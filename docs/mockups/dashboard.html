@@ -1,0 +1,631 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Tableau de bord — Finance OS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Spectral:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" />
+<style>
+:root{
+  --page-bg:#E7E5DA;
+  --bg:#F5F4EE;
+  --surface:#FFFFFF;
+  --surface-2:#FBFAF5;
+  --border:#E1DFD3;
+  --border-soft:#ECEAE0;
+  --ink-900:#171B22;
+  --ink-600:#565C66;
+  --ink-400:#767C86;
+  --accent:#2E3A59;
+  --accent-ink:#24304D;
+  --accent-soft:#E4E7F0;
+  --gold:#A9762F;
+  --gold-ink:#6E4C1D;
+  --gold-soft:#F3E7D3;
+  --positive:#3E7A57;
+  --positive-ink:#2C5940;
+  --positive-soft:#E1EEE4;
+  --negative:#AE4F35;
+  --negative-ink:#7C3823;
+  --negative-soft:#F3E3DC;
+  --mauve:#8C6E8A;
+  --slate:#7C8896;
+  --shadow:0 20px 60px -20px rgba(23,27,34,0.35), 0 2px 10px -2px rgba(23,27,34,0.12);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --page-bg:#0D0F13;
+    --bg:#14171C;
+    --surface:#1A1E24;
+    --surface-2:#101318;
+    --border:#2B2F37;
+    --border-soft:#23262D;
+    --ink-900:#EDEEF0;
+    --ink-600:#ABB0B8;
+    --ink-400:#767C86;
+    --accent:#8FA0D6;
+    --accent-ink:#DCE2F2;
+    --accent-soft:#232B42;
+    --gold:#D9A94F;
+    --gold-ink:#F2DDB0;
+    --gold-soft:#3A2E18;
+    --positive:#6FBF93;
+    --positive-ink:#C9EBD7;
+    --positive-soft:#1B2E22;
+    --negative:#E0876A;
+    --negative-ink:#F5D2C4;
+    --negative-soft:#2E1C15;
+    --mauve:#B79AB5;
+    --slate:#9AA6B2;
+    --shadow:0 20px 60px -20px rgba(0,0,0,0.6), 0 2px 10px -2px rgba(0,0,0,0.35);
+  }
+}
+:root[data-theme="dark"]{
+  --page-bg:#0D0F13;
+  --bg:#14171C;
+  --surface:#1A1E24;
+  --surface-2:#101318;
+  --border:#2B2F37;
+  --border-soft:#23262D;
+  --ink-900:#EDEEF0;
+  --ink-600:#ABB0B8;
+  --ink-400:#767C86;
+  --accent:#8FA0D6;
+  --accent-ink:#DCE2F2;
+  --accent-soft:#232B42;
+  --gold:#D9A94F;
+  --gold-ink:#F2DDB0;
+  --gold-soft:#3A2E18;
+  --positive:#6FBF93;
+  --positive-ink:#C9EBD7;
+  --positive-soft:#1B2E22;
+  --negative:#E0876A;
+  --negative-ink:#F5D2C4;
+  --negative-soft:#2E1C15;
+  --mauve:#B79AB5;
+  --slate:#9AA6B2;
+  --shadow:0 20px 60px -20px rgba(0,0,0,0.6), 0 2px 10px -2px rgba(0,0,0,0.35);
+}
+*{box-sizing:border-box;}
+body{
+  margin:0;
+  background:var(--page-bg);
+  color:var(--ink-900);
+  font-family:"IBM Plex Sans", -apple-system, "Segoe UI", sans-serif;
+  font-variant-numeric:tabular-nums;
+}
+.stage{
+  display:flex;
+  justify-content:center;
+  padding:3rem 1.5rem;
+}
+.window{
+  width:100%;
+  max-width:1180px;
+  background:var(--bg);
+  border:0.5px solid var(--border);
+  border-radius:14px;
+  overflow:hidden;
+  box-shadow:var(--shadow);
+}
+.titlebar{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:10px 18px;
+  background:var(--surface-2);
+  border-bottom:0.5px solid var(--border);
+}
+.brand{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  font-family:"Spectral", Georgia, serif;
+  font-weight:600;
+  font-size:14px;
+  color:var(--ink-900);
+  letter-spacing:0.01em;
+}
+.brand-mark{
+  width:22px; height:22px;
+  border-radius:6px;
+  background:var(--accent);
+  color:var(--bg);
+  display:flex; align-items:center; justify-content:center;
+}
+.winctl{display:flex; gap:6px;}
+.winctl span{width:10px; height:10px; border-radius:50%; background:var(--border);}
+.layout{
+  display:grid;
+  grid-template-columns:216px minmax(0,1fr);
+  align-items:start;
+}
+nav.sidebar{
+  padding:18px 10px;
+  border-right:0.5px solid var(--border);
+  display:flex;
+  flex-direction:column;
+  gap:2px;
+}
+.navgroup-label{
+  font-size:11px;
+  color:var(--ink-400);
+  padding:14px 12px 6px;
+  letter-spacing:0.04em;
+}
+.navitem{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:8px 12px;
+  border-radius:8px;
+  font-size:13.5px;
+  color:var(--ink-600);
+  text-decoration:none;
+  cursor:pointer;
+}
+.navitem svg{flex:none; opacity:0.85;}
+.navitem:hover{background:var(--border-soft);}
+.navitem.active{
+  background:var(--accent-soft);
+  color:var(--accent-ink);
+  font-weight:500;
+}
+.navitem.active svg{opacity:1;}
+main{padding:24px 28px 32px;}
+.pagehead{
+  display:flex;
+  align-items:flex-end;
+  justify-content:space-between;
+  margin-bottom:20px;
+  gap:16px;
+}
+.pagehead h1{
+  font-family:"Spectral", Georgia, serif;
+  font-weight:600;
+  font-size:24px;
+  margin:0 0 4px;
+}
+.pagehead .meta{
+  font-size:12.5px;
+  color:var(--ink-400);
+}
+.btn{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  padding:7px 13px;
+  border-radius:8px;
+  border:0.5px solid var(--border);
+  background:var(--surface);
+  color:var(--ink-600);
+  font-size:12.5px;
+  font-family:inherit;
+  cursor:pointer;
+}
+.btn:hover{border-color:var(--ink-400); color:var(--ink-900);}
+.btn-primary{
+  background:var(--positive-soft);
+  border-color:var(--positive);
+  color:var(--positive-ink);
+  font-weight:500;
+}
+.btn-primary:hover{filter:brightness(0.97);}
+.kpis{
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:14px;
+  margin-bottom:16px;
+}
+.kpi{
+  background:var(--surface);
+  border:0.5px solid var(--border);
+  border-radius:12px;
+  padding:15px 16px;
+}
+.kpi .label{font-size:12.5px; color:var(--ink-600); margin-bottom:8px;}
+.kpi .value{
+  font-family:"IBM Plex Mono", monospace;
+  font-size:24px;
+  font-weight:500;
+  letter-spacing:-0.01em;
+}
+.kpi .ctx{
+  font-size:11.5px;
+  color:var(--ink-400);
+  margin-top:6px;
+  display:flex;
+  align-items:center;
+  gap:4px;
+}
+.kpi .ctx.up{color:var(--positive);}
+.kpi .ctx.watch{color:var(--gold-ink);}
+.card{
+  background:var(--surface);
+  border:0.5px solid var(--border);
+  border-radius:12px;
+  padding:18px 20px;
+}
+.card + .card{margin-top:14px;}
+.cardhead{
+  display:flex;
+  align-items:baseline;
+  justify-content:space-between;
+  margin-bottom:12px;
+  gap:12px;
+}
+.cardhead h2{
+  font-family:"Spectral", Georgia, serif;
+  font-weight:600;
+  font-size:15.5px;
+  margin:0;
+}
+.legend{display:flex; gap:14px; font-size:11.5px; color:var(--ink-400);}
+.legend span{display:inline-flex; align-items:center; gap:5px;}
+.legend .sw{width:14px; height:0; border-top:2px solid var(--ink-600); display:inline-block;}
+.legend .sw.dash{border-top-style:dashed;}
+.legend .dot{width:7px; height:7px; border-radius:50%; background:var(--gold); display:inline-block;}
+.chartalt{
+  font-size:12px;
+  color:var(--ink-600);
+  margin-top:10px;
+  padding-top:10px;
+  border-top:0.5px solid var(--border-soft);
+  line-height:1.55;
+}
+.chartalt b{font-weight:500; color:var(--ink-900);}
+.row2{
+  display:grid;
+  grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);
+  gap:16px;
+  align-items:start;
+  margin-top:14px;
+}
+.list{display:flex; flex-direction:column;}
+.qrow{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  padding:10px 0;
+  border-bottom:0.5px solid var(--border-soft);
+}
+.qrow:last-child{border-bottom:none; padding-bottom:2px;}
+.qicon{
+  width:32px; height:32px; border-radius:8px;
+  background:var(--gold-soft); color:var(--gold-ink);
+  display:flex; align-items:center; justify-content:center; flex:none;
+}
+.qinfo{flex:1; min-width:0;}
+.qinfo .t{font-size:13px; font-weight:500;}
+.qinfo .s{font-size:11.5px; color:var(--ink-400); margin-top:1px;}
+.qamt{font-family:"IBM Plex Mono", monospace; font-size:13.5px; margin-right:4px; white-space:nowrap;}
+.qactions{display:flex; gap:6px; flex:none;}
+.qactions .btn{padding:6px 10px;}
+.oprow{
+  display:grid;
+  grid-template-columns:64px minmax(0,1fr) auto auto;
+  align-items:center;
+  gap:10px;
+  padding:9px 0;
+  border-bottom:0.5px solid var(--border-soft);
+}
+.oprow:last-child{border-bottom:none; padding-bottom:2px;}
+.oprow .d{font-size:11.5px; color:var(--ink-400);}
+.oprow .t{font-size:13px;}
+.oprow .t .sub{color:var(--ink-400); font-size:11.5px; display:block; margin-top:1px;}
+.oprow .amt{font-family:"IBM Plex Mono", monospace; font-size:13px; text-align:right; white-space:nowrap;}
+.amt.pos{color:var(--positive);}
+.amt.neg{color:var(--ink-900);}
+.badge{
+  font-size:10.5px;
+  padding:3px 8px;
+  border-radius:20px;
+  white-space:nowrap;
+  border:0.5px solid var(--border);
+  color:var(--ink-600);
+}
+.badge.est{background:var(--gold-soft); border-color:transparent; color:var(--gold-ink);}
+.bud-row{padding:10px 0; border-bottom:0.5px solid var(--border-soft);}
+.bud-row:last-child{border-bottom:none;}
+.bud-top{display:flex; justify-content:space-between; align-items:baseline; margin-bottom:6px;}
+.bud-top .name{font-size:13px; font-weight:500;}
+.bud-top .figs{font-family:"IBM Plex Mono", monospace; font-size:12px; color:var(--ink-600);}
+.bud-top .figs b{color:var(--ink-900); font-weight:500;}
+.bar{height:6px; border-radius:4px; background:var(--border-soft); overflow:hidden; position:relative;}
+.bar > i{display:block; height:100%; border-radius:4px; background:var(--accent);}
+.bar > i.over{background:var(--negative);}
+.bud-note{font-size:11px; color:var(--ink-400); margin-top:5px;}
+.bud-note.over{color:var(--negative-ink);}
+.chip{
+  font-size:10px;
+  padding:2px 7px;
+  border-radius:20px;
+  background:var(--accent-soft);
+  color:var(--accent-ink);
+  margin-left:6px;
+}
+.donutwrap{display:flex; align-items:center; gap:18px;}
+.donutlegend{flex:1; display:flex; flex-direction:column; gap:8px;}
+.dl-row{display:flex; align-items:center; gap:8px; font-size:12.5px;}
+.dl-sw{width:9px; height:9px; border-radius:2px; flex:none;}
+.dl-name{flex:1; color:var(--ink-600);}
+.dl-val{font-family:"IBM Plex Mono", monospace; color:var(--ink-900);}
+.acct-row{display:flex; align-items:center; justify-content:space-between; padding:9px 0; border-bottom:0.5px solid var(--border-soft);}
+.acct-row:last-child{border-bottom:none; padding-bottom:2px;}
+.acct-name{font-size:13px;}
+.acct-tag{font-size:10.5px; color:var(--ink-400); display:block; margin-top:1px;}
+.acct-bal{font-family:"IBM Plex Mono", monospace; font-size:13px;}
+.sr-only{position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0;}
+</style>
+</head>
+<body>
+<h2 class="sr-only">Maquette du tableau de bord de Finance OS Desktop : soldes, trésorerie prévisionnelle, opérations à vérifier et budget du mois de Camille, utilisatrice fictive.</h2>
+<div class="stage">
+<div class="window">
+
+  <div class="titlebar">
+    <div class="brand">
+      <span class="brand-mark">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l5-6 4 3 7-9"/><circle cx="19" cy="5" r="1.4" fill="currentColor" stroke="none"/></svg>
+      </span>
+      Finance OS
+    </div>
+    <div class="winctl"><span></span><span></span><span></span></div>
+  </div>
+
+  <div class="layout">
+    <nav class="sidebar" aria-label="Navigation principale">
+      <a class="navitem active">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7.5" height="7.5" rx="1.6"/><rect x="13.5" y="3" width="7.5" height="7.5" rx="1.6"/><rect x="3" y="13.5" width="7.5" height="7.5" rx="1.6"/><rect x="13.5" y="13.5" width="7.5" height="7.5" rx="1.6"/></svg>
+        Tableau de bord
+      </a>
+      <a class="navitem">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="5" width="19" height="14" rx="2.4"/><path d="M2.5 9.5h19"/><rect x="5" y="13" width="5" height="2.3" rx="0.6" fill="currentColor" stroke="none"/></svg>
+        Comptes
+      </a>
+      <a class="navitem">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h13.5l-3.4-3.4"/><path d="M20 16H6.5l3.4 3.4"/></svg>
+        Transactions
+      </a>
+      <a class="navitem">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l5-6 4 3 7-9"/><circle cx="19" cy="5" r="1.4" fill="currentColor" stroke="none"/></svg>
+        Prévisions
+      </a>
+      <a class="navitem">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.3"/><path d="M12 3.7A8.3 8.3 0 0 1 20.3 12H12Z" fill="currentColor" stroke="none" opacity="0.85"/></svg>
+        Budget
+      </a>
+      <div class="navgroup-label">Application</div>
+      <a class="navitem">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 3.3v2.3M12 18.4v2.3M20.7 12h-2.3M5.6 12H3.3M17.9 6.1l-1.6 1.6M7.7 16.3l-1.6 1.6M17.9 17.9l-1.6-1.6M7.7 7.7 6.1 6.1"/></svg>
+        Paramètres
+      </a>
+    </nav>
+
+    <main>
+      <div class="pagehead">
+        <div>
+          <h1>Tableau de bord</h1>
+          <div class="meta">Dernière actualisation aujourd'hui à 08:30 · 13 septembre 2026</div>
+        </div>
+        <button class="btn">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11A8 8 0 1 0 19 15.5"/><path d="M20 5v6h-6"/></svg>
+          Actualiser
+        </button>
+      </div>
+
+      <div class="kpis">
+        <div class="kpi">
+          <div class="label">Solde disponible</div>
+          <div class="value">1 748,60 €</div>
+          <div class="ctx">Comptes immédiats uniquement</div>
+        </div>
+        <div class="kpi">
+          <div class="label">Solde prévu en fin de mois</div>
+          <div class="value">2 486,40 €</div>
+          <div class="ctx up">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 15L15 6M15 6H9M15 6v6"/></svg>
+            +737,80 € vs aujourd'hui
+          </div>
+        </div>
+        <div class="kpi">
+          <div class="label">Point bas prévisionnel</div>
+          <div class="value">486,40 €</div>
+          <div class="ctx watch">27 sept. · assurance habitation</div>
+        </div>
+        <div class="kpi">
+          <div class="label">Reste à vivre</div>
+          <div class="value">612,00 €</div>
+          <div class="ctx">17 jours restants · ≈ 36 €/j</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="cardhead">
+          <h2>Trésorerie — compte courant</h2>
+          <div class="legend">
+            <span><i class="sw"></i>Réel</span>
+            <span><i class="sw dash"></i>Prévu</span>
+            <span><i class="dot"></i>Point bas</span>
+          </div>
+        </div>
+
+        <svg viewBox="0 0 660 200" width="100%" height="200" role="img" aria-label="Courbe de trésorerie du 20 août au 30 septembre 2026, du solde réel puis prévu">
+          <line x1="48" y1="24" x2="632" y2="24" stroke="var(--border-soft)" stroke-width="1"/>
+          <line x1="48" y1="100" x2="632" y2="100" stroke="var(--border-soft)" stroke-width="1"/>
+          <line x1="48" y1="176" x2="632" y2="176" stroke="var(--border-soft)" stroke-width="1"/>
+          <text x="8" y="28" class="axis" font-family="IBM Plex Mono" font-size="10" fill="var(--ink-400)">3 500 €</text>
+          <text x="16" y="180" font-family="IBM Plex Mono" font-size="10" fill="var(--ink-400)">400 €</text>
+
+          <line x1="389.9" y1="18" x2="389.9" y2="182" stroke="var(--border)" stroke-width="1" stroke-dasharray="2,3"/>
+          <text x="389.9" y="13" font-family="IBM Plex Sans" font-size="10.5" fill="var(--ink-400)" text-anchor="middle">aujourd'hui</text>
+
+          <path d="M48,131.4 L119.2,136.9 L176.2,33.9 L233.2,42.6 L275.9,74.5 L318.6,79.2 L389.9,109.9"
+                fill="none" stroke="var(--accent)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M389.9,109.9 L432.6,112.8 L489.6,114.5 L532.3,117.7 L560.8,129.9 L589.2,171.8 L617.8,68.8 L632,73.7"
+                fill="none" stroke="var(--accent)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="1,6.5"/>
+
+          <circle cx="389.9" cy="109.9" r="3.2" fill="var(--bg)" stroke="var(--accent)" stroke-width="2"/>
+          <circle cx="589.2" cy="171.8" r="4" fill="var(--gold)"/>
+          <text x="589.2" y="192" font-family="IBM Plex Mono" font-size="11" fill="var(--gold-ink)" text-anchor="middle">486,40 € · 27 sept.</text>
+
+          <text x="48" y="196" font-family="IBM Plex Sans" font-size="10.5" fill="var(--ink-400)">20 août</text>
+          <text x="632" y="196" font-family="IBM Plex Sans" font-size="10.5" fill="var(--ink-400)" text-anchor="end">30 sept.</text>
+        </svg>
+
+        <div class="chartalt">
+          Historique réel jusqu'à aujourd'hui (<b>1 748,60&nbsp;€</b>), puis projection jusqu'au 30&nbsp;septembre. Point bas attendu à <b>486,40&nbsp;€ le 27&nbsp;septembre</b>, causé par le paiement de l'assurance habitation. Le salaire du 29&nbsp;septembre ramène le solde prévu de fin de mois à <b>2 486,40&nbsp;€</b>.
+        </div>
+      </div>
+
+      <div class="row2">
+        <div class="col">
+          <div class="card">
+            <div class="cardhead"><h2>Opérations à vérifier</h2><span class="badge">2 en attente</span></div>
+            <div class="list">
+              <div class="qrow">
+                <div class="qicon">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.3"/><path d="M12 7.3v5l3.4 2"/></svg>
+                </div>
+                <div class="qinfo">
+                  <div class="t">Électricité — EDF</div>
+                  <div class="s">Attendue le 8 sept. · il y a 5 jours</div>
+                </div>
+                <div class="qamt">−95,00 €</div>
+                <div class="qactions">
+                  <button class="btn">Pas encore</button>
+                  <button class="btn btn-primary">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l5 5L20 6"/></svg>
+                    C'est arrivé
+                  </button>
+                </div>
+              </div>
+              <div class="qrow">
+                <div class="qicon">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.3"/><path d="M12 7.3v5l3.4 2"/></svg>
+                </div>
+                <div class="qinfo">
+                  <div class="t">Abonnement salle de sport</div>
+                  <div class="s">Attendue le 10 sept. · il y a 3 jours</div>
+                </div>
+                <div class="qamt">−34,90 €</div>
+                <div class="qactions">
+                  <button class="btn">Pas encore</button>
+                  <button class="btn btn-primary">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l5 5L20 6"/></svg>
+                    C'est arrivé
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="cardhead"><h2>Prochaines opérations</h2></div>
+            <div class="list">
+              <div class="oprow">
+                <div class="d">20 sept.</div>
+                <div class="t">Internet<span class="sub">Orange · compte courant</span></div>
+                <div class="amt neg">−35,00 €</div>
+                <div class="badge">Attendue</div>
+              </div>
+              <div class="oprow">
+                <div class="d">25 sept.</div>
+                <div class="t">Virement épargne<span class="sub">Vers Livret A</span></div>
+                <div class="amt neg">−250,00 €</div>
+                <div class="badge">Attendue</div>
+              </div>
+              <div class="oprow">
+                <div class="d">27 sept.</div>
+                <div class="t">Assurance habitation<span class="sub">Prélèvement annuel</span></div>
+                <div class="amt neg">−853,60 €</div>
+                <div class="badge est">Estimée</div>
+              </div>
+              <div class="oprow">
+                <div class="d">29 sept.</div>
+                <div class="t">Salaire<span class="sub">Employeur</span></div>
+                <div class="amt pos">+2 100,00 €</div>
+                <div class="badge">Attendue</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col">
+          <div class="card">
+            <div class="cardhead"><h2>Budget — septembre</h2></div>
+            <div class="bud-row">
+              <div class="bud-top"><span class="name">Alimentation</span><span class="figs"><b>214,80&nbsp;€</b> / 350,00&nbsp;€</span></div>
+              <div class="bar"><i style="width:61%"></i></div>
+              <div class="bud-note">135,20 € restants</div>
+            </div>
+            <div class="bud-row">
+              <div class="bud-top"><span class="name">Loisirs</span><span class="figs"><b>132,50&nbsp;€</b> / 120,00&nbsp;€</span></div>
+              <div class="bar"><i class="over" style="width:100%"></i></div>
+              <div class="bud-note over">Dépassement de 12,50 €</div>
+            </div>
+            <div class="bud-row">
+              <div class="bud-top"><span class="name">Transport</span><span class="figs"><b>46,00&nbsp;€</b> / 80,00&nbsp;€</span></div>
+              <div class="bar"><i style="width:58%"></i></div>
+              <div class="bud-note">34,00 € restants</div>
+            </div>
+            <div class="bud-row">
+              <div class="bud-top"><span class="name">Logement<span class="chip">Engagé</span></span><span class="figs"><b>745,00&nbsp;€</b> / 745,00&nbsp;€</span></div>
+              <div class="bar"><i style="width:100%"></i></div>
+              <div class="bud-note">Loyer et électricité déjà comptabilisés</div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="cardhead"><h2>Répartition des dépenses</h2></div>
+            <div class="donutwrap">
+              <svg width="120" height="120" viewBox="0 0 120 120" role="img" aria-label="Répartition des dépenses de septembre par catégorie">
+                <g transform="rotate(-90 60 60)">
+                  <circle cx="60" cy="60" r="46" fill="none" stroke="var(--border-soft)" stroke-width="16"/>
+                  <circle cx="60" cy="60" r="46" fill="none" stroke="var(--accent)" stroke-width="16" stroke-dasharray="130.3 158.9" stroke-dashoffset="0"/>
+                  <circle cx="60" cy="60" r="46" fill="none" stroke="var(--positive)" stroke-width="16" stroke-dasharray="43.4 245.8" stroke-dashoffset="-130.3"/>
+                  <circle cx="60" cy="60" r="46" fill="none" stroke="var(--gold)" stroke-width="16" stroke-dasharray="37.6 251.6" stroke-dashoffset="-173.7"/>
+                  <circle cx="60" cy="60" r="46" fill="none" stroke="var(--mauve)" stroke-width="16" stroke-dasharray="23.1 265.9" stroke-dashoffset="-211.3"/>
+                  <circle cx="60" cy="60" r="46" fill="none" stroke="var(--slate)" stroke-width="16" stroke-dasharray="8.7 280.5" stroke-dashoffset="-234.4"/>
+                  <circle cx="60" cy="60" r="46" fill="none" stroke="var(--ink-400)" stroke-width="16" stroke-dasharray="46.3 242.7" stroke-dashoffset="-243.2"/>
+                </g>
+                <text x="60" y="57" text-anchor="middle" font-family="IBM Plex Mono" font-size="14" fill="var(--ink-900)" font-weight="500">1 658 €</text>
+                <text x="60" y="72" text-anchor="middle" font-family="IBM Plex Sans" font-size="9.5" fill="var(--ink-400)">dépenses</text>
+              </svg>
+              <div class="donutlegend">
+                <div class="dl-row"><span class="dl-sw" style="background:var(--accent)"></span><span class="dl-name">Logement</span><span class="dl-val">45 %</span></div>
+                <div class="dl-row"><span class="dl-sw" style="background:var(--positive)"></span><span class="dl-name">Épargne</span><span class="dl-val">15 %</span></div>
+                <div class="dl-row"><span class="dl-sw" style="background:var(--gold)"></span><span class="dl-name">Alimentation</span><span class="dl-val">13 %</span></div>
+                <div class="dl-row"><span class="dl-sw" style="background:var(--mauve)"></span><span class="dl-name">Loisirs</span><span class="dl-val">8 %</span></div>
+                <div class="dl-row"><span class="dl-sw" style="background:var(--slate)"></span><span class="dl-name">Transport</span><span class="dl-val">3 %</span></div>
+                <div class="dl-row"><span class="dl-sw" style="background:var(--ink-400)"></span><span class="dl-name">Autres</span><span class="dl-val">16 %</span></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="cardhead"><h2>Comptes</h2></div>
+            <div class="acct-row">
+              <div><div class="acct-name">Compte courant</div><span class="acct-tag">Immédiat</span></div>
+              <div class="acct-bal">1 748,60 €</div>
+            </div>
+            <div class="acct-row">
+              <div><div class="acct-name">Livret A</div><span class="acct-tag">Réserve</span></div>
+              <div class="acct-bal">3 240,00 €</div>
+            </div>
+            <div class="acct-row">
+              <div><div class="acct-name">PEA</div><span class="acct-tag">Exclu des arbitrages</span></div>
+              <div class="acct-bal">6 120,00 €</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+</div>
+</body>
+</html>
