@@ -217,6 +217,21 @@ Types V1 : `current`, `savings`, `cash`, `investment` (valorisation globale sais
 
 ---
 
+# 6bis. Catégorisation assistée
+
+Aucune table dédiée : la suggestion (cf. `01-Perimetre.md` §2.4, `07-Interface.md` §7) s'appuie sur une requête simple à la saisie —
+
+```sql
+SELECT category_id FROM transaction_entry
+WHERE normalized_label = ?
+ORDER BY operation_date DESC
+LIMIT 1;
+```
+
+Le dernier choix de catégorie pour un libellé donné fait office de mémorisation. Pas de table `CategorizationRule` à maintenir.
+
+---
+
 # 7. RecurringOperation → ForecastOccurrence
 
 Logique inchangée par rapport à l'ancien projet : une opération récurrente génère des occurrences de façon idempotente (contrainte d'unicité `recurring_operation_id + expected_date`), une occurrence ajustée manuellement n'est jamais écrasée par une régénération, une occurrence rapprochée (`matched_transaction_id` renseigné) sort du calcul prévisionnel.
