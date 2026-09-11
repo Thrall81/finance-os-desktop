@@ -14,7 +14,22 @@ Le cœur fonctionnel — moteur de prévision de trésorerie, modèle de donnée
 
 ## Statut
 
-Projet en tout début de reconstruction. Voir `docs/` pour la documentation de conception (à venir).
+Documentation de conception rédigée, implémentation pas encore commencée.
+
+## Documentation
+
+| Document | Contenu |
+|---|---|
+| [docs/00-Vision.md](docs/00-Vision.md) | Pourquoi ce projet, philosophie, principes |
+| [docs/01-Perimetre.md](docs/01-Perimetre.md) | Périmètre de la V1, exclusions, feuille de route |
+| [docs/02-Architecture.md](docs/02-Architecture.md) | Couches Domain/Data/App/UI, composition, navigation |
+| [docs/03-Modele_de_donnees.md](docs/03-Modele_de_donnees.md) | Entités et schéma SQLite |
+| [docs/04-Stack_technique.md](docs/04-Stack_technique.md) | Unity, UI Toolkit, SQLite, organisation du dépôt |
+| [docs/05-Conventions_de_code.md](docs/05-Conventions_de_code.md) | Conventions C#, montants, dates, tests, Git |
+| [docs/06-Moteur_de_prevision.md](docs/06-Moteur_de_prevision.md) | Algorithme de projection de trésorerie |
+| [docs/07-Interface.md](docs/07-Interface.md) | Écrans, graphiques faits maison, formulaires |
+| [docs/08-Confidentialite_et_donnees.md](docs/08-Confidentialite_et_donnees.md) | Stockage local, sauvegarde, absence de réseau |
+| [docs/09-Decisions_techniques.md](docs/09-Decisions_techniques.md) | Journal des décisions (ADR-101 et suivants) |
 
 ## Stack
 
