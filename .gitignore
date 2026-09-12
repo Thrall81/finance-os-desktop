@@ -26,11 +26,11 @@ sysinfo.txt
 # Crashlytics generated file
 crashlytics-build.properties
 
-# Local data
+# Local data (portable data/ folder used when running from the Editor, and any SQLite file)
+/data/
 *.db
 *.db-shm
 *.db-wal
-!/data/seed/*.db
 
 # Visual Studio / Rider / VS Code cache
 .vs/

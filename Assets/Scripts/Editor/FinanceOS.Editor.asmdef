@@ -3,7 +3,8 @@
     "rootNamespace": "FinanceOS.EditorTools",
     "references": [
         "FinanceOS.Domain",
-        "FinanceOS.App"
+        "FinanceOS.App",
+        "FinanceOS.Data"
     ],
     "includePlatforms": [
         "Editor"
