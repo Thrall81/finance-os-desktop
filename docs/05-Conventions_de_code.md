@@ -86,9 +86,11 @@ Identique à l'ancien projet, sans exception :
 
 # 5. Dates
 
-- `DateOnly` pour une date civile (date d'opération, échéance) ;
+- `DateTime` (composante horaire toujours à zéro) pour une date civile (date d'opération, échéance) ;
 - `DateTimeOffset` pour un événement horodaté (date de création d'un enregistrement) ;
 - stockage SQLite en texte ISO-8601 (`yyyy-MM-dd` / `yyyy-MM-ddTHH:mm:sszzz`), jamais en format ambigu.
+
+`System.DateOnly` (.NET 6+) n'est pas disponible dans le runtime scripting d'Unity 6000.3 — vérifié empiriquement (`error CS0246`) en écrivant le modèle `Domain`, cf. `09-Decisions_techniques.md` (ADR-110). Ne pas réintroduire `DateOnly` sans revalider sur une version d'Unity ultérieure.
 
 ---
 
