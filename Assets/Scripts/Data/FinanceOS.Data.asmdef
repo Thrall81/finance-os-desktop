@@ -1,0 +1,16 @@
+{
+    "name": "FinanceOS.Data",
+    "rootNamespace": "FinanceOS.Data",
+    "references": [
+        "FinanceOS.Domain"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
