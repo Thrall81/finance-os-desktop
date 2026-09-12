@@ -1,0 +1,136 @@
+/* Design tokens. Light theme only for this first pass — see docs/07-Interface.md.
+   No custom font yet: Unity's default runtime font until a real typeface is vendored in. */
+
+.page {
+    --color-bg: #F5F4EE;
+    --color-surface: #FFFFFF;
+    --color-border: #E1DFD3;
+    --color-ink-900: #171B22;
+    --color-ink-600: #565C66;
+    --color-ink-400: #868C94;
+    --color-accent: #2E3A59;
+    --color-gold: #A9762F;
+    --color-gold-soft: #F3E7D3;
+
+    flex-grow: 1;
+    background-color: var(--color-bg);
+    padding: 24px 28px;
+}
+
+.page-header {
+    margin-bottom: 16px;
+}
+
+.page-title {
+    font-size: 22px;
+    -unity-font-style: bold;
+    color: var(--color-ink-900);
+}
+
+.page-subtitle {
+    font-size: 13px;
+    color: var(--color-ink-400);
+    margin-top: 2px;
+}
+
+.kpi-row {
+    flex-direction: row;
+    margin-bottom: 16px;
+}
+
+.kpi-card {
+    flex-grow: 1;
+    flex-basis: 0;
+    background-color: var(--color-surface);
+    border-width: 1px;
+    border-color: var(--color-border);
+    border-radius: 12px;
+    padding: 14px 16px;
+    margin-right: 12px;
+}
+
+/* UI Toolkit's USS does not support the structural pseudo-class :last-child (web-CSS only) —
+   confirmed by a real "Unknown pseudo class" warning, not assumed. A small unused trailing
+   margin after the last card is harmless, so every card just keeps the same margin-right. */
+
+.kpi-label {
+    font-size: 12px;
+    color: var(--color-ink-600);
+    margin-bottom: 6px;
+}
+
+.kpi-value {
+    font-size: 22px;
+    -unity-font-style: bold;
+    color: var(--color-ink-900);
+}
+
+.kpi-context {
+    font-size: 11px;
+    color: var(--color-ink-400);
+    margin-top: 4px;
+}
+
+.card {
+    background-color: var(--color-surface);
+    border-width: 1px;
+    border-color: var(--color-border);
+    border-radius: 12px;
+    padding: 16px 18px;
+}
+
+.card-header {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.card-title {
+    font-size: 15px;
+    -unity-font-style: bold;
+    color: var(--color-ink-900);
+}
+
+.badge {
+    font-size: 11px;
+    padding: 2px 8px;
+    background-color: var(--color-gold-soft);
+    color: var(--color-gold);
+    border-radius: 20px;
+}
+
+.empty-state {
+    font-size: 13px;
+    color: var(--color-ink-400);
+}
+
+.list {
+    flex-direction: column;
+}
+
+.verification-row {
+    flex-direction: row;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom-width: 1px;
+    border-bottom-color: var(--color-border);
+}
+
+.verification-row-label {
+    font-size: 13px;
+    color: var(--color-ink-900);
+    flex-grow: 1;
+}
+
+.verification-row-date {
+    font-size: 11px;
+    color: var(--color-ink-400);
+    margin-top: 2px;
+}
+
+.verification-row-amount {
+    font-size: 13px;
+    color: var(--color-ink-900);
+    -unity-text-align: middle-right;
+}

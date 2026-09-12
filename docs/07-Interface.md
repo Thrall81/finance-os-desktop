@@ -73,6 +73,8 @@ Navigation clavier complète, `aria`-équivalent UI Toolkit pour l'étape couran
 
 Cartes reprises de l'ancien projet : Solde disponible, Solde prévu en fin de mois, Point bas prévisionnel, Reste à vivre — puis graphique de trésorerie, **file de vérification** (occurrences arrivées à échéance non confirmées, mise en avant si non vide), prochaines opérations, synthèse budgétaire, alertes calculées à l'affichage (solde faible, dépassement de budget).
 
+**État d'implémentation** : `Dashboard.uxml` + `DashboardController` affichent Solde disponible, Solde prévu en fin de mois, Point bas prévisionnel et la file de vérification, alimentés par `DashboardViewModelBuilder` (`Assets/Scripts/UI/`). Reste à vivre, prochaines opérations, synthèse budgétaire, alertes et le graphique de trésorerie ne sont pas encore construits — le graphique en particulier est différé volontairement : son rendu `Painter2D` ne peut être vérifié qu'à l'exécution réelle (un rendu), impossible à contrôler en mode batch dans cet environnement de développement (cf. `09-Decisions_techniques.md`, ADR-112). Aucune police personnalisée n'est encore intégrée : l'interface utilise la police par défaut d'Unity en attendant une passe de style dédiée.
+
 ---
 
 # 6. File de vérification et confirmation rapide

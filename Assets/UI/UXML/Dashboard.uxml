@@ -1,0 +1,36 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="False">
+  <Style src="../USS/theme.uss" />
+  <ui:VisualElement name="dashboard-root" class="page">
+    <ui:VisualElement name="dashboard-header" class="page-header">
+      <ui:VisualElement>
+        <ui:Label text="Tableau de bord" class="page-title" />
+        <ui:Label name="account-name-label" text="—" class="page-subtitle" />
+      </ui:VisualElement>
+    </ui:VisualElement>
+
+    <ui:VisualElement name="kpi-row" class="kpi-row">
+      <ui:VisualElement class="kpi-card">
+        <ui:Label text="Solde disponible" class="kpi-label" />
+        <ui:Label name="kpi-available-value" text="—" class="kpi-value" />
+      </ui:VisualElement>
+      <ui:VisualElement class="kpi-card">
+        <ui:Label text="Solde prévu en fin de mois" class="kpi-label" />
+        <ui:Label name="kpi-endofmonth-value" text="—" class="kpi-value" />
+      </ui:VisualElement>
+      <ui:VisualElement class="kpi-card">
+        <ui:Label text="Point bas prévisionnel" class="kpi-label" />
+        <ui:Label name="kpi-lowest-value" text="—" class="kpi-value" />
+        <ui:Label name="kpi-lowest-date" text="—" class="kpi-context" />
+      </ui:VisualElement>
+    </ui:VisualElement>
+
+    <ui:VisualElement name="verification-card" class="card">
+      <ui:VisualElement class="card-header">
+        <ui:Label text="Opérations à vérifier" class="card-title" />
+        <ui:Label name="verification-count" text="0" class="badge" />
+      </ui:VisualElement>
+      <ui:Label name="verification-empty" text="Rien à vérifier pour l'instant." class="empty-state" />
+      <ui:VisualElement name="verification-list" class="list" />
+    </ui:VisualElement>
+  </ui:VisualElement>
+</ui:UXML>

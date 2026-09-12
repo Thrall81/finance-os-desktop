@@ -5,7 +5,8 @@
         "FinanceOS.Domain",
         "FinanceOS.App",
         "FinanceOS.Data",
-        "FinanceOS.Forecast"
+        "FinanceOS.Forecast",
+        "FinanceOS.UI"
     ],
     "includePlatforms": [
         "Editor"

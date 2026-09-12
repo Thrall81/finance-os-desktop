@@ -3,7 +3,8 @@
     "rootNamespace": "FinanceOS.UI",
     "references": [
         "FinanceOS.Domain",
-        "FinanceOS.App"
+        "FinanceOS.App",
+        "FinanceOS.Forecast"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
