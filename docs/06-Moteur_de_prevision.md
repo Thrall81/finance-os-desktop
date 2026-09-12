@@ -28,17 +28,10 @@ Une occurrence rapprochée (`MatchedTransactionId` renseigné) n'est plus appliq
 # 3. Entrée du moteur
 
 ```csharp
-public sealed record ForecastRequest(
-    DateOnly DateFrom,
-    DateOnly DateTo,
-    IReadOnlyList<int> AccountIds,
-    ForecastOptions Options);
-
-public sealed record ForecastOptions(
-    bool IncludeSavingsTransfers = true,
-    bool IncludeInvestmentAccounts = false,
-    bool IncludeRemainingVariableBudget = true);
+public sealed record ForecastRequest(DateTime DateFrom, DateTime DateTo);
 ```
+
+La V1 implémentée calcule un compte à la fois (voir §11) ; la consolidation multi-comptes se fait en sommant les projections individuelles, ce qui neutralise déjà naturellement un virement interne entre deux comptes inclus (§8). `ForecastOptions` n'a pas été nécessaire pour la V1 : aucune des options envisagées (virements d'épargne, comptes d'investissement, budget variable restant) n'a encore de consommateur réel.
 
 ---
 
@@ -57,12 +50,14 @@ Identique à l'ancien projet, simplifié des étapes propres aux connecteurs :
 
 ```csharp
 public sealed record ForecastEvent(
-    int? SourceOccurrenceId,
+    int AccountId,
     int? SourceTransactionId,
-    DateOnly Date,
+    int? SourceOccurrenceId,
+    DateTime Date,
     long AmountMinor,
     string Label,
-    ForecastEventCertainty Certainty);
+    ForecastEventCertainty Certainty,
+    bool IsTransfer);
 
 public enum ForecastEventCertainty
 {
@@ -71,6 +66,8 @@ public enum ForecastEventCertainty
     Estimated,   // occurrence ponctuelle ou montant variable estimé
 }
 ```
+
+`IsTransfer` (occurrence dont `DestinationAccountId` est renseigné, ou transaction dont `IsInternalTransfer` est vrai) exclut l'événement des totaux revenus/dépenses attendus sans l'exclure du calcul de solde — cf. §8.
 
 La V1 simplifie les quatre niveaux qualitatifs de l'ancien moteur de décision (`CONFIRMED / HIGHLY_LIKELY / ESTIMATED / UNKNOWN`) à trois : un usage strictement local et manuel ne justifie pas la granularité qu'imposait la diversité des connecteurs.
 
@@ -87,6 +84,8 @@ Règle de fin de mois inchangée : une occurrence prévue le 31 utilise le derni
 # 6. Montants variables
 
 Modes conservés, simplifiés : `FixedAmount`, `LastKnownAmount`, `RecentAverage` (3 ou 6 dernières occurrences rapprochées). Les modes `SeasonalAverage` et `ScheduledAmount` (liés à un échéancier de facture, donc au module Documents) sont retirés de la V1.
+
+**Statut d'implémentation** : `RecurringOperation` ne porte pour l'instant qu'un unique `ExpectedAmountMinor` fixe — les colonnes `amount_mode`/`estimation_mode` n'existent pas encore dans le schéma (`03-Modele_de_donnees.md`). `VariableAmountEstimator` est donc différé : l'ajouter maintenant produirait une classe sans donnée réelle à exploiter. À construire lorsque le besoin d'un montant variable se manifeste concrètement à l'usage, avec la migration de schéma correspondante.
 
 ---
 
@@ -124,14 +123,17 @@ Le moteur d'aide à la décision complet (règles financières, objectifs, compa
 
 ```text
 Forecast/
-├── ForecastCalculator.cs
+├── ForecastEvent.cs
 ├── ForecastEventBuilder.cs
+├── ForecastCalculator.cs
 ├── ForecastOccurrenceGenerator.cs
-├── VariableAmountEstimator.cs
-└── ReconciliationSuggester.cs
+├── ReconciliationSuggester.cs
+└── IsExternalInitPolyfill.cs
 ```
 
-Toutes ces classes sont pur C#, sans dépendance à `UnityEngine`, testables en Edit Mode exactement comme `ForecastCalculatorTest` l'était en PHPUnit.
+Toutes ces classes sont pur C#, sans dépendance à `UnityEngine` (`FinanceOS.Forecast.asmdef` a `noEngineReferences: true`, comme `FinanceOS.Domain`) — testables en Edit Mode exactement comme `ForecastCalculatorTest` l'était en PHPUnit. `VariableAmountEstimator` n'existe pas encore, cf. §6.
+
+`IsExternalInitPolyfill.cs` n'est pas une classe métier : c'est un correctif technique nécessaire pour utiliser des `record`/propriétés `init` (C# 9) sous le runtime scripting d'Unity, qui ne fournit pas le type marqueur correspondant — même famille de contrainte que `DateOnly` (cf. `09-Decisions_techniques.md`, ADR-110 et ADR-111).
 
 ---
 

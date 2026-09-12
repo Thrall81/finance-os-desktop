@@ -4,7 +4,8 @@
     "references": [
         "FinanceOS.Domain",
         "FinanceOS.App",
-        "FinanceOS.Data"
+        "FinanceOS.Data",
+        "FinanceOS.Forecast"
     ],
     "includePlatforms": [
         "Editor"

@@ -75,7 +75,7 @@ namespace FinanceOS.Domain
             DestinationAccountId = destinationAccountId;
             CategoryId = categoryId;
             CounterpartyId = counterpartyId;
-            ExpectedAmountMinor = expectedAmountMinor;
+            ExpectedAmountMinor = NormalizeAmountSign(type, expectedAmountMinor);
             Frequency = frequency;
             IntervalValue = intervalValue;
             StartDate = startDate;
@@ -178,8 +178,18 @@ namespace FinanceOS.Domain
 
         public void UpdateExpectedAmount(long expectedAmountMinor, DateTimeOffset? now = null)
         {
-            ExpectedAmountMinor = expectedAmountMinor;
+            ExpectedAmountMinor = NormalizeAmountSign(Type, expectedAmountMinor);
             Touch(now);
+        }
+
+        /// <summary>The caller may pass either sign (a form typically lets the user enter a plain
+        /// magnitude) — the type alone decides the stored sign: positive for income, negative for
+        /// an expense or a transfer (which always reduces the source account).
+        /// See docs/03-Modele_de_donnees.md §2.4.</summary>
+        private static long NormalizeAmountSign(RecurringOperationType type, long amountMinor)
+        {
+            var magnitude = Math.Abs(amountMinor);
+            return type == RecurringOperationType.Income ? magnitude : -magnitude;
         }
 
         public void UpdateTolerances(int dateToleranceDays, long amountToleranceMinor, DateTimeOffset? now = null)
