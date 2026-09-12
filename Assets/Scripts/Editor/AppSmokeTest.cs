@@ -1,0 +1,128 @@
+using System;
+using System.IO;
+using System.Linq;
+using FinanceOS.App;
+using FinanceOS.Domain;
+using UnityEditor;
+using UnityEngine;
+
+namespace FinanceOS.EditorTools
+{
+    /// <summary>
+    /// Manual, batchmode-runnable proof that the App layer correctly orchestrates Domain, Data
+    /// and Forecast together through AppContainer — end to end, the way UI eventually will.
+    /// Ahead of the proper EditMode test suite.
+    /// </summary>
+    internal static class AppSmokeTest
+    {
+        [MenuItem("Finance OS/Run App Smoke Test")]
+        public static void Run()
+        {
+            var tempPath = Path.Combine(Path.GetTempPath(), $"financeos-app-smoke-{Guid.NewGuid():N}.db");
+
+            RunAgainst(tempPath);
+            TryDeleteQuietly(tempPath);
+        }
+
+        private static void TryDeleteQuietly(string path)
+        {
+            try
+            {
+                if (File.Exists(path))
+                {
+                    File.Delete(path);
+                }
+            }
+            catch (IOException)
+            {
+                Debug.LogWarning($"[AppSmokeTest] Could not delete temp file (harmless): {path}");
+            }
+        }
+
+        private static void RunAgainst(string tempPath)
+        {
+            using var app = new AppContainer(tempPath);
+
+            app.Categories.SeedDefaultCategoriesIfEmpty();
+            Check(app.Categories.ListActive().Count == 10, "ten default categories seeded");
+            app.Categories.SeedDefaultCategoriesIfEmpty();
+            Check(app.Categories.ListActive().Count == 10, "seeding twice does not duplicate");
+
+            var housing = app.Categories.ListActive().First(c => c.Name == "Logement");
+            var current = app.Accounts.CreateAccount("Compte courant", AccountType.Current, "EUR", 150_000);
+            var savings = app.Accounts.CreateAccount("Livret A", AccountType.Savings, "EUR", 300_000);
+            app.Accounts.RecordOfficialBalance(current.Id, 150_000, new DateTime(2026, 9, 1));
+            app.Accounts.RecordOfficialBalance(savings.Id, 300_000, new DateTime(2026, 9, 1));
+
+            // Dated in August, strictly before the account's balance reference date of Sept 1st,
+            // so it seeds the label-memory suggestion below without also landing in the
+            // September forecast window and double-counting rent alongside the occurrence
+            // confirmed later.
+            var firstRent = app.Transactions.CreateManual(
+                current.Id, -65_000, "EUR", new DateTime(2026, 8, 5), "PRLV SEPA PROPRIETAIRE", categoryId: housing.Id);
+            app.Transactions.AssignCategory(firstRent.Id, housing.Id, normalizedLabel: "Loyer");
+
+            var suggested = app.Transactions.SuggestCategoryForLabel("Loyer");
+            Check(suggested == housing.Id, "label-memory suggests the previously used category");
+
+            var rent = app.RecurringOperations.Create(
+                "Loyer", RecurringOperationType.Expense, 65_000, RecurringFrequency.Monthly,
+                new DateTime(2026, 1, 5), sourceAccountId: current.Id, categoryId: housing.Id, expectedDayOfMonth: 5);
+
+            var generated = app.RecurringOperations.GenerateOccurrences(rent.Id, new DateTime(2026, 9, 1), new DateTime(2026, 11, 30));
+            Check(generated.Select(o => o.ExpectedDate).SequenceEqual(new[]
+            {
+                new DateTime(2026, 9, 5), new DateTime(2026, 10, 5), new DateTime(2026, 11, 5),
+            }), "three monthly occurrences generated");
+
+            var regenerated = app.RecurringOperations.GenerateOccurrences(rent.Id, new DateTime(2026, 9, 1), new DateTime(2026, 11, 30));
+            Check(regenerated.Count == 0, "regenerating the same window is a no-op");
+
+            var due = app.ForecastOccurrences.ListDueForVerification(new DateTime(2026, 9, 13));
+            Check(due.Count == 1 && due[0].ExpectedDate == new DateTime(2026, 9, 5), "September occurrence is due for verification");
+
+            var confirmedTransaction = app.ForecastOccurrences.ConfirmAsTransaction(due[0].Id, new DateTime(2026, 9, 5), -65_000);
+            Check(confirmedTransaction.Id != 0, "confirming the occurrence created a real transaction");
+            Check(app.ForecastOccurrences.ListDueForVerification(new DateTime(2026, 9, 13)).Count == 0,
+                "confirmed occurrence leaves the verification queue");
+
+            var transferLink = app.InternalTransfers.CreateTransfer(
+                current.Id, savings.Id, 20_000, "EUR", new DateTime(2026, 9, 10), "Virement épargne");
+            Check(transferLink.Status == TransferLinkStatus.Confirmed, "internal transfer is confirmed immediately");
+
+            var forecast = app.Forecast.GetForecast(current.Id, new DateTime(2026, 9, 1), new DateTime(2026, 9, 30), new DateTime(2026, 9, 13));
+            // 150 000 - 65 000 (September rent, now a real confirmed transaction) - 20 000 (transfer out).
+            // October and November's occurrences fall outside this window and are not counted.
+            Check(forecast.ClosingBalanceMinor == 65_000, "forecast reflects the real rent payment and the transfer out (150000-65000-20000)");
+
+            var simulated = app.Forecast.Simulate(
+                current.Id, new DateTime(2026, 9, 1), new DateTime(2026, 9, 30), new DateTime(2026, 9, 13),
+                "Achat ordinateur", new DateTime(2026, 9, 20), -85_000);
+            Check(simulated.ClosingBalanceMinor == -20_000, "simulation reflects the extra purchase without persisting it");
+            Check(app.Forecast.GetForecast(current.Id, new DateTime(2026, 9, 1), new DateTime(2026, 9, 30), new DateTime(2026, 9, 13))
+                .ClosingBalanceMinor == 65_000, "simulation left no trace in the real forecast");
+
+            var budget = app.Budget.GetOrCreate(2026, 9);
+            app.Budget.UpsertAllocation(budget.Id, housing.Id, 70_000);
+            var summary = app.Budget.GetSummary(budget.Id).Single();
+            Check(summary.PlannedAmountMinor == 70_000, "budget planned amount");
+            Check(summary.ActualAmountMinor == 65_000, "budget actual amount excludes the internal transfer, includes the rent");
+            Check(summary.RemainingAmountMinor == 5_000, "budget remaining = 70000 - 65000");
+
+            var settings = app.Settings.Get();
+            Check(settings.ForecastHorizonDays == 90, "default forecast horizon");
+            app.Settings.UpdateForecastHorizon(60);
+            Check(app.Settings.Get().ForecastHorizonDays == 60, "forecast horizon persisted through the service");
+
+            Debug.Log($"[AppSmokeTest] OK — every App-layer service round-trips correctly through AppContainer. File: {tempPath}");
+        }
+
+        private static void Check(bool condition, string what)
+        {
+            if (!condition)
+            {
+                throw new InvalidOperationException($"App smoke test assertion failed: {what}.");
+            }
+        }
+    }
+}

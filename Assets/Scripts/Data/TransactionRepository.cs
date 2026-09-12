@@ -112,6 +112,21 @@ namespace FinanceOS.Data
                 .Select(Map)
                 .ToList();
 
+        /// <summary>The category last used for this exact normalized label — the whole
+        /// mechanism behind "catégorisation assistée". See docs/03-Modele_de_donnees.md §6bis.</summary>
+        public int? FindLastCategoryForLabel(string normalizedLabel) => _connection.ExecuteScalar<int?>(
+            "SELECT category_id FROM transaction_entry WHERE normalized_label = ? ORDER BY operation_date DESC LIMIT 1",
+            normalizedLabel);
+
+        /// <summary>Transactions across every account within a period — a budget is user-wide,
+        /// not account-scoped. See docs/03-Modele_de_donnees.md §18.</summary>
+        public IReadOnlyList<Transaction> ListForPeriod(DateTime from, DateTime to) =>
+            _connection.Query<TransactionRow>(
+                    $"{SelectColumns} WHERE operation_date BETWEEN ? AND ? ORDER BY operation_date",
+                    from.ToStorageString(), to.ToStorageString())
+                .Select(Map)
+                .ToList();
+
         private static Transaction Map(TransactionRow row) => Transaction.FromStorage(
             row.Id,
             row.AccountId,

@@ -111,6 +111,16 @@ namespace FinanceOS.Data
                 .Select(Map)
                 .ToList();
 
+        /// <summary>Unresolved occurrences across every account within a period — a budget is
+        /// user-wide, not account-scoped. Matched/cancelled/ignored ones are excluded: they will
+        /// never happen as a future movement. See docs/03-Modele_de_donnees.md §18.</summary>
+        public IReadOnlyList<ForecastOccurrence> ListForPeriod(DateTime from, DateTime to) =>
+            _connection.Query<ForecastOccurrenceRow>(
+                    $"{SelectColumns} WHERE status IN ('planned', 'missed') AND expected_date BETWEEN ? AND ? ORDER BY expected_date",
+                    from.ToStorageString(), to.ToStorageString())
+                .Select(Map)
+                .ToList();
+
         /// <summary>Existing occurrences for one recurring operation in a date range — used by the
         /// (future) generator to stay idempotent. See docs/06-Moteur_de_prevision.md §5.</summary>
         public IReadOnlyList<ForecastOccurrence> ListForRecurringOperation(int recurringOperationId, DateTime from, DateTime to) =>

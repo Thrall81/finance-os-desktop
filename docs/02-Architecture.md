@@ -59,18 +59,21 @@ Contrôleurs qui lient les `VisualElement` (UI Toolkit) aux services applicatifs
 
 # 4. Composition et démarrage
 
-Pas de framework d'injection de dépendances. Un unique point d'entrée (`AppBootstrap`, `MonoBehaviour` attaché à un objet de la scène `Main.unity`) construit explicitement le graphe d'objets au lancement :
+Pas de framework d'injection de dépendances. La construction du graphe d'objets est scindée en deux, pour rester testable sans passer par le cycle de vie Unity :
 
 ```text
-AppBootstrap
-  → ouvre/crée le fichier SQLite (Data.Database)
+AppContainer (classe C# simple, App)
+  → ouvre/crée le fichier SQLite (AppDatabase)
   → applique les migrations en attente
   → instancie les repositories
   → instancie les services applicatifs (App)
-  → instancie le contrôleur racine de navigation (UI)
+
+AppBootstrap (MonoBehaviour, attaché à un objet de la scène Main.unity — pas encore créé)
+  → Awake() construit un AppContainer
+  → instancie le contrôleur racine de navigation (UI) à partir de ses services
 ```
 
-Cette construction manuelle reste lisible tant que le nombre de services est raisonnable (quelques dizaines). Un conteneur DI (VContainer) ne sera introduit que si ce fichier devient réellement difficile à maintenir — pas par anticipation.
+`AppContainer` ne dépend d'aucune classe `UnityEngine` dans sa propre logique de composition (il utilise `AppDatabase`, lui-même autorisé à référencer Unity pour la résolution de chemin) et s'instancie directement avec `new` dans un test, ce qu'un `MonoBehaviour` ne permet pas. Cette construction manuelle reste lisible tant que le nombre de services est raisonnable (quelques dizaines). Un conteneur DI (VContainer) ne sera introduit que si ce fichier devient réellement difficile à maintenir — pas par anticipation.
 
 ---
 
