@@ -30,6 +30,7 @@ Journal des décisions structurantes, dans le même format que l'ancien projet (
 | ADR-114 | Éviter les membres .NET Standard 2.1 (ex. `Dictionary.GetValueOrDefault`) dans `FinanceOS.UI` | ACCEPTED |
 | ADR-115 | Définition retenue pour « reste à vivre » et « taux d'épargne du mois » | ACCEPTED |
 | ADR-116 | Corrections de mise en page trouvées uniquement via captures d'écran réelles | ACCEPTED |
+| ADR-117 | Défilement de page sur les 7 écrans ; repli de la section Simulation | ACCEPTED |
 
 ---
 
@@ -252,3 +253,21 @@ Journal des décisions structurantes, dans le même format que l'ancien projet (
 **Conditions de réévaluation** : mêmes conditions qu'ADR-112. Le schéma « boîte trop courte pour son propre contenu textuel » s'étant maintenant répété sur six éléments distincts (`.kpi-card`, `.form-row`, `.card-header`, `.page-header`, `.kpi-context`/`.kpi-value`, et indirectement le réemploi de `.page-subtitle`), il est probable que d'autres éléments non encore repérés dans ce fichier partagent le même défaut — traiter tout nouveau signalement de chevauchement de texte comme une instance de plus de ce même schéma, pas un cas isolé.
 
 **Documents concernés** : aucun autre — plusieurs petits correctifs de code/USS, déjà répercutés dans `Assets/UI/USS/theme.uss` et les contrôleurs concernés.
+
+---
+
+# 19. ADR-117 — Défilement de page et repli de la section Simulation
+
+**Contexte** : après plusieurs itérations de l'ADR-116 à ajuster des marges sur l'écran Prévisions, l'utilisateur a reformulé le vrai problème : ce n'était pas (seulement) des marges mal réglées, c'était trop d'information pour un seul écran — six cartes empilées (synthèse, vérification, occurrences, journal, simulation) sans défilement de page (seuls les tableaux internes défilaient), ce qui rendait chaque petit défaut de marge disproportionnellement visible.
+
+**Décision** :
+1. **Défilement de page sur les sept écrans**, pas seulement Prévisions — la zone de contenu de chaque écran (`X-root`) passe de `ui:VisualElement` à `ui:ScrollView` (`mode="Vertical"`), même classe `page` conservée. Défaut structurel partagé par toute l'application (aucun écran n'avait de défilement de page), pas seulement un correctif pour Prévisions — un écran pourrait dépasser la hauteur de fenêtre sur n'importe quel autre écran au fur et à mesure que son contenu grandit.
+2. **Section Simulation repliée par défaut** sur Prévisions — remplacée par un bouton « Simuler un scénario » dans l'en-tête de carte, qui affiche le formulaire au clic (`ForecastsController.ToggleSimulationBody`). La doc regroupe explicitement la simulation dans l'écran Prévisions (`01-Perimetre.md`/`07-Interface.md` §3) plutôt que comme écran séparé — un nouvel écran de navigation aurait cassé ce regroupement documenté ; le repli garde tout sur un seul écran sans l'imposer par défaut.
+
+**Découverte empirique en cours de route** : le premier test écrit pour vérifier que la section est repliée par défaut a échoué — `simulation-body` avait `style="display: none;"` en UXML mais son `.style.display` ne valait pas `DisplayStyle.None` une fois l'arbre instancié hors d'un panel réel. Tous les autres éléments « cachés par défaut » de l'application ont toujours leur affichage fixé explicitement par du code C# (typiquement dans `Refresh()`), jamais laissé au seul style UXML — ce cas est le premier à s'appuyer uniquement sur l'attribut UXML, et c'est celui qui a révélé que ça ne suffit pas de façon fiable sans panel réel. Corrigé en fixant `_simulationBody.style.display = DisplayStyle.None;` explicitement dans le constructeur du contrôleur, comme partout ailleurs. Même famille de limitation que ADR-112/ADR-113 (rien de fiable sans panel réel attaché) — retenir la règle générale : ne jamais compter sur un `style="display: none;"` UXML seul pour l'état initial d'un élément dont le contrôleur gère ensuite la visibilité ; le fixer aussi explicitement en C#.
+
+**Conséquences négatives** : le Journal des mouvements prévus reste une carte lourde (tableau + légende) non repliée — si la densité reste un problème une fois un compte réel utilisé au quotidien, il recevra probablement le même traitement.
+
+**Conditions de réévaluation** : si un écran continue de sembler surchargé malgré le défilement de page, envisager de replier d'autres sections secondaires plutôt que d'ajouter encore des ajustements de marge.
+
+**Documents concernés** : `07-Interface.md` §2/§3.

@@ -1,6 +1,6 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="False">
   <Style src="../USS/theme.uss" />
-  <ui:VisualElement name="transactions-root" class="page">
+  <ui:ScrollView name="transactions-root" class="page" mode="Vertical">
     <ui:VisualElement class="page-header accounts-header">
       <ui:VisualElement>
         <ui:Label text="Transactions" class="page-title" />
@@ -99,5 +99,5 @@
       <ui:Label name="transactions-empty" text="Aucune transaction pour l'instant." class="empty-state" />
       <ui:MultiColumnListView name="transactions-list-view" class="transactions-table" style="display: none;" />
     </ui:VisualElement>
-  </ui:VisualElement>
+  </ui:ScrollView>
 </ui:UXML>

@@ -1,6 +1,6 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="False">
   <Style src="../USS/theme.uss" />
-  <ui:VisualElement name="dashboard-root" class="page">
+  <ui:ScrollView name="dashboard-root" class="page" mode="Vertical">
     <ui:VisualElement name="dashboard-header" class="page-header">
       <ui:VisualElement>
         <ui:Label text="Tableau de bord" class="page-title" />
@@ -32,5 +32,5 @@
       <ui:Label name="verification-empty" text="Rien à vérifier pour l'instant." class="empty-state" />
       <ui:VisualElement name="verification-list" class="list" />
     </ui:VisualElement>
-  </ui:VisualElement>
+  </ui:ScrollView>
 </ui:UXML>

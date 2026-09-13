@@ -1,6 +1,6 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="False">
   <Style src="../USS/theme.uss" />
-  <ui:VisualElement name="settings-root" class="page">
+  <ui:ScrollView name="settings-root" class="page" mode="Vertical">
     <ui:VisualElement class="page-header">
       <ui:VisualElement>
         <ui:Label text="Paramètres" class="page-title" />
@@ -68,5 +68,5 @@
         <ui:Label name="backup-result-label" text="" class="empty-state" style="display: none;" />
       </ui:VisualElement>
     </ui:VisualElement>
-  </ui:VisualElement>
+  </ui:ScrollView>
 </ui:UXML>

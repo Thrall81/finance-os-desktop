@@ -1,6 +1,6 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="False">
   <Style src="../USS/theme.uss" />
-  <ui:VisualElement name="recurring-operations-root" class="page">
+  <ui:ScrollView name="recurring-operations-root" class="page" mode="Vertical">
     <ui:VisualElement class="page-header accounts-header">
       <ui:VisualElement>
         <ui:Label text="Opérations récurrentes" class="page-title" />
@@ -103,5 +103,5 @@
       <ui:Label name="operations-empty" text="Aucune opération récurrente pour l'instant." class="empty-state" />
       <ui:MultiColumnListView name="operations-list-view" class="transactions-table" style="display: none;" />
     </ui:VisualElement>
-  </ui:VisualElement>
+  </ui:ScrollView>
 </ui:UXML>

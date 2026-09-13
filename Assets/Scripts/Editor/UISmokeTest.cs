@@ -275,6 +275,9 @@ namespace FinanceOS.EditorTools
             Check(forecastVerificationList.childCount == forecastsViewModel.VerificationQueue.Count, "verification queue rows rendered");
             Check(forecastsRoot.Q<Label>("verification-count").text == forecastsViewModel.VerificationQueue.Count.ToString(), "verification badge count bound");
 
+            Check(forecastsRoot.Q<VisualElement>("simulation-body").style.display == DisplayStyle.None, "simulation body collapsed by default");
+            Check(forecastsRoot.Q<Button>("simulation-toggle-button").text == "Simuler un scénario", "simulation toggle shows its initial label");
+
             forecastsController.Refresh();
             Check(forecastOccurrencesListView.itemsSource.Count == forecastsViewModel.Occurrences.Count, "refresh re-renders without duplication");
 

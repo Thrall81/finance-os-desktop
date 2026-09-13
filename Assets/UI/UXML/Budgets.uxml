@@ -1,6 +1,6 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="False">
   <Style src="../USS/theme.uss" />
-  <ui:VisualElement name="budgets-root" class="page">
+  <ui:ScrollView name="budgets-root" class="page" mode="Vertical">
     <ui:VisualElement class="page-header accounts-header">
       <ui:VisualElement>
         <ui:Label text="Budget" class="page-title" />
@@ -86,5 +86,5 @@
         </ui:VisualElement>
       </ui:VisualElement>
     </ui:VisualElement>
-  </ui:VisualElement>
+  </ui:ScrollView>
 </ui:UXML>

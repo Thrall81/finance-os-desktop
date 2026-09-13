@@ -47,6 +47,8 @@ namespace FinanceOS.UI
         private readonly Label _timelineEmptyLabel;
         private readonly MultiColumnListView _timelineListView;
 
+        private readonly Button _simulationToggleButton;
+        private readonly VisualElement _simulationBody;
         private readonly TextField _simulationLabelField;
         private readonly DropdownField _simulationTypeField;
         private readonly TextField _simulationAmountField;
@@ -68,6 +70,7 @@ namespace FinanceOS.UI
         private int? _selectedAccountId;
         private int? _confirmingOccurrenceId;
         private bool _confirmingIsNegative;
+        private bool _simulationExpanded;
 
         public ForecastsController(VisualElement root, AppContainer app)
         {
@@ -101,6 +104,13 @@ namespace FinanceOS.UI
             _timelineEmptyLabel = root.Q<Label>("timeline-empty");
             _timelineListView = root.Q<MultiColumnListView>("timeline-list-view");
 
+            _simulationToggleButton = root.Q<Button>("simulation-toggle-button");
+            _simulationBody = root.Q<VisualElement>("simulation-body");
+            // Set explicitly rather than relying on the UXML inline style alone — confirmed
+            // empirically that a bare "style=display:none" in UXML does not reliably populate
+            // .style.display on a tree that was never attached to a live panel (every other
+            // hidden-by-default element in this app is already set this way by its controller).
+            _simulationBody.style.display = DisplayStyle.None;
             _simulationLabelField = root.Q<TextField>("simulation-label");
             _simulationTypeField = root.Q<DropdownField>("simulation-type");
             _simulationAmountField = root.Q<TextField>("simulation-amount");
@@ -124,6 +134,7 @@ namespace FinanceOS.UI
             _accountField.RegisterValueChangedCallback(_ => OnAccountChanged());
             _confirmCancelButton.clicked += CloseConfirmForm;
             _confirmSubmitButton.clicked += SubmitConfirm;
+            _simulationToggleButton.clicked += ToggleSimulationBody;
             _simulationRunButton.clicked += RunSimulation;
             _simulationResetButton.clicked += () => _simulationResultCard.style.display = DisplayStyle.None;
 
@@ -404,6 +415,15 @@ namespace FinanceOS.UI
             _selectedAccountId = _accountOptions[index].Id;
             CloseConfirmForm();
             Refresh();
+        }
+
+        /// <summary>Collapsed by default — this screen already stacks five other cards, and the
+        /// simulation is the one section nobody needs on every visit. See docs/07-Interface.md §3.</summary>
+        private void ToggleSimulationBody()
+        {
+            _simulationExpanded = !_simulationExpanded;
+            _simulationBody.style.display = _simulationExpanded ? DisplayStyle.Flex : DisplayStyle.None;
+            _simulationToggleButton.text = _simulationExpanded ? "Masquer" : "Simuler un scénario";
         }
 
         private void RunSimulation()

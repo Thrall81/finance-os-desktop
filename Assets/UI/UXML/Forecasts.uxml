@@ -1,6 +1,6 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="False">
   <Style src="../USS/theme.uss" />
-  <ui:VisualElement name="forecasts-root" class="page">
+  <ui:ScrollView name="forecasts-root" class="page" mode="Vertical">
     <ui:VisualElement class="page-header accounts-header">
       <ui:VisualElement>
         <ui:Label text="Prévisions" class="page-title" />
@@ -90,53 +90,56 @@
     <ui:VisualElement name="simulation-card" class="card">
       <ui:VisualElement class="card-header">
         <ui:Label text="Simulation — « Et si ? »" class="card-title" />
+        <ui:Button name="simulation-toggle-button" text="Simuler un scénario" class="secondary-button" />
       </ui:VisualElement>
       <ui:Label text="Jamais enregistré : une projection à titre indicatif, écartée dès que vous quittez cet écran." class="card-caption" />
 
-      <ui:VisualElement class="form-row">
-        <ui:Label text="Libellé" class="form-label" />
-        <ui:TextField name="simulation-label" class="form-field" />
-      </ui:VisualElement>
-      <ui:VisualElement class="form-row">
-        <ui:Label text="Type" class="form-label" />
-        <ui:DropdownField name="simulation-type" class="form-field" />
-      </ui:VisualElement>
-      <ui:VisualElement class="form-row">
-        <ui:Label text="Montant (€)" class="form-label" />
-        <ui:TextField name="simulation-amount" class="form-field" />
-      </ui:VisualElement>
-      <ui:VisualElement class="form-row">
-        <ui:Label text="Date" class="form-label" />
-        <ui:TextField name="simulation-date" class="form-field" />
-      </ui:VisualElement>
-      <ui:VisualElement class="form-row">
-        <ui:Label text="Catégorie (facultatif)" class="form-label" />
-        <ui:DropdownField name="simulation-category" class="form-field" />
-      </ui:VisualElement>
-
-      <ui:Label name="simulation-error" text="" class="form-error" style="display: none;" />
-
-      <ui:VisualElement class="form-actions">
-        <ui:Button name="simulation-run-button" text="Simuler" class="primary-button" />
-      </ui:VisualElement>
-
-      <ui:VisualElement name="simulation-result-card" class="card form-card" style="display: none;">
-        <ui:Label text="Résultat de la simulation" class="card-title" />
-        <ui:VisualElement class="kpi-row">
-          <ui:VisualElement class="kpi-card">
-            <ui:Label text="Solde prévu (fin d'horizon)" class="kpi-label" />
-            <ui:Label name="simulation-result-projected" text="—" class="kpi-value" />
-          </ui:VisualElement>
-          <ui:VisualElement class="kpi-card">
-            <ui:Label text="Point bas prévisionnel" class="kpi-label" />
-            <ui:Label name="simulation-result-lowest" text="—" class="kpi-value" />
-            <ui:Label name="simulation-result-lowest-date" text="—" class="kpi-context" />
-          </ui:VisualElement>
+      <ui:VisualElement name="simulation-body" style="display: none;">
+        <ui:VisualElement class="form-row">
+          <ui:Label text="Libellé" class="form-label" />
+          <ui:TextField name="simulation-label" class="form-field" />
         </ui:VisualElement>
+        <ui:VisualElement class="form-row">
+          <ui:Label text="Type" class="form-label" />
+          <ui:DropdownField name="simulation-type" class="form-field" />
+        </ui:VisualElement>
+        <ui:VisualElement class="form-row">
+          <ui:Label text="Montant (€)" class="form-label" />
+          <ui:TextField name="simulation-amount" class="form-field" />
+        </ui:VisualElement>
+        <ui:VisualElement class="form-row">
+          <ui:Label text="Date" class="form-label" />
+          <ui:TextField name="simulation-date" class="form-field" />
+        </ui:VisualElement>
+        <ui:VisualElement class="form-row">
+          <ui:Label text="Catégorie (facultatif)" class="form-label" />
+          <ui:DropdownField name="simulation-category" class="form-field" />
+        </ui:VisualElement>
+
+        <ui:Label name="simulation-error" text="" class="form-error" style="display: none;" />
+
         <ui:VisualElement class="form-actions">
-          <ui:Button name="simulation-reset-button" text="Réinitialiser" class="secondary-button" />
+          <ui:Button name="simulation-run-button" text="Simuler" class="primary-button" />
+        </ui:VisualElement>
+
+        <ui:VisualElement name="simulation-result-card" class="card form-card" style="display: none;">
+          <ui:Label text="Résultat de la simulation" class="card-title" />
+          <ui:VisualElement class="kpi-row">
+            <ui:VisualElement class="kpi-card">
+              <ui:Label text="Solde prévu (fin d'horizon)" class="kpi-label" />
+              <ui:Label name="simulation-result-projected" text="—" class="kpi-value" />
+            </ui:VisualElement>
+            <ui:VisualElement class="kpi-card">
+              <ui:Label text="Point bas prévisionnel" class="kpi-label" />
+              <ui:Label name="simulation-result-lowest" text="—" class="kpi-value" />
+              <ui:Label name="simulation-result-lowest-date" text="—" class="kpi-context" />
+            </ui:VisualElement>
+          </ui:VisualElement>
+          <ui:VisualElement class="form-actions">
+            <ui:Button name="simulation-reset-button" text="Réinitialiser" class="secondary-button" />
+          </ui:VisualElement>
         </ui:VisualElement>
       </ui:VisualElement>
     </ui:VisualElement>
-  </ui:VisualElement>
+  </ui:ScrollView>
 </ui:UXML>

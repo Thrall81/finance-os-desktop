@@ -1,6 +1,6 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="False">
   <Style src="../USS/theme.uss" />
-  <ui:VisualElement name="accounts-root" class="page">
+  <ui:ScrollView name="accounts-root" class="page" mode="Vertical">
     <ui:VisualElement class="page-header accounts-header">
       <ui:VisualElement>
         <ui:Label text="Comptes" class="page-title" />
@@ -53,5 +53,5 @@
       <ui:Label name="accounts-empty" text="Aucun compte pour l'instant." class="empty-state" />
       <ui:VisualElement name="accounts-list" class="list" />
     </ui:VisualElement>
-  </ui:VisualElement>
+  </ui:ScrollView>
 </ui:UXML>
