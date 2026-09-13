@@ -167,6 +167,20 @@ public sealed class LineChartElement : VisualElement
 
 ---
 
+# 8bis. Typographie
+
+Identité retenue depuis la maquette (`docs/mockups/dashboard.html`), maintenant vendorisée et appliquée dans `Assets/UI/USS/theme.uss` :
+
+- **Spectral** (empattements) pour la marque (« Finance OS » dans la barre latérale) et tous les titres — de page (`.page-title`) et de carte (`.card-title`) ;
+- **IBM Plex Sans** pour le reste de l'interface — c'est la police de base, posée une seule fois sur `.shell-root` et héritée partout où rien d'autre n'est précisé ;
+- **IBM Plex Mono** pour tout affichage de montant ou de date — jamais pour un champ de saisie libre (`.form-field` reste en Plex Sans, seul l'affichage l'exige, pas la frappe) : chiffres de KPI, montants et dates en tableau ou en liste, contexte de date sous un KPI.
+
+Fichiers statiques uniquement (jamais de police variable) — voir `09-Decisions_techniques.md` ADR-118 pour pourquoi, et `Assets/Fonts/THIRD-PARTY-NOTICES.md` pour la provenance et les licences (SIL OFL 1.1 pour les trois familles). Chaque règle USS qui a besoin d'un poids précis pointe directement le fichier correspondant (`-unity-font-definition: url("../../Fonts/...")`) plutôt que de simuler un gras avec `-unity-font-style: bold` à partir d'un fichier Regular.
+
+**Simplification assumée** : `.form-readonly-value` (valeurs en lecture seule dans les formulaires d'édition) reste en Plex Sans partout, y compris quand elle affiche un montant ou une date — cette classe sert aussi bien à afficher un nom de compte ou de catégorie, et la distinguer selon le contenu affiché aurait demandé une classe par contexte pour un gain visuel mineur à ce stade.
+
+---
+
 # 9. Formulaires
 
 Reactive-style : validation locale immédiate (UI Toolkit `INotifyValueChanged` + validation C#), bouton de soumission désactivé pendant le traitement, erreurs affichées près du champ concerné. Montants saisis par l'utilisateur en euros, convertis en centimes avant d'atteindre la couche `App`.

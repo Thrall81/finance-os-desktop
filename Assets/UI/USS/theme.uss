@@ -1,5 +1,9 @@
 /* Design tokens. Light theme only for this first pass — see docs/07-Interface.md.
-   No custom font yet: Unity's default runtime font until a real typeface is vendored in. */
+   Typography: Spectral for the wordmark and every heading (page/card title), IBM Plex Sans for
+   the rest of the interface (the base font, set once on .shell-root and inherited), IBM Plex
+   Mono for every money/date display — see docs/07-Interface.md §8bis and
+   Assets/Fonts/THIRD-PARTY-NOTICES.md for provenance. Real Bold files are used directly wherever
+   one is vendored (never -unity-font-style: bold to synthesize it from a Regular file). */
 
 .shell-root {
     --color-bg: #F5F4EE;
@@ -16,6 +20,7 @@
     flex-grow: 1;
     flex-direction: row;
     background-color: var(--color-bg);
+    -unity-font-definition: url("../../Fonts/IBMPlexSans-Regular.ttf");
 }
 
 .sidebar {
@@ -29,7 +34,7 @@
 
 .sidebar-title {
     font-size: 16px;
-    -unity-font-style: bold;
+    -unity-font-definition: url("../../Fonts/Spectral-Bold.ttf");
     color: var(--color-ink-900);
     margin-bottom: 18px;
     margin-left: 6px;
@@ -57,7 +62,7 @@
 .nav-item-active {
     background-color: var(--color-gold-soft);
     color: var(--color-gold);
-    -unity-font-style: bold;
+    -unity-font-definition: url("../../Fonts/IBMPlexSans-Bold.ttf");
 }
 
 .content-area {
@@ -76,7 +81,7 @@
 
 .page-title {
     font-size: 22px;
-    -unity-font-style: bold;
+    -unity-font-definition: url("../../Fonts/Spectral-Bold.ttf");
     color: var(--color-ink-900);
 }
 
@@ -117,7 +122,7 @@
 
 .kpi-value {
     font-size: 22px;
-    -unity-font-style: bold;
+    -unity-font-definition: url("../../Fonts/IBMPlexMono-Bold.ttf");
     color: var(--color-ink-900);
     margin-bottom: 4px;
 }
@@ -126,6 +131,7 @@
     font-size: 11px;
     color: var(--color-ink-400);
     margin-top: 10px;
+    -unity-font-definition: url("../../Fonts/IBMPlexMono-Regular.ttf");
 }
 
 .card {
@@ -146,7 +152,7 @@
 
 .card-title {
     font-size: 15px;
-    -unity-font-style: bold;
+    -unity-font-definition: url("../../Fonts/Spectral-Bold.ttf");
     color: var(--color-ink-900);
 }
 
@@ -195,12 +201,14 @@
     font-size: 11px;
     color: var(--color-ink-400);
     margin-top: 2px;
+    -unity-font-definition: url("../../Fonts/IBMPlexMono-Regular.ttf");
 }
 
 .verification-row-amount {
     font-size: 13px;
     color: var(--color-ink-900);
     -unity-text-align: middle-right;
+    -unity-font-definition: url("../../Fonts/IBMPlexMono-Regular.ttf");
 }
 
 .accounts-header {
@@ -300,6 +308,7 @@
     font-size: 13px;
     color: var(--color-ink-900);
     -unity-text-align: middle-right;
+    -unity-font-definition: url("../../Fonts/IBMPlexMono-Regular.ttf");
 }
 
 .account-row-archived {
@@ -350,4 +359,11 @@
 
 .amount-negative {
     color: var(--color-danger);
+}
+
+/* Table date cells have no other dedicated class (unlike amount cells, which already reuse
+   .account-row-balance) — applied directly in C# wherever a MultiColumnListView builds a date
+   column. */
+.cell-mono {
+    -unity-font-definition: url("../../Fonts/IBMPlexMono-Regular.ttf");
 }

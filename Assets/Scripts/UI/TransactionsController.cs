@@ -150,7 +150,7 @@ namespace FinanceOS.UI
 
         private void SetupColumns()
         {
-            _listView.columns.Add(BuildColumn("date", "Date", r => r.DateText, width: 90, minWidth: 80));
+            _listView.columns.Add(BuildColumn("date", "Date", r => r.DateText, width: 90, minWidth: 80, mono: true));
             _listView.columns.Add(BuildColumn("account", "Compte", r => r.AccountName, width: 130, minWidth: 100));
             _listView.columns.Add(BuildColumn("label", "Libellé", r => r.Label, width: 220, minWidth: 120, stretchable: true));
             _listView.columns.Add(BuildColumn("category", "Catégorie", r => r.CategoryText, width: 130, minWidth: 100));
@@ -161,7 +161,7 @@ namespace FinanceOS.UI
 
         private Column BuildColumn(
             string name, string title, Func<TransactionRowViewModel, string> textSelector,
-            float width, float minWidth, bool alignRight = false, bool stretchable = false)
+            float width, float minWidth, bool alignRight = false, bool stretchable = false, bool mono = false)
         {
             return new Column
             {
@@ -176,6 +176,11 @@ namespace FinanceOS.UI
                     if (alignRight)
                     {
                         label.AddToClassList("account-row-balance");
+                    }
+
+                    if (mono)
+                    {
+                        label.AddToClassList("cell-mono");
                     }
 
                     return label;

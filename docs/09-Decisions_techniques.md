@@ -31,6 +31,7 @@ Journal des décisions structurantes, dans le même format que l'ancien projet (
 | ADR-115 | Définition retenue pour « reste à vivre » et « taux d'épargne du mois » | ACCEPTED |
 | ADR-116 | Corrections de mise en page trouvées uniquement via captures d'écran réelles | ACCEPTED |
 | ADR-117 | Défilement de page sur les 7 écrans ; repli de la section Simulation | ACCEPTED |
+| ADR-118 | Polices statiques vendorisées (Spectral, IBM Plex Sans/Mono) plutôt que variables | ACCEPTED |
 
 ---
 
@@ -271,3 +272,19 @@ Journal des décisions structurantes, dans le même format que l'ancien projet (
 **Conditions de réévaluation** : si un écran continue de sembler surchargé malgré le défilement de page, envisager de replier d'autres sections secondaires plutôt que d'ajouter encore des ajustements de marge.
 
 **Documents concernés** : `07-Interface.md` §2/§3.
+
+---
+
+# 20. ADR-118 — Polices statiques vendorisées plutôt que variables
+
+**Contexte** : en allant chercher les polices de la maquette (Spectral, IBM Plex Sans, IBM Plex Mono) pour la passe typographie, le mirror `google/fonts` (source évidente pour Spectral) a échoué pour `ibmplexsans`/`ibmplexmono` — vérification faite via l'API GitHub plutôt que supposé, ces deux familles n'existent plus dans ce dépôt qu'en police variable (un seul fichier `[wdth,wght].ttf` couvrant tous les poids par un axe de variation), les fichiers statiques historiques (`IBMPlexSans-Regular.ttf`, `-Bold.ttf`, etc.) ont disparu du dépôt.
+
+**Décision** : ne pas utiliser les polices variables. UI Toolkit référence une police via `-unity-font-definition: url(...)` pointant un `Font` Unity — importer un fichier variable ne rend que son instance par défaut (généralement le poids 400), sans moyen scriptable dans cet environnement de sélectionner un autre poids sur l'axe `wght` (ça demanderait de configurer un Font Asset TextCore par l'inspecteur de l'éditeur, ou une API de script non vérifiée ici). Utilisé à la place le dépôt source canonique d'IBM (`github.com/IBM/plex`, package `plex-sans`/`plex-mono`, dossier `fonts/complete/ttf`), qui distribue encore des fichiers statiques par poids (`IBMPlexSans-Regular.ttf`, `IBMPlexSans-Bold.ttf`, etc.) — la même licence SIL OFL 1.1, juste une distribution différente de celle de Google Fonts.
+
+**Ce que cette vérification a évité** : importer la police variable sans le remarquer aurait probablement semblé fonctionner (aucune erreur de compilation, juste un rendu visuellement plat au poids par défaut) — un défaut impossible à détecter par les tests batchmode existants (ADR-112) et qui n'aurait été visible qu'à la prochaine capture d'écran, potentiellement confondu avec un simple oubli de `-unity-font-style: bold` plutôt qu'un vrai problème de police.
+
+**Conséquences négatives** : dépendance à deux dépôts sources différents (`google/fonts` pour Spectral, `IBM/plex` pour les deux familles Plex) plutôt qu'un seul mirror — légèrement plus de friction pour une future mise à jour de version.
+
+**Conditions de réévaluation** : si Unity ajoute un moyen scriptable et vérifiable dans cet environnement de sélectionner un poids d'une police variable importée, ou si `google/fonts` republie des fichiers statiques pour ces familles.
+
+**Documents concernés** : `07-Interface.md` §8bis, `Assets/Fonts/THIRD-PARTY-NOTICES.md`.

@@ -143,7 +143,7 @@ namespace FinanceOS.UI
 
         private void SetupOccurrenceColumns()
         {
-            _occurrencesListView.columns.Add(BuildOccurrenceColumn("date", "Date", r => r.DateText, width: 90, minWidth: 80));
+            _occurrencesListView.columns.Add(BuildOccurrenceColumn("date", "Date", r => r.DateText, width: 90, minWidth: 80, mono: true));
             _occurrencesListView.columns.Add(BuildOccurrenceColumn("label", "Libellé", r => r.Label, width: 220, minWidth: 120, stretchable: true));
             _occurrencesListView.columns.Add(BuildOccurrenceColumn("amount", "Montant", r => r.AmountText, width: 110, minWidth: 90, alignRight: true));
             _occurrencesListView.columns.Add(BuildOccurrenceColumn("status", "Statut", r => r.StatusText, width: 100, minWidth: 80));
@@ -152,7 +152,7 @@ namespace FinanceOS.UI
 
         private Column BuildOccurrenceColumn(
             string name, string title, Func<ForecastOccurrenceRowViewModel, string> textSelector,
-            float width, float minWidth, bool alignRight = false, bool stretchable = false)
+            float width, float minWidth, bool alignRight = false, bool stretchable = false, bool mono = false)
         {
             return new Column
             {
@@ -169,6 +169,11 @@ namespace FinanceOS.UI
                         label.AddToClassList("account-row-balance");
                     }
 
+                    if (mono)
+                    {
+                        label.AddToClassList("cell-mono");
+                    }
+
                     return label;
                 },
                 bindCell = (element, index) => ((Label)element).text = textSelector(_occurrenceRows[index]),
@@ -183,7 +188,12 @@ namespace FinanceOS.UI
                 title = "Date",
                 width = 90,
                 minWidth = 80,
-                makeCell = () => new Label(),
+                makeCell = () =>
+                {
+                    var label = new Label();
+                    label.AddToClassList("cell-mono");
+                    return label;
+                },
                 bindCell = (element, index) => ((Label)element).text = _timelineRows[index].DateText,
             });
             _timelineListView.columns.Add(new Column
