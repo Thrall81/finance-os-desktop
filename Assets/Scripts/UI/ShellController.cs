@@ -11,6 +11,7 @@ namespace FinanceOS.UI
         RecurringOperations,
         Forecasts,
         Budgets,
+        Settings,
     }
 
     /// <summary>
@@ -27,6 +28,7 @@ namespace FinanceOS.UI
         private readonly Button _navRecurringOperations;
         private readonly Button _navForecasts;
         private readonly Button _navBudgets;
+        private readonly Button _navSettings;
 
         public ShellController(
             VisualElement root,
@@ -35,7 +37,8 @@ namespace FinanceOS.UI
             Action onNavigateToTransactions,
             Action onNavigateToRecurringOperations,
             Action onNavigateToForecasts,
-            Action onNavigateToBudgets)
+            Action onNavigateToBudgets,
+            Action onNavigateToSettings)
         {
             _contentArea = root.Q<VisualElement>("content-area");
             _navDashboard = root.Q<Button>("nav-dashboard");
@@ -44,6 +47,7 @@ namespace FinanceOS.UI
             _navRecurringOperations = root.Q<Button>("nav-recurring-operations");
             _navForecasts = root.Q<Button>("nav-forecasts");
             _navBudgets = root.Q<Button>("nav-budgets");
+            _navSettings = root.Q<Button>("nav-settings");
 
             _navDashboard.clicked += onNavigateToDashboard;
             _navAccounts.clicked += onNavigateToAccounts;
@@ -51,6 +55,7 @@ namespace FinanceOS.UI
             _navRecurringOperations.clicked += onNavigateToRecurringOperations;
             _navForecasts.clicked += onNavigateToForecasts;
             _navBudgets.clicked += onNavigateToBudgets;
+            _navSettings.clicked += onNavigateToSettings;
         }
 
         public void SetContent(VisualElement content)
@@ -67,6 +72,7 @@ namespace FinanceOS.UI
             _navRecurringOperations.EnableInClassList("nav-item-active", screen == ShellScreen.RecurringOperations);
             _navForecasts.EnableInClassList("nav-item-active", screen == ShellScreen.Forecasts);
             _navBudgets.EnableInClassList("nav-item-active", screen == ShellScreen.Budgets);
+            _navSettings.EnableInClassList("nav-item-active", screen == ShellScreen.Settings);
         }
     }
 }

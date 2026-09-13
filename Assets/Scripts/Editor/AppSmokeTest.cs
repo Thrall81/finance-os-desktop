@@ -150,6 +150,11 @@ namespace FinanceOS.EditorTools
             Check(app.ForecastOccurrences.ListDueForVerification(new DateTime(2026, 11, 1)).Any(o => o.Id == octoberOccurrence.Id),
                 "a missed occurrence still appears in the verification queue rather than disappearing");
 
+            var backupPath = app.Backup.CreateBackup(new DateTimeOffset(2026, 9, 13, 10, 0, 0, TimeSpan.Zero));
+            Check(File.Exists(backupPath), "backup creates a real file");
+            Check(new FileInfo(backupPath).Length == new FileInfo(tempPath).Length, "backup is a byte-for-byte copy of the live database file");
+            Directory.Delete(Path.GetDirectoryName(backupPath)!, recursive: true);
+
             Debug.Log($"[AppSmokeTest] OK — every App-layer service round-trips correctly through AppContainer. File: {tempPath}");
         }
 

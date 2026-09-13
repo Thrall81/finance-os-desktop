@@ -14,6 +14,11 @@ namespace FinanceOS.App
     {
         public AppDatabase Database { get; }
 
+        /// <summary>Forwards <see cref="AppDatabase.DatabasePath"/> so callers that must stay
+        /// FinanceOS.Data-free (i.e. FinanceOS.UI, per docs/05-Conventions_de_code.md §6) can
+        /// read the data file's location without referencing <see cref="AppDatabase"/> itself.</summary>
+        public string DatabasePath => Database.DatabasePath;
+
         public AccountService Accounts { get; }
         public CategoryService Categories { get; }
         public CounterpartyService Counterparties { get; }
@@ -24,6 +29,7 @@ namespace FinanceOS.App
         public ForecastService Forecast { get; }
         public BudgetService Budget { get; }
         public AppSettingsService Settings { get; }
+        public BackupService Backup { get; }
 
         public AppContainer() : this(AppDatabasePath.Resolve())
         {
@@ -57,6 +63,7 @@ namespace FinanceOS.App
             Forecast = new ForecastService(accountRepository, transactionRepository, occurrenceRepository);
             Budget = new BudgetService(budgetRepository, budgetAllocationRepository, transactionRepository, occurrenceRepository, categoryRepository);
             Settings = new AppSettingsService(appSettingsRepository);
+            Backup = new BackupService(Database.DatabasePath);
         }
 
         public void Dispose() => Database.Dispose();

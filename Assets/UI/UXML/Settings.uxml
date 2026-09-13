@@ -1,0 +1,72 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="False">
+  <Style src="../USS/theme.uss" />
+  <ui:VisualElement name="settings-root" class="page">
+    <ui:VisualElement class="page-header">
+      <ui:VisualElement>
+        <ui:Label text="Paramètres" class="page-title" />
+        <ui:Label text="Devise, horizon de prévision, seuils, emplacement des données, sauvegarde." class="page-subtitle" />
+      </ui:VisualElement>
+    </ui:VisualElement>
+
+    <ui:VisualElement name="general-card" class="card form-card">
+      <ui:VisualElement class="card-header">
+        <ui:Label text="Général" class="card-title" />
+      </ui:VisualElement>
+
+      <ui:VisualElement class="form-row">
+        <ui:Label text="Devise" class="form-label" />
+        <ui:Label name="currency-value" text="EUR" class="form-readonly-value" />
+      </ui:VisualElement>
+
+      <ui:VisualElement class="form-row">
+        <ui:Label text="Horizon de prévision (jours)" class="form-label" />
+        <ui:TextField name="horizon-field" class="form-field" />
+      </ui:VisualElement>
+
+      <ui:VisualElement class="form-row">
+        <ui:Label text="Seuil de solde faible (€)" class="form-label" />
+        <ui:TextField name="low-balance-field" class="form-field" />
+      </ui:VisualElement>
+
+      <ui:VisualElement class="form-row">
+        <ui:Label text="Seuil avant qu'une occurrence passe en « Manquée » (jours)" class="form-label" />
+        <ui:TextField name="missed-threshold-field" class="form-field" />
+      </ui:VisualElement>
+
+      <ui:VisualElement class="form-row">
+        <ui:Label text="Compte par défaut du tableau de bord" class="form-label" />
+        <ui:DropdownField name="default-account-field" class="form-field" />
+      </ui:VisualElement>
+
+      <ui:Label name="settings-error" text="" class="form-error" style="display: none;" />
+      <ui:Label name="settings-saved-label" text="Paramètres enregistrés." class="empty-state" style="display: none;" />
+
+      <ui:VisualElement class="form-actions">
+        <ui:Button name="save-button" text="Enregistrer" class="primary-button" />
+      </ui:VisualElement>
+    </ui:VisualElement>
+
+    <ui:VisualElement name="data-card" class="card">
+      <ui:VisualElement class="card-header">
+        <ui:Label text="Données" class="card-title" />
+      </ui:VisualElement>
+
+      <ui:VisualElement class="form-row">
+        <ui:Label text="Emplacement du fichier de données" class="form-label" />
+        <ui:VisualElement class="form-row-inline">
+          <ui:Label name="database-path-value" text="—" class="form-readonly-value" />
+          <ui:Button name="copy-path-button" text="Copier le chemin" class="secondary-button" />
+        </ui:VisualElement>
+      </ui:VisualElement>
+
+      <ui:VisualElement class="form-row">
+        <ui:Label text="Sauvegarde manuelle" class="form-label" />
+        <ui:Label text="Copie horodatée du fichier SQLite dans un dossier « backups » à côté des données." class="page-subtitle" />
+        <ui:VisualElement class="form-actions">
+          <ui:Button name="backup-button" text="Créer une sauvegarde maintenant" class="secondary-button" />
+        </ui:VisualElement>
+        <ui:Label name="backup-result-label" text="" class="empty-state" style="display: none;" />
+      </ui:VisualElement>
+    </ui:VisualElement>
+  </ui:VisualElement>
+</ui:UXML>

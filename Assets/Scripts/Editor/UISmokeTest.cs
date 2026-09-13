@@ -24,6 +24,7 @@ namespace FinanceOS.EditorTools
         private const string RecurringOperationsUxmlPath = "Assets/UI/UXML/RecurringOperations.uxml";
         private const string ForecastsUxmlPath = "Assets/UI/UXML/Forecasts.uxml";
         private const string BudgetsUxmlPath = "Assets/UI/UXML/Budgets.uxml";
+        private const string SettingsUxmlPath = "Assets/UI/UXML/Settings.uxml";
         private const string ShellUxmlPath = "Assets/UI/UXML/Shell.uxml";
 
         [MenuItem("Finance OS/Run UI Smoke Test")]
@@ -317,6 +318,36 @@ namespace FinanceOS.EditorTools
             Check(emptyBudgetsRoot.Q<VisualElement>("empty-state-card").style.display == DisplayStyle.Flex, "empty-state shown for a month with no budget yet");
             Check(emptyBudgetsRoot.Q<VisualElement>("overview-card").style.display == DisplayStyle.None, "overview hidden for a month with no budget yet");
 
+            var settingsViewModel = SettingsViewModelBuilder.Build(app.Settings, app.Accounts, app.DatabasePath);
+            Check(settingsViewModel.Currency == "EUR", "currency is fixed EUR in V1");
+            Check(settingsViewModel.ForecastHorizonDays == 90, "default forecast horizon before any change");
+            Check(settingsViewModel.MissedThresholdDays == 15, "default missed threshold before any change");
+            Check(settingsViewModel.DatabasePath == app.DatabasePath, "database path passed through");
+            Check(settingsViewModel.Accounts.Count == 2, "the two active accounts are listed for the default-account picker");
+
+            app.Settings.UpdateForecastHorizon(45);
+            app.Settings.SetDefaultCurrentAccount(newSavings.Id);
+            var updatedSettingsViewModel = SettingsViewModelBuilder.Build(app.Settings, app.Accounts, app.DatabasePath);
+            Check(updatedSettingsViewModel.ForecastHorizonDays == 45, "forecast horizon reflects the update");
+            Check(updatedSettingsViewModel.DefaultCurrentAccountId == newSavings.Id, "default account reflects the update");
+
+            var settingsTree = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(SettingsUxmlPath);
+            if (settingsTree == null)
+            {
+                throw new FileNotFoundException($"Settings UXML not found at {SettingsUxmlPath}");
+            }
+
+            var settingsRoot = settingsTree.Instantiate();
+            var settingsController = new SettingsController(settingsRoot, app.Settings, app.Accounts, app.Backup, app.DatabasePath);
+
+            Check(settingsRoot.Q<Label>("currency-value").text == "EUR", "currency label bound");
+            Check(settingsRoot.Q<TextField>("horizon-field").value == "45", "horizon field reflects the persisted setting");
+            Check(settingsRoot.Q<Label>("database-path-value").text == app.DatabasePath, "database path label bound");
+            Check(settingsRoot.Q<DropdownField>("default-account-field").choices.Count == 3, "default-account dropdown has 'Aucun' plus each active account");
+
+            settingsController.Refresh();
+            Check(settingsRoot.Q<TextField>("horizon-field").value == "45", "refresh re-renders without changing the value");
+
             var noAccountPath = Path.Combine(Path.GetTempPath(), $"financeos-ui-smoke-empty-{Guid.NewGuid():N}.db");
             using (var noAccountApp = new AppContainer(noAccountPath))
             {
@@ -345,6 +376,11 @@ namespace FinanceOS.EditorTools
                 _ = new ForecastsController(emptyForecastsRoot, noAccountApp);
                 Check(emptyForecastsRoot.Q<Label>("kpi-current-value").text == "—", "empty synthesis falls back to placeholders");
                 Check(!emptyForecastsRoot.Q<Button>("simulation-run-button").enabledSelf, "simulation disabled with no account");
+
+                var emptySettingsRoot = settingsTree.Instantiate();
+                _ = new SettingsController(
+                    emptySettingsRoot, noAccountApp.Settings, noAccountApp.Accounts, noAccountApp.Backup, noAccountApp.DatabasePath);
+                Check(emptySettingsRoot.Q<DropdownField>("default-account-field").choices.Count == 1, "only 'Aucun (automatique)' when no accounts exist");
             }
 
             TryDeleteQuietly(noAccountPath);
@@ -365,9 +401,10 @@ namespace FinanceOS.EditorTools
             var recurringOperationsCalls = 0;
             var forecastsCalls = 0;
             var budgetsCalls = 0;
+            var settingsCalls = 0;
             var shell = new ShellController(
                 root, () => dashboardCalls++, () => accountsCalls++, () => transactionsCalls++,
-                () => recurringOperationsCalls++, () => forecastsCalls++, () => budgetsCalls++);
+                () => recurringOperationsCalls++, () => forecastsCalls++, () => budgetsCalls++, () => settingsCalls++);
 
             var content = new VisualElement();
             shell.SetContent(content);
@@ -396,6 +433,10 @@ namespace FinanceOS.EditorTools
             Check(root.Q<Button>("nav-budgets").ClassListContains("nav-item-active"), "budgets nav item marked active");
             Check(!root.Q<Button>("nav-forecasts").ClassListContains("nav-item-active"), "forecasts nav item not active");
 
+            shell.SetActive(ShellScreen.Settings);
+            Check(root.Q<Button>("nav-settings").ClassListContains("nav-item-active"), "settings nav item marked active");
+            Check(!root.Q<Button>("nav-budgets").ClassListContains("nav-item-active"), "budgets nav item not active");
+
             shell.SetActive(ShellScreen.Dashboard);
             Check(root.Q<Button>("nav-dashboard").ClassListContains("nav-item-active"), "dashboard nav item marked active");
             Check(!root.Q<Button>("nav-accounts").ClassListContains("nav-item-active"), "accounts nav item not active");
@@ -403,6 +444,7 @@ namespace FinanceOS.EditorTools
             Check(!root.Q<Button>("nav-recurring-operations").ClassListContains("nav-item-active"), "recurring operations nav item not active");
             Check(!root.Q<Button>("nav-forecasts").ClassListContains("nav-item-active"), "forecasts nav item not active");
             Check(!root.Q<Button>("nav-budgets").ClassListContains("nav-item-active"), "budgets nav item not active");
+            Check(!root.Q<Button>("nav-settings").ClassListContains("nav-item-active"), "settings nav item not active");
 
             using (var clickEvent = ClickEvent.GetPooled())
             {
@@ -410,7 +452,7 @@ namespace FinanceOS.EditorTools
                 root.Q<Button>("nav-accounts").SendEvent(clickEvent);
             }
 
-            Debug.Log($"[UISmokeTest] Shell nav click delivery: dashboard={dashboardCalls}, accounts={accountsCalls}, transactions={transactionsCalls}, recurringOperations={recurringOperationsCalls}, forecasts={forecastsCalls}, budgets={budgetsCalls} (best-effort without an attached panel).");
+            Debug.Log($"[UISmokeTest] Shell nav click delivery: dashboard={dashboardCalls}, accounts={accountsCalls}, transactions={transactionsCalls}, recurringOperations={recurringOperationsCalls}, forecasts={forecastsCalls}, budgets={budgetsCalls}, settings={settingsCalls} (best-effort without an attached panel).");
         }
 
         private static void TryDeleteQuietly(string path)
