@@ -228,6 +228,55 @@
     margin-top: 4px;
 }
 
+.budget-summary-row {
+    padding: 8px 0;
+    border-bottom-width: 1px;
+    border-bottom-color: var(--color-border);
+}
+
+.budget-summary-top {
+    flex-direction: row;
+    justify-content: space-between;
+    margin-bottom: 6px;
+}
+
+.budget-summary-name {
+    font-size: 13px;
+    color: var(--color-ink-900);
+}
+
+.budget-summary-figures {
+    font-size: 13px;
+    color: var(--color-ink-600);
+    -unity-font-definition: url("../../Fonts/IBMPlexMono-Regular.ttf");
+}
+
+.budget-summary-bar-track {
+    height: 6px;
+    border-radius: 3px;
+    background-color: var(--color-border);
+    overflow: hidden;
+}
+
+.budget-summary-bar-fill {
+    height: 6px;
+    background-color: var(--color-accent);
+}
+
+.budget-summary-bar-fill-over {
+    background-color: var(--color-danger);
+}
+
+.budget-summary-note {
+    font-size: 11px;
+    color: var(--color-ink-400);
+    margin-top: 4px;
+}
+
+.budget-summary-note-over {
+    color: var(--color-danger);
+}
+
 .accounts-header {
     flex-direction: row;
     justify-content: space-between;

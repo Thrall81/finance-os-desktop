@@ -26,6 +26,8 @@ namespace FinanceOS.UI
         private readonly VisualElement _donutLegend;
         private readonly Label _upcomingEmptyLabel;
         private readonly VisualElement _upcomingList;
+        private readonly Label _budgetSummaryEmptyLabel;
+        private readonly VisualElement _budgetSummaryList;
 
         public DashboardController(VisualElement root)
         {
@@ -52,6 +54,9 @@ namespace FinanceOS.UI
 
             _upcomingEmptyLabel = root.Q<Label>("upcoming-empty");
             _upcomingList = root.Q<VisualElement>("upcoming-list");
+
+            _budgetSummaryEmptyLabel = root.Q<Label>("budget-summary-empty");
+            _budgetSummaryList = root.Q<VisualElement>("budget-summary-list");
         }
 
         public void Render(DashboardViewModel viewModel)
@@ -95,6 +100,16 @@ namespace FinanceOS.UI
             foreach (var item in viewModel.UpcomingOperations)
             {
                 _upcomingList.Add(BuildUpcomingRow(item));
+            }
+
+            _budgetSummaryEmptyLabel.style.display = viewModel.BudgetSummary.Count == 0
+                ? DisplayStyle.Flex
+                : DisplayStyle.None;
+
+            _budgetSummaryList.Clear();
+            foreach (var row in viewModel.BudgetSummary)
+            {
+                _budgetSummaryList.Add(BuildBudgetSummaryRow(row));
             }
         }
 
@@ -145,6 +160,38 @@ namespace FinanceOS.UI
             row.Add(textColumn);
             row.Add(rightColumn);
             return row;
+        }
+
+        private static VisualElement BuildBudgetSummaryRow(DashboardBudgetRowViewModel row)
+        {
+            var container = new VisualElement();
+            container.AddToClassList("budget-summary-row");
+
+            var top = new VisualElement();
+            top.AddToClassList("budget-summary-top");
+            var nameLabel = new Label(row.CategoryName);
+            nameLabel.AddToClassList("budget-summary-name");
+            var figuresLabel = new Label($"{row.ActualText} / {row.PlannedText}");
+            figuresLabel.AddToClassList("budget-summary-figures");
+            top.Add(nameLabel);
+            top.Add(figuresLabel);
+
+            var track = new VisualElement();
+            track.AddToClassList("budget-summary-bar-track");
+            var fill = new VisualElement();
+            fill.AddToClassList("budget-summary-bar-fill");
+            fill.EnableInClassList("budget-summary-bar-fill-over", row.IsOverBudget);
+            fill.style.width = new Length(row.SpentRatio * 100f, LengthUnit.Percent);
+            track.Add(fill);
+
+            var noteLabel = new Label(row.NoteText);
+            noteLabel.AddToClassList("budget-summary-note");
+            noteLabel.EnableInClassList("budget-summary-note-over", row.IsOverBudget);
+
+            container.Add(top);
+            container.Add(track);
+            container.Add(noteLabel);
+            return container;
         }
 
         private static VisualElement BuildDonutLegendRow(ExpenseCategorySliceViewModel slice, Color color)

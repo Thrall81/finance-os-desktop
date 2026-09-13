@@ -64,5 +64,13 @@
       <ui:Label name="upcoming-empty" text="Rien de prévu pour l'instant." class="empty-state" />
       <ui:VisualElement name="upcoming-list" class="list" />
     </ui:VisualElement>
+
+    <ui:VisualElement name="budget-summary-card" class="card">
+      <ui:VisualElement class="card-header">
+        <ui:Label text="Synthèse budgétaire" class="card-title" />
+      </ui:VisualElement>
+      <ui:Label name="budget-summary-empty" text="Aucun budget créé pour ce mois." class="empty-state" />
+      <ui:VisualElement name="budget-summary-list" class="list" />
+    </ui:VisualElement>
   </ui:ScrollView>
 </ui:UXML>

@@ -43,6 +43,7 @@ namespace FinanceOS.UI
             var expenseBreakdown = BuildExpenseBreakdown(app, account, monthStart, monthEnd);
             var remainingToLiveText = BuildRemainingToLiveText(app, today);
             var upcomingOperations = BuildUpcomingOperations(app, account, today);
+            var budgetSummary = BuildBudgetSummary(app, today);
 
             return new DashboardViewModel(
                 account.Name,
@@ -54,7 +55,45 @@ namespace FinanceOS.UI
                 chartSeries,
                 expenseBreakdown,
                 verificationQueue,
-                upcomingOperations);
+                upcomingOperations,
+                budgetSummary);
+        }
+
+        /// <summary>Empty when no budget exists for the current month — same reasoning as
+        /// <see cref="BuildRemainingToLiveText"/>, and the same underlying figures as the Budget
+        /// screen's own allocations table (`BudgetService.GetSummary`), just as compact progress
+        /// bars instead of four columns. Not account-scoped, same as reste à vivre.</summary>
+        private static IReadOnlyList<DashboardBudgetRowViewModel> BuildBudgetSummary(AppContainer app, DateTime today)
+        {
+            var budget = app.Budget.FindByYearMonth(today.Year, today.Month);
+            if (budget is null)
+            {
+                return Array.Empty<DashboardBudgetRowViewModel>();
+            }
+
+            var categoryNames = app.Categories.ListActive().ToDictionary(c => c.Id, c => c.Name);
+
+            return app.Budget.GetSummary(budget.Id)
+                .Select(s =>
+                {
+                    var spentRatio = s.PlannedAmountMinor > 0
+                        ? Math.Clamp((float)s.ActualAmountMinor / s.PlannedAmountMinor, 0f, 1f)
+                        : 0f;
+                    var isOverBudget = s.RemainingAmountMinor < 0;
+                    var noteText = isOverBudget
+                        ? $"Dépassement de {MoneyFormat.Format(-s.RemainingAmountMinor)}"
+                        : $"{MoneyFormat.Format(s.RemainingAmountMinor)} restants";
+
+                    return new DashboardBudgetRowViewModel(
+                        categoryNames.TryGetValue(s.CategoryId, out var name) ? name : "—",
+                        MoneyFormat.Format(s.ActualAmountMinor),
+                        MoneyFormat.Format(s.PlannedAmountMinor),
+                        noteText,
+                        isOverBudget,
+                        spentRatio);
+                })
+                .OrderBy(r => r.CategoryName)
+                .ToList();
         }
 
         private const int UpcomingOperationsLimit = 5;

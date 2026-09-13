@@ -40,6 +40,7 @@ Journal des décisions structurantes, dans le même format que l'ancien projet (
 | ADR-124 | Infobulles au survol sur les quatre graphiques ; détection géométrique statique et publique pour rester testable | ACCEPTED |
 | ADR-125 | Reste à vivre sur le Tableau de bord ; placeholder « — » sans budget plutôt qu'un calcul erroné | ACCEPTED |
 | ADR-126 | Prochaines opérations sur le Tableau de bord ; badge Attendue/Estimée | ACCEPTED |
+| ADR-127 | Synthèse budgétaire sur le Tableau de bord ; barres de progression compactes | ACCEPTED |
 
 ---
 
@@ -449,5 +450,19 @@ Journal des décisions structurantes, dans le même format que l'ancien projet (
 **Une différence structurelle de plus, comme Reste à vivre (ADR-125)** : les montants sont affichés avec `forceSign: true` (signe + explicite sur un revenu à venir, ex. Salaire) — contrairement à la file de vérification juste au-dessus, qui n'utilise pas `forceSign`. Choix délibéré pour coller à la maquette et à la convention déjà utilisée pour les figures « attendues » ailleurs (Revenus/Dépenses attendus sur Prévisions), pas une incohérence : la file de vérification n'a simplement jamais eu d'exemple positif à afficher jusqu'ici pour que la question se pose.
 
 **Testé sur un jeu de données isolé plutôt que le scénario partagé** : au point du scénario de test où assez d'opérations récurrentes existent pour avoir de vraies occurrences à venir, plusieurs (Loyer, Salaire, Épargne mensuelle) tombent toutes dans les mêmes prochains mois — rendre l'ordre/le compte exact vérifiable aurait demandé de dépendre d'un ordre de tri secondaire (deux occurrences à la même date) non garanti par la requête SQL. Un `AppContainer` temporaire dédié, une opération récurrente (« Attendue ») + une occurrence ponctuelle (« Estimée ») à des dates distinctes, évite entièrement le problème — même stratégie que le cas « suppression bloquée par une occurrence rapprochée » d'ADR-120.
+
+**Documents concernés** : `07-Interface.md` §5.
+
+---
+
+# 29. ADR-127 — Synthèse budgétaire sur le Tableau de bord
+
+**Contexte** : avant-dernière carte du Tableau de bord listée dans `07-Interface.md` §5 à ne pas être construite (il ne reste alors que les alertes calculées à l'affichage). La maquette (`docs/mockups/dashboard.html`, carte « Budget — septembre ») montre une barre de progression par catégorie allouée : nom, figures réel/prévu, barre, note (« X € restants » ou « Dépassement de X € »).
+
+**Décision** : `DashboardViewModelBuilder.BuildBudgetSummary` reprend telles quelles les figures déjà calculées par `BudgetService.GetSummary` (même source de vérité que le tableau de l'écran Budget, pas un second calcul) — nom de catégorie, réel, prévu, et un texte de note déjà composé en phrase complète (`NoteText`) plutôt qu'un montant signé brut, pour que le contrôleur n'ait qu'à assigner du texte, jamais à construire de phrase. `SpentRatio` (réel seul / prévu, borné à [0, 1]) est lui aussi calculé dans le builder — c'est une donnée dérivée des mêmes montants bruts que le reste de la ligne, pas un souci d'affichage propre au contrôleur — et sert directement de largeur de barre (`style.width` en pourcentage) côté `DashboardController`. Même non-disponibilité sans budget que Reste à vivre (ADR-125) : liste vide, état vide explicite (`budget-summary-empty`) plutôt qu'une carte silencieusement vide.
+
+**Simplification assumée par rapport à la maquette** : la barre ne représente que le réel rapporté au prévu, pas réel+engagé — la maquette elle-même est ambiguë sur ce point pour sa ligne « Logement » (barre à 100 % avec puce « Engagé » alors que la ligne juste au-dessus n'a que du réel). Plutôt que de deviner une sémantique visuelle mixte non documentée, le réel seul reste cohérent avec ce que la barre représente pour toutes les autres lignes, et l'écran Budget affiche déjà le détail complet (prévu/réel/engagé/restant, plus les barres groupées `BudgetBarChartElement`) pour qui veut la vue complète — cette carte est une synthèse, pas un doublon.
+
+**Vérifié en batchmode** : les deux branches (avec et sans budget pour le mois affiché), plus un cas concret réel dépassant son enveloppe (réutilise l'allocation Logement déjà présente dans le scénario de test partagé — prévu 700,00 €, réel 90,00 €, engagé 650,00 €, restant −40,00 € — donc pas besoin d'un jeu de données isolé ici, une seule catégorie suffit à ne laisser aucune ambiguïté d'ordre) : ratio de la barre, classe CSS de dépassement, texte de note composé — vert du premier coup.
 
 **Documents concernés** : `07-Interface.md` §5.

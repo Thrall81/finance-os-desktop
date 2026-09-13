@@ -97,6 +97,7 @@ namespace FinanceOS.EditorTools
             Check(Normalize(viewModel.AvailableBalanceText) == "1 748,60 €", "available balance formatted correctly");
             Check(viewModel.ChartSeries.Count > 0, "chart series is populated when an account exists");
             Check(viewModel.RemainingToLiveText == "—", "reste à vivre falls back to a placeholder with no budget created yet for this month");
+            Check(viewModel.BudgetSummary.Count == 0, "budget summary is empty with no budget created yet for this month");
             Check(viewModel.UpcomingOperations.Count == 0, "no upcoming operations yet — the only occurrence so far (September's rent) is already overdue, not upcoming");
 
             var visualTree = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(DashboardUxmlPath);
@@ -136,6 +137,9 @@ namespace FinanceOS.EditorTools
 
             Check(root.Q<Label>("upcoming-empty").style.display == DisplayStyle.Flex, "upcoming-operations empty-state shown with nothing upcoming yet");
             Check(root.Q<VisualElement>("upcoming-list").childCount == 0, "no upcoming-operations rows rendered yet");
+
+            Check(root.Q<Label>("budget-summary-empty").style.display == DisplayStyle.Flex, "budget-summary empty-state shown with no budget created yet");
+            Check(root.Q<VisualElement>("budget-summary-list").childCount == 0, "no budget-summary rows rendered yet");
 
             // Isolated fixture (own temp database) rather than reusing `app`/`account`: by the time
             // enough recurring operations exist later in this scenario to have real upcoming
@@ -452,6 +456,21 @@ namespace FinanceOS.EditorTools
 
             var dashboardViewModelWithBudget = DashboardViewModelBuilder.Build(app, today);
             Check(Normalize(dashboardViewModelWithBudget!.RemainingToLiveText) == "−40,00 €", "dashboard reflects the same reste à vivre as the budget screen, once a budget exists");
+            Check(dashboardViewModelWithBudget.BudgetSummary.Count == 1, "one row in the budget summary, matching the one allocation");
+            Check(dashboardViewModelWithBudget.BudgetSummary[0].CategoryName == "Logement", "budget summary row resolved by category name");
+            Check(Normalize(dashboardViewModelWithBudget.BudgetSummary[0].ActualText) == "90,00 €", "réel formatted correctly (9 000 minor)");
+            Check(Normalize(dashboardViewModelWithBudget.BudgetSummary[0].PlannedText) == "700,00 €", "prévu formatted correctly (70 000 minor)");
+            Check(dashboardViewModelWithBudget.BudgetSummary[0].IsOverBudget, "réel (90€) + engagé (650€) already exceeds prévu (700€)");
+            Check(Normalize(dashboardViewModelWithBudget.BudgetSummary[0].NoteText) == "Dépassement de 40,00 €", "note phrases the overage rather than showing a raw signed amount");
+            var spentRatio = dashboardViewModelWithBudget.BudgetSummary[0].SpentRatio;
+            Check(spentRatio > 0.12f && spentRatio < 0.13f, "spent ratio is réel-only over prévu (9 000 / 70 000), not réel+engagé");
+
+            controller.Render(dashboardViewModelWithBudget);
+            Check(root.Q<Label>("budget-summary-empty").style.display == DisplayStyle.None, "budget-summary empty-state hidden once a budget exists");
+            Check(root.Q<VisualElement>("budget-summary-list").childCount == 1, "one budget-summary row rendered");
+            var budgetSummaryFill = root.Q<VisualElement>(className: "budget-summary-bar-fill");
+            Check(budgetSummaryFill is not null, "budget-summary bar fill element bound");
+            Check(budgetSummaryFill!.ClassListContains("budget-summary-bar-fill-over"), "over-budget row's bar fill carries the over-budget class");
 
             var octoberViewModel = BudgetsViewModelBuilder.Build(app.Budget, app.Categories, 2026, 10);
             Check(!octoberViewModel.BudgetExists, "no budget exists yet for a month never created");
