@@ -22,6 +22,10 @@
         <ui:Label name="kpi-lowest-value" text="—" class="kpi-value" />
         <ui:Label name="kpi-lowest-date" text="—" class="kpi-context" />
       </ui:VisualElement>
+      <ui:VisualElement class="kpi-card">
+        <ui:Label text="Reste à vivre" class="kpi-label" />
+        <ui:Label name="kpi-remaining-value" text="—" class="kpi-value" />
+      </ui:VisualElement>
     </ui:VisualElement>
 
     <ui:VisualElement name="cashflow-card" class="card">

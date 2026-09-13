@@ -15,6 +15,7 @@ namespace FinanceOS.UI
         private readonly Label _endOfMonthValueLabel;
         private readonly Label _lowestValueLabel;
         private readonly Label _lowestDateLabel;
+        private readonly Label _remainingValueLabel;
         private readonly Label _verificationCountLabel;
         private readonly Label _verificationEmptyLabel;
         private readonly VisualElement _verificationList;
@@ -31,6 +32,7 @@ namespace FinanceOS.UI
             _endOfMonthValueLabel = root.Q<Label>("kpi-endofmonth-value");
             _lowestValueLabel = root.Q<Label>("kpi-lowest-value");
             _lowestDateLabel = root.Q<Label>("kpi-lowest-date");
+            _remainingValueLabel = root.Q<Label>("kpi-remaining-value");
             _verificationCountLabel = root.Q<Label>("verification-count");
             _verificationEmptyLabel = root.Q<Label>("verification-empty");
             _verificationList = root.Q<VisualElement>("verification-list");
@@ -54,6 +56,7 @@ namespace FinanceOS.UI
             _endOfMonthValueLabel.text = viewModel.EndOfMonthBalanceText;
             _lowestValueLabel.text = viewModel.LowestBalanceText;
             _lowestDateLabel.text = viewModel.LowestBalanceDateText;
+            _remainingValueLabel.text = viewModel.RemainingToLiveText;
 
             _cashFlowChart.Points = viewModel.ChartSeries;
 

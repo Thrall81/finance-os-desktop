@@ -41,6 +41,7 @@ namespace FinanceOS.UI
                 .ToList();
 
             var expenseBreakdown = BuildExpenseBreakdown(app, account, monthStart, monthEnd);
+            var remainingToLiveText = BuildRemainingToLiveText(app, today);
 
             return new DashboardViewModel(
                 account.Name,
@@ -48,9 +49,29 @@ namespace FinanceOS.UI
                 MoneyFormat.Format(forecast.ClosingBalanceMinor, account.Currency),
                 MoneyFormat.Format(forecast.LowestBalanceMinor, account.Currency),
                 DateFormat.Short(forecast.LowestBalanceDate),
+                remainingToLiveText,
                 chartSeries,
                 expenseBreakdown,
                 verificationQueue);
+        }
+
+        /// <summary>"—" when no budget exists for the current month — unlike the savings-evolution
+        /// chart (ADR-123), reste à vivre is inherently budget-shaped: it sums the remaining
+        /// (prévu − réel − engagé) of each allocated Expense-type category, so with no allocation
+        /// there is nothing to sum in the first place, not just an empty history. Same definition
+        /// as `BudgetOverview.RemainingToLiveMinor` (ADR-115) — user-wide, not account-scoped,
+        /// unlike every other Dashboard figure, because a budget itself isn't account-scoped
+        /// either.</summary>
+        private static string BuildRemainingToLiveText(AppContainer app, DateTime today)
+        {
+            var budget = app.Budget.FindByYearMonth(today.Year, today.Month);
+            if (budget is null)
+            {
+                return "—";
+            }
+
+            var overview = app.Budget.GetOverview(budget.Id);
+            return MoneyFormat.Format(overview.RemainingToLiveMinor, forceSign: true);
         }
 
         /// <summary>Real expense transactions only (negative amounts, no internal transfer, an

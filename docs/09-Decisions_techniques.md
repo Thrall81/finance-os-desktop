@@ -38,6 +38,7 @@ Journal des décisions structurantes, dans le même format que l'ancien projet (
 | ADR-122 | Anneau des dépenses construit ; légende textuelle comme réponse à « jamais uniquement par la couleur » | ACCEPTED |
 | ADR-123 | Évolution de l'épargne construite (barres) ; historique indépendant de l'existence d'un budget | ACCEPTED |
 | ADR-124 | Infobulles au survol sur les quatre graphiques ; détection géométrique statique et publique pour rester testable | ACCEPTED |
+| ADR-125 | Reste à vivre sur le Tableau de bord ; placeholder « — » sans budget plutôt qu'un calcul erroné | ACCEPTED |
 
 ---
 
@@ -419,3 +420,19 @@ Journal des décisions structurantes, dans le même format que l'ancien projet (
 **Conséquences négatives** : positionnement de l'infobulle approximatif (marge estimée, pas de mesure de layout réelle) — pourrait déborder légèrement dans un cas limite non testé. Pas de support tactile (sans objet, application desktop souris/clavier uniquement).
 
 **Documents concernés** : `07-Interface.md` §8.3quinquies/§8.4.
+
+---
+
+# 27. ADR-125 — Reste à vivre sur le Tableau de bord
+
+**Contexte** : dernier des quatre KPI listés pour le Tableau de bord dans `07-Interface.md` §5 (« Solde disponible, Solde prévu en fin de mois, Point bas prévisionnel, Reste à vivre ») à ne pas être construit.
+
+**Décision** : réutilisation directe de `BudgetOverview.RemainingToLiveMinor` (ADR-115, `BudgetService.GetOverview`) — même définition qu'affichée sur l'écran Budget, pas de second calcul parallèle. `DashboardViewModelBuilder` cherche le budget du mois courant (`BudgetService.FindByYearMonth`, jamais `GetOrCreate` — cohérent avec le reste du builder, qui ne doit rien créer comme effet de bord d'un simple affichage) ; s'il existe, en tire le reste à vivre formaté ; sinon, `"—"`.
+
+**Une différence structurelle avec le reste de l'écran, assumée plutôt que masquée** : chaque autre chiffre du Tableau de bord est calculé pour le compte principal résolu (`ResolvePrimaryAccount`). Le reste à vivre ne l'est pas — un budget n'est jamais rattaché à un compte, il agrège toutes les catégories de type Dépense allouées, tous comptes confondus. La carte affiche donc, à dessein, un chiffre qui n'est pas dans le même périmètre que ses trois voisines — cohérent avec ce que l'écran Budget affiche déjà, pas une incohérence nouvelle.
+
+**Pourquoi un placeholder plutôt qu'un calcul silencieux** : contrairement à l'évolution de l'épargne (ADR-123), qui reste calculable sans `Budget` créé (simple somme de transactions/occurrences réelles), le reste à vivre est structurellement une notion budgétaire — sans allocation prévue par catégorie, il n'y a rien de sensé à soustraire. Pas de `GetOrCreate` déguisé ni de valeur à zéro trompeuse : `"—"`, cohérent avec le principe déjà énoncé au §11 (« aucune donnée » doit être un message explicite, jamais une valeur silencieusement fausse).
+
+**Vérifié en batchmode** : les deux branches (avec et sans budget pour le mois affiché), plus la cohérence de valeur entre le Tableau de bord et l'écran Budget pour le même mois (même montant formaté des deux côtés) — vert du premier coup.
+
+**Documents concernés** : `07-Interface.md` §5.

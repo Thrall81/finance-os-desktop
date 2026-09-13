@@ -19,6 +19,7 @@ namespace FinanceOS.UI
         string EndOfMonthBalanceText,
         string LowestBalanceText,
         string LowestBalanceDateText,
+        string RemainingToLiveText,
         IReadOnlyList<ChartPointViewModel> ChartSeries,
         IReadOnlyList<ExpenseCategorySliceViewModel> ExpenseBreakdown,
         IReadOnlyList<DashboardVerificationItem> VerificationQueue);

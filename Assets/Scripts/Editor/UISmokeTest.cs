@@ -96,6 +96,7 @@ namespace FinanceOS.EditorTools
             Check(viewModel!.VerificationQueue.Count == 1, "September's rent occurrence is due for verification");
             Check(Normalize(viewModel.AvailableBalanceText) == "1 748,60 €", "available balance formatted correctly");
             Check(viewModel.ChartSeries.Count > 0, "chart series is populated when an account exists");
+            Check(viewModel.RemainingToLiveText == "—", "reste à vivre falls back to a placeholder with no budget created yet for this month");
 
             var visualTree = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(DashboardUxmlPath);
             if (visualTree == null)
@@ -109,6 +110,7 @@ namespace FinanceOS.EditorTools
 
             Check(root.Q<Label>("account-name-label").text == "Compte courant", "account name bound");
             Check(Normalize(root.Q<Label>("kpi-available-value").text) == "1 748,60 €", "available balance bound");
+            Check(root.Q<Label>("kpi-remaining-value").text == "—", "reste à vivre placeholder bound");
             Check(root.Q<Label>("verification-count").text == "1", "verification count bound");
             Check(root.Q<Label>("verification-empty").style.display == DisplayStyle.None, "empty-state hidden when queue is non-empty");
 
@@ -403,6 +405,7 @@ namespace FinanceOS.EditorTools
             Check(budgetsViewModel.Allocations.Count == 1, "one allocation appears in the view model");
             Check(budgetsViewModel.Allocations[0].CategoryName == "Logement", "category resolved by name");
             Check(budgetsViewModel.Overview is not null, "overview built once a budget exists");
+            Check(Normalize(budgetsViewModel.Overview!.RemainingToLiveText) == "−40,00 €", "reste à vivre is prévu − réel − engagé (70 000 − 9 000 − 65 000 minor), over budget here");
             Check(budgetsViewModel.ChartGroups.Count == 1, "one bar group appears in the view model, matching the one allocation");
             Check(budgetsViewModel.ChartGroups[0].CategoryName == "Logement", "bar group resolved by category name");
             Check(budgetsViewModel.ChartGroups[0].PlannedMinor == 70_000, "bar group carries the raw planned amount, not display text");
@@ -412,6 +415,9 @@ namespace FinanceOS.EditorTools
             Check(budgetsViewModel.SavingsEvolution[5].SavingsMinor == 20_000, "September's savings transaction is reflected in the last point");
             Check(budgetsViewModel.SavingsEvolution[0].MonthLabel == "avr. 2026", "first point is five months before the viewed month");
             Check(budgetsViewModel.SavingsEvolution[0].SavingsMinor == 0, "no savings activity in April in this fixture");
+
+            var dashboardViewModelWithBudget = DashboardViewModelBuilder.Build(app, today);
+            Check(Normalize(dashboardViewModelWithBudget!.RemainingToLiveText) == "−40,00 €", "dashboard reflects the same reste à vivre as the budget screen, once a budget exists");
 
             var octoberViewModel = BudgetsViewModelBuilder.Build(app.Budget, app.Categories, 2026, 10);
             Check(!octoberViewModel.BudgetExists, "no budget exists yet for a month never created");
