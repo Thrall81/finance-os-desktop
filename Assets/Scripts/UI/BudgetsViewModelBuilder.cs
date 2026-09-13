@@ -27,6 +27,7 @@ namespace FinanceOS.UI
                     year, month, monthLabel, false, null, false, null,
                     Array.Empty<BudgetAllocationRowViewModel>(),
                     Array.Empty<BudgetChartBarGroupViewModel>(),
+                    Array.Empty<SavingsEvolutionPointViewModel>(),
                     categoryList.Select(c => new DropdownOption(c.Id, c.Name)).ToList());
             }
 
@@ -65,9 +66,16 @@ namespace FinanceOS.UI
                 MoneyFormat.Format(overview.SavingsMinor),
                 FormatPercent(overview.SavingsRatePercent));
 
+            var savingsEvolution = budgets.GetSavingsEvolution(new DateTime(year, month, 1))
+                .Select(p => new SavingsEvolutionPointViewModel(
+                    DateFormat.MonthAbbreviationYear(new DateTime(p.Year, p.Month, 1)),
+                    p.SavingsMinor,
+                    MoneyFormat.Format(p.SavingsMinor)))
+                .ToList();
+
             return new BudgetsViewModel(
                 year, month, monthLabel, true, budget.Id, budget.Status == BudgetStatus.Closed,
-                overviewViewModel, rows, chartGroups, unallocated);
+                overviewViewModel, rows, chartGroups, savingsEvolution, unallocated);
         }
 
         /// <summary>"12,3 %" — rounds via InvariantCulture (safe, no ICU data involved) then

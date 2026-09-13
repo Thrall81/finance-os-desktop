@@ -52,6 +52,14 @@
       </ui:VisualElement>
     </ui:VisualElement>
 
+    <ui:VisualElement name="savings-chart-card" class="card">
+      <ui:VisualElement class="card-header">
+        <ui:Label text="Évolution de l'épargne" class="card-title" />
+      </ui:VisualElement>
+      <ui:Label text="Épargne réelle et engagée par mois, sur les 6 derniers mois." class="card-caption" />
+      <ui:VisualElement name="savings-chart-container" class="chart" />
+    </ui:VisualElement>
+
     <ui:VisualElement name="chart-card" class="card">
       <ui:VisualElement class="card-header">
         <ui:Label text="Prévu / réel / engagé" class="card-title" />

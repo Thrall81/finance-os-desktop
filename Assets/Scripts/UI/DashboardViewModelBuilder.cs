@@ -53,20 +53,25 @@ namespace FinanceOS.UI
                 verificationQueue);
         }
 
-        /// <summary>Real expense transactions only (negative amounts, no internal transfer, a
-        /// category assigned) for the account's own currency — same filter as
-        /// `BudgetService.GetSummary`'s "réel" column, minus the account-agnostic scope (this
-        /// screen is already scoped to one account, unlike the budget). Sorted by amount
-        /// descending so both the donut's slice order and the legend below it read the same way:
-        /// biggest expense first.</summary>
+        /// <summary>Real expense transactions only (negative amounts, no internal transfer, an
+        /// Expense-type category assigned — a negative amount categorized as Épargne is money
+        /// moved to savings, not a "dépense") for the account's own currency. Narrower than
+        /// `BudgetService.GetSummary`'s "réel" column, which sums by whatever category an
+        /// allocation happens to target regardless of type: this donut is specifically about
+        /// spending, and this screen is already scoped to one account, unlike the budget. Sorted
+        /// by amount descending so both the donut's slice order and the legend below it read the
+        /// same way: biggest expense first.</summary>
         private static IReadOnlyList<ExpenseCategorySliceViewModel> BuildExpenseBreakdown(
             AppContainer app, Account account, DateTime monthStart, DateTime monthEnd)
         {
-            var categoryNames = app.Categories.ListActive().ToDictionary(c => c.Id, c => c.Name);
+            var expenseCategories = app.Categories.ListActive()
+                .Where(c => c.Type == CategoryType.Expense)
+                .ToDictionary(c => c.Id, c => c.Name);
 
             var byCategory = app.Transactions.ListForAccount(account.Id)
                 .Where(t => t.OperationDate >= monthStart && t.OperationDate <= monthEnd)
                 .Where(t => !t.IsInternalTransfer && t.CategoryId.HasValue && t.AmountMinor < 0)
+                .Where(t => expenseCategories.ContainsKey(t.CategoryId!.Value))
                 .GroupBy(t => t.CategoryId!.Value)
                 .Select(g => (CategoryId: g.Key, AmountMinor: -g.Sum(t => t.AmountMinor)))
                 .Where(g => g.AmountMinor > 0)
@@ -81,7 +86,7 @@ namespace FinanceOS.UI
 
             return byCategory
                 .Select(g => new ExpenseCategorySliceViewModel(
-                    categoryNames.TryGetValue(g.CategoryId, out var name) ? name : "—",
+                    expenseCategories.TryGetValue(g.CategoryId, out var name) ? name : "—",
                     g.AmountMinor,
                     MoneyFormat.Format(g.AmountMinor, account.Currency),
                     FormatPercent(100.0 * g.AmountMinor / total)))

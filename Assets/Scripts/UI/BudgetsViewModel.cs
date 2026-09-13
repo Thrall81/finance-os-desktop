@@ -25,6 +25,10 @@ namespace FinanceOS.UI
     public sealed record BudgetChartBarGroupViewModel(
         string CategoryName, long PlannedMinor, long ActualMinor, long CommittedMinor);
 
+    /// <summary>One month's point on the savings-evolution chart, raw amount alongside its
+    /// already-formatted axis label and legend text. See docs/07-Interface.md §8.</summary>
+    public sealed record SavingsEvolutionPointViewModel(string MonthLabel, long SavingsMinor, string SavingsText);
+
     /// <summary>Everything the Budget screen displays for one calendar month. Null
     /// <see cref="Overview"/>/empty <see cref="Allocations"/> with <see cref="BudgetExists"/>
     /// false means no budget row exists yet for this month — the screen shows a create prompt
@@ -39,5 +43,6 @@ namespace FinanceOS.UI
         BudgetOverviewViewModel? Overview,
         IReadOnlyList<BudgetAllocationRowViewModel> Allocations,
         IReadOnlyList<BudgetChartBarGroupViewModel> ChartGroups,
+        IReadOnlyList<SavingsEvolutionPointViewModel> SavingsEvolution,
         IReadOnlyList<DropdownOption> UnallocatedCategories);
 }

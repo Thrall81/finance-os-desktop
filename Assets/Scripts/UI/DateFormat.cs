@@ -15,6 +15,12 @@ namespace FinanceOS.UI
             "juillet", "août", "septembre", "octobre", "novembre", "décembre",
         };
 
+        private static readonly string[] MonthAbbreviations =
+        {
+            "janv.", "févr.", "mars", "avr.", "mai", "juin",
+            "juil.", "août", "sept.", "oct.", "nov.", "déc.",
+        };
+
         /// <summary>"27 août" — compact, for lists.</summary>
         public static string Short(DateTime date) => $"{date.Day} {MonthNames[date.Month - 1]}";
 
@@ -29,6 +35,11 @@ namespace FinanceOS.UI
             var name = MonthNames[date.Month - 1];
             return $"{char.ToUpperInvariant(name[0])}{name[1..]} {date.Year}";
         }
+
+        /// <summary>"sept. 2026" — narrow enough for a chart axis label under one of several bars,
+        /// unlike <see cref="MonthYear"/>'s full name. Year included since the savings-evolution
+        /// chart's 6-month window can cross a calendar year boundary.</summary>
+        public static string MonthAbbreviationYear(DateTime date) => $"{MonthAbbreviations[date.Month - 1]} {date.Year}";
 
         /// <summary>"il y a 5 jours" / "aujourd'hui" / "dans 3 jours" — for the verification queue.
         /// See docs/07-Interface.md §6.</summary>

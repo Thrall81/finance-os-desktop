@@ -374,6 +374,10 @@ namespace FinanceOS.EditorTools
             var septemberBudget = app.Budget.GetOrCreate(2026, 9);
             app.Budget.UpsertAllocation(septemberBudget.Id, housing.Id, 70_000);
 
+            var savingsCategory = app.Categories.ListActive().First(c => c.Name == "Épargne");
+            app.Transactions.CreateManual(
+                account.Id, -20_000, "EUR", new DateTime(2026, 9, 12), "Vers Livret Perso", categoryId: savingsCategory.Id);
+
             var budgetsViewModel = BudgetsViewModelBuilder.Build(app.Budget, app.Categories, 2026, 9);
             Check(budgetsViewModel.BudgetExists, "budget exists for September once created");
             Check(budgetsViewModel.MonthLabel == "Septembre 2026", "month label capitalized");
@@ -383,6 +387,12 @@ namespace FinanceOS.EditorTools
             Check(budgetsViewModel.ChartGroups.Count == 1, "one bar group appears in the view model, matching the one allocation");
             Check(budgetsViewModel.ChartGroups[0].CategoryName == "Logement", "bar group resolved by category name");
             Check(budgetsViewModel.ChartGroups[0].PlannedMinor == 70_000, "bar group carries the raw planned amount, not display text");
+
+            Check(budgetsViewModel.SavingsEvolution.Count == 6, "six months of savings history, independent of any Budget row existing for them");
+            Check(budgetsViewModel.SavingsEvolution[5].MonthLabel == "sept. 2026", "last point is the viewed month, abbreviated");
+            Check(budgetsViewModel.SavingsEvolution[5].SavingsMinor == 20_000, "September's savings transaction is reflected in the last point");
+            Check(budgetsViewModel.SavingsEvolution[0].MonthLabel == "avr. 2026", "first point is five months before the viewed month");
+            Check(budgetsViewModel.SavingsEvolution[0].SavingsMinor == 0, "no savings activity in April in this fixture");
 
             var octoberViewModel = BudgetsViewModelBuilder.Build(app.Budget, app.Categories, 2026, 10);
             Check(!octoberViewModel.BudgetExists, "no budget exists yet for a month never created");
@@ -412,6 +422,12 @@ namespace FinanceOS.EditorTools
             Check(budgetChart!.Groups.Count == budgetsViewModel.ChartGroups.Count, "bar chart element receives every bar group");
             Check(budgetChart.style.flexGrow.value == 1f, "bar chart element grows to fill its fixed-height container, same requirement as the cash-flow chart");
 
+            Check(budgetsRoot.Q<VisualElement>("savings-chart-card").style.display == DisplayStyle.Flex, "savings chart card shown when a budget exists");
+            var savingsChart = budgetsRoot.Q<SavingsEvolutionElement>();
+            Check(savingsChart is not null, "savings chart element added to the savings chart card");
+            Check(savingsChart!.Points.Count == budgetsViewModel.SavingsEvolution.Count, "savings chart element receives every month's point");
+            Check(savingsChart.style.flexGrow.value == 1f, "savings chart element grows to fill its fixed-height container, same requirement as the other two charts");
+
             budgetsController.Refresh();
             Check(allocationsListView.itemsSource.Count == 1, "refresh re-renders without duplication");
 
@@ -421,6 +437,8 @@ namespace FinanceOS.EditorTools
             Check(emptyBudgetsRoot.Q<VisualElement>("overview-card").style.display == DisplayStyle.None, "overview hidden for a month with no budget yet");
             Check(emptyBudgetsRoot.Q<VisualElement>("chart-card").style.display == DisplayStyle.None, "bar chart card hidden for a month with no budget yet");
             Check(emptyBudgetsRoot.Q<BudgetBarChartElement>()!.Groups.Count == 0, "bar chart has no groups with no budget — constructing it did not throw");
+            Check(emptyBudgetsRoot.Q<VisualElement>("savings-chart-card").style.display == DisplayStyle.None, "savings chart card hidden for a month with no budget yet");
+            Check(emptyBudgetsRoot.Q<SavingsEvolutionElement>()!.Points.Count == 0, "savings chart has no points with no budget — constructing it did not throw");
 
             var settingsViewModel = SettingsViewModelBuilder.Build(app.Settings, app.Accounts, app.DatabasePath);
             Check(settingsViewModel.Currency == "EUR", "currency is fixed EUR in V1");

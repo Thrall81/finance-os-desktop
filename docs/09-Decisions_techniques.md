@@ -36,6 +36,7 @@ Journal des décisions structurantes, dans le même format que l'ancien projet (
 | ADR-120 | Opérations récurrentes : avertissement de premier cycle sauté + suppression conditionnelle | ACCEPTED |
 | ADR-121 | Graphique barres budget construit ; texte des catégories en `Label` superposés, pas en Painter2D | ACCEPTED |
 | ADR-122 | Anneau des dépenses construit ; légende textuelle comme réponse à « jamais uniquement par la couleur » | ACCEPTED |
+| ADR-123 | Évolution de l'épargne construite (barres) ; historique indépendant de l'existence d'un budget | ACCEPTED |
 
 ---
 
@@ -373,5 +374,25 @@ Journal des décisions structurantes, dans le même format que l'ancien projet (
 **Ce qui reste vérifiable en batchmode, et ce qui ne l'est pas** : compilation, mapping `ExpenseBreakdown` (montants, tri, pourcentages — vérifié contre de vraies transactions de test, pas seulement asserté), présence de l'élément et `flexGrow == 1f` (même garde-fou que les deux graphiques précédents), nombre de lignes de légende, absence d'exception sans dépense ce mois-ci — tout vert du premier coup. Le rendu effectif (quartiers correctement proportionnés, légende lisible, couleurs cohérentes entre anneau et légende) ne l'est pas ; à confirmer par capture d'écran, comme les deux précédents.
 
 **Conséquences négatives** : pas d'infobulle au survol (§8.4), même report que les deux graphiques précédents. Palette limitée à 8 couleurs distinctes — au-delà, deux catégories peuvent partager visuellement la même couleur (le cycle modulo), acceptable pour une première version mais à revoir si un usage réel avec plus de 8 catégories dépensières le rend ambigu. Le graphique d'évolution de l'épargne (Budget) reste le dernier du catalogue à construire.
+
+**Documents concernés** : `07-Interface.md` §5/§8.
+
+---
+
+# 25. ADR-123 — Évolution de l'épargne construite (barres), dernier graphique du catalogue
+
+**Contexte** : quatrième et dernier graphique de `07-Interface.md` §8.2, sur l'écran Budget — le catalogue laissait le choix entre ligne et barres.
+
+**Décision** : `SavingsEvolutionElement` (`Assets/Scripts/UI/SavingsEvolutionElement.cs`), barres plutôt que ligne — une barre par mois se lit plus naturellement qu'une courbe pour six valeurs mensuelles indépendantes (pas un solde cumulé continu comme la courbe de trésorerie). Même famille `Painter2D` (ADR-103/119/121/122), même technique que `BudgetBarChartElement` pour les libellés (`Label` enfants repositionnés au `GeometryChangedEvent`, `Painter2D` ne dessinant pas de texte) — nouveau `DateFormat.MonthAbbreviationYear` (« sept. 2026 ») pour tenir sous une barre étroite, là où `DateFormat.MonthYear` (« Septembre 2026 ») sert déjà d'en-tête de page. Une seule série de barres (pas de groupe) : aucun enjeu « jamais uniquement par la couleur » puisqu'il n'y a rien d'autre à distinguer visuellement — première fois qu'un graphique de ce catalogue n'a pas eu besoin d'une réponse dédiée à cette exigence.
+
+**`BudgetService.GetSavingsEvolution` (nouveau)** : calcule l'épargne réelle + engagée (même définition que `BudgetOverview.SavingsMinor`, juste répétée par mois) pour les 6 derniers mois, **sans exiger qu'un `Budget` existe pour chacun** — contrairement à `GetOverview`, qui lève si aucune ligne `budget` n'existe pour le mois demandé. Un utilisateur qui vient de commencer à utiliser l'app n'a probablement pas créé de budget pour les mois précédents ; leur historique d'épargne réelle (transactions déjà enregistrées) doit rester visible malgré tout. Réutilise la même logique privée `SumForCategoryType` que `GetOverview`, appelée une fois par mois plutôt qu'une seule fois.
+
+**Corrigé en construisant ce graphique** : en écrivant son test, une transaction catégorisée « Épargne » serait apparue à tort dans l'anneau des dépenses (`ExpenseDonutElement`, ADR-122) — celui-ci ne filtrait que par signe (montant négatif) et présence d'une catégorie, pas par type de catégorie. Un virement vers l'épargne n'est pas une dépense. `DashboardViewModelBuilder.BuildExpenseBreakdown` restreint désormais explicitement aux catégories de type `Expense`. Repéré par effet de bord en assemblant les données de test de ce graphique-ci, pas par une revue a posteriori du précédent — worth noting que les quatre graphiques partagent assez de logique de filtrage par catégorie pour que ce genre d'angle mort se révèle seulement une fois plusieurs types de mouvement testés ensemble.
+
+**Affichage** : carte « Évolution de l'épargne » entre la synthèse et les barres prévu/réel/engagé sur l'écran Budget, masquée par le même interrupteur `BudgetExists` que le reste de l'écran — **simplification assumée** : la donnée elle-même ne dépend d'aucun budget créé (voir ci-dessus), mais un cas particulier pour cette seule carte n'a pas été jugé utile pour une première version ; à revoir si un utilisateur sans budget pour le mois courant se plaint de ne pas voir son historique d'épargne.
+
+**Ce qui reste vérifiable en batchmode, et ce qui ne l'est pas** : compilation, mapping `SavingsEvolution` (6 points, mois correctement abrégés, montant réel du mois testé vérifié contre une vraie transaction — pas seulement asserté), présence de l'élément et `flexGrow == 1f`, absence d'exception sans budget — tout vert du premier coup. Le rendu effectif (hauteur des barres, lisibilité des libellés de mois) ne l'est pas ; à confirmer par capture d'écran, comme les trois précédents.
+
+**Conséquences négatives** : pas d'infobulle au survol (§8.4), même report que les trois graphiques précédents. Fenêtre fixe de 6 mois, non réglable dans cette première version. Avec le dernier graphique du catalogue construit, les quatre sont maintenant confirmés vert en batchmode mais aucun n'a encore reçu de confirmation visuelle par capture d'écran pour ce graphique-ci spécifiquement.
 
 **Documents concernés** : `07-Interface.md` §5/§8.

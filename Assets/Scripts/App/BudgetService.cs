@@ -30,6 +30,11 @@ namespace FinanceOS.App
         long SavingsMinor,
         double SavingsRatePercent);
 
+    /// <summary>One calendar month's total savings movement (réel + engagé into Savings-type
+    /// categories, same definition as <see cref="BudgetOverview.SavingsMinor"/>) — a point on the
+    /// evolution chart. See docs/07-Interface.md §8.</summary>
+    public sealed record SavingsMonthPoint(int Year, int Month, long SavingsMinor);
+
     /// <summary>Orchestrates the monthly budget: allocations, and the prévu/réel/engagé/restant
     /// figures computed from transactions and occurrences. See docs/01-Perimetre.md §2.9.</summary>
     public sealed class BudgetService
@@ -156,6 +161,29 @@ namespace FinanceOS.App
             var savingsRate = income == 0 ? 0d : (double)savings / income * 100d;
 
             return new BudgetOverview(remainingToLive, income, savings, savingsRate);
+        }
+
+        /// <summary>Savings movement for each of the <paramref name="monthsBack"/> months up to and
+        /// including <paramref name="referenceDate"/>'s month — deliberately independent of any
+        /// `Budget` row existing for those months (unlike <see cref="GetOverview"/>, which requires
+        /// one): a new user with no budget created for past months should still see their savings
+        /// history. Same "réel + engagé into Savings-type categories" definition as
+        /// <see cref="BudgetOverview.SavingsMinor"/>, just repeated per month instead of once.</summary>
+        public IReadOnlyList<SavingsMonthPoint> GetSavingsEvolution(DateTime referenceDate, int monthsBack = 6)
+        {
+            var categoryTypes = _categories.ListAll().ToDictionary(c => c.Id, c => c.Type);
+            var cursor = new DateTime(referenceDate.Year, referenceDate.Month, 1).AddMonths(-(monthsBack - 1));
+
+            var points = new List<SavingsMonthPoint>();
+            for (var i = 0; i < monthsBack; i++)
+            {
+                var monthEnd = cursor.AddMonths(1).AddDays(-1);
+                var savings = SumForCategoryType(cursor, monthEnd, categoryTypes, CategoryType.Savings);
+                points.Add(new SavingsMonthPoint(cursor.Year, cursor.Month, savings));
+                cursor = cursor.AddMonths(1);
+            }
+
+            return points;
         }
 
         /// <summary>Réel (transactions) + engagé (occurrences) for every category of one type,
