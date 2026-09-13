@@ -1,3 +1,5 @@
+using System.Linq;
+using UnityEngine;
 using UnityEngine.UIElements;
 
 namespace FinanceOS.UI
@@ -18,6 +20,10 @@ namespace FinanceOS.UI
         private readonly Label _verificationEmptyLabel;
         private readonly VisualElement _verificationList;
         private readonly LineChartElement _cashFlowChart;
+        private readonly Label _donutEmptyLabel;
+        private readonly VisualElement _donutRow;
+        private readonly ExpenseDonutElement _donutChart;
+        private readonly VisualElement _donutLegend;
 
         public DashboardController(VisualElement root)
         {
@@ -33,6 +39,13 @@ namespace FinanceOS.UI
             _cashFlowChart = new LineChartElement();
             _cashFlowChart.style.flexGrow = 1;
             root.Q<VisualElement>("cashflow-chart-container").Add(_cashFlowChart);
+
+            _donutEmptyLabel = root.Q<Label>("donut-empty");
+            _donutRow = root.Q<VisualElement>("donut-row");
+            _donutChart = new ExpenseDonutElement();
+            _donutChart.style.flexGrow = 1;
+            root.Q<VisualElement>("donut-chart-container").Add(_donutChart);
+            _donutLegend = root.Q<VisualElement>("donut-legend");
         }
 
         public void Render(DashboardViewModel viewModel)
@@ -44,6 +57,17 @@ namespace FinanceOS.UI
             _lowestDateLabel.text = viewModel.LowestBalanceDateText;
 
             _cashFlowChart.Points = viewModel.ChartSeries;
+
+            var hasExpenses = viewModel.ExpenseBreakdown.Count > 0;
+            _donutEmptyLabel.style.display = hasExpenses ? DisplayStyle.None : DisplayStyle.Flex;
+            _donutRow.style.display = hasExpenses ? DisplayStyle.Flex : DisplayStyle.None;
+            _donutChart.Slices = viewModel.ExpenseBreakdown.Select(s => s.AmountMinor).ToList();
+
+            _donutLegend.Clear();
+            for (var i = 0; i < viewModel.ExpenseBreakdown.Count; i++)
+            {
+                _donutLegend.Add(BuildDonutLegendRow(viewModel.ExpenseBreakdown[i], ExpenseDonutElement.Palette[i % ExpenseDonutElement.Palette.Length]));
+            }
 
             _verificationCountLabel.text = viewModel.VerificationQueue.Count.ToString();
             _verificationEmptyLabel.style.display = viewModel.VerificationQueue.Count == 0
@@ -75,6 +99,27 @@ namespace FinanceOS.UI
 
             row.Add(textColumn);
             row.Add(amountElement);
+            return row;
+        }
+
+        private static VisualElement BuildDonutLegendRow(ExpenseCategorySliceViewModel slice, Color color)
+        {
+            var row = new VisualElement();
+            row.AddToClassList("donut-legend-row");
+
+            var swatch = new VisualElement();
+            swatch.AddToClassList("donut-legend-swatch");
+            swatch.style.backgroundColor = color;
+
+            var nameLabel = new Label(slice.CategoryName);
+            nameLabel.AddToClassList("donut-legend-name");
+
+            var valueLabel = new Label($"{slice.AmountText} · {slice.PercentText}");
+            valueLabel.AddToClassList("donut-legend-value");
+
+            row.Add(swatch);
+            row.Add(nameLabel);
+            row.Add(valueLabel);
             return row;
         }
     }

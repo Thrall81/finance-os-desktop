@@ -385,3 +385,45 @@
     -unity-text-align: upper-center;
     white-space: normal;
 }
+
+.donut-row {
+    flex-direction: row;
+    align-items: center;
+}
+
+.donut-container {
+    width: 160px;
+    height: 160px;
+    flex-shrink: 0;
+    margin-right: 20px;
+}
+
+.donut-legend {
+    flex-grow: 1;
+}
+
+.donut-legend-row {
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: 6px;
+}
+
+.donut-legend-swatch {
+    width: 10px;
+    height: 10px;
+    border-radius: 5px;
+    margin-right: 8px;
+    flex-shrink: 0;
+}
+
+.donut-legend-name {
+    flex-grow: 1;
+    font-size: 13px;
+}
+
+.donut-legend-value {
+    font-size: 13px;
+    color: var(--color-ink-600);
+    -unity-text-align: middle-right;
+    -unity-font-definition: url("../../Fonts/IBMPlexMono-Regular.ttf");
+}

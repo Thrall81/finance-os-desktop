@@ -119,6 +119,11 @@ namespace FinanceOS.EditorTools
             Check(dashboardChart!.Points.Count == viewModel.ChartSeries.Count, "dashboard chart element receives the full chart series");
             Check(dashboardChart.style.flexGrow.value == 1f, "dashboard chart element grows to fill its fixed-height container");
 
+            Check(viewModel.ExpenseBreakdown.Count == 0, "no September expense transactions exist yet at this point in the scenario");
+            Check(root.Q<Label>("donut-empty").style.display == DisplayStyle.Flex, "donut empty-state shown with no expenses this month");
+            Check(root.Q<VisualElement>("donut-row").style.display == DisplayStyle.None, "donut row hidden with no expenses this month");
+            Check(root.Q<ExpenseDonutElement>()!.Slices.Count == 0, "donut chart has no slices with no expenses — constructing/rendering it did not throw");
+
             var savings = app.Accounts.CreateAccount("Ancien Livret", AccountType.Savings, "EUR", 20_000);
             app.Accounts.Archive(savings.Id);
 
@@ -194,6 +199,30 @@ namespace FinanceOS.EditorTools
 
             transactionsController.Refresh();
             Check(listView.itemsSource.Count == 1, "refresh re-renders without duplication");
+
+            // Dashboard expense-breakdown donut: "Carrefour" above is dated in August, outside
+            // this month's window, so a couple of September-dated expenses are needed to exercise
+            // ExpenseDonutElement with real (non-empty) data.
+            app.Transactions.CreateManual(account.Id, -3_000, "EUR", new DateTime(2026, 9, 8), "Monoprix", categoryId: groceries.Id);
+            app.Transactions.CreateManual(account.Id, -9_000, "EUR", new DateTime(2026, 9, 9), "Loyer manuel", categoryId: housing.Id);
+
+            var septemberViewModel = DashboardViewModelBuilder.Build(app, today);
+            Check(septemberViewModel!.ExpenseBreakdown.Count == 2, "two categories appear in this month's expense breakdown");
+            Check(septemberViewModel.ExpenseBreakdown[0].CategoryName == "Logement", "biggest expense sorts first");
+            Check(septemberViewModel.ExpenseBreakdown[0].AmountMinor == 9_000, "raw amount is a positive magnitude, not the signed transaction amount");
+            Check(Normalize(septemberViewModel.ExpenseBreakdown[0].AmountText) == "90,00 €", "amount formatted correctly");
+            Check(septemberViewModel.ExpenseBreakdown[0].PercentText == "75 %", "75% of the 120,00 € total is Logement's share");
+            Check(septemberViewModel.ExpenseBreakdown[1].CategoryName == "Alimentation", "smaller category sorts second");
+            Check(septemberViewModel.ExpenseBreakdown[1].PercentText == "25 %", "the remaining 25% is Alimentation's share");
+
+            controller.Render(septemberViewModel);
+            Check(root.Q<Label>("donut-empty").style.display == DisplayStyle.None, "donut empty-state hidden once expenses exist");
+            Check(root.Q<VisualElement>("donut-row").style.display == DisplayStyle.Flex, "donut row shown once expenses exist");
+            var donutChart = root.Q<ExpenseDonutElement>();
+            Check(donutChart is not null, "donut chart element added to the chart container");
+            Check(donutChart!.Slices.Count == 2, "donut chart element receives one slice per category");
+            Check(donutChart.style.flexGrow.value == 1f, "donut chart element grows to fill its fixed-size container, same requirement as the other two charts");
+            Check(root.Q<VisualElement>("donut-legend").childCount == 2, "one legend row per category");
 
             var salary = app.RecurringOperations.Create(
                 "Salaire", RecurringOperationType.Income, 210_000, RecurringFrequency.Monthly,

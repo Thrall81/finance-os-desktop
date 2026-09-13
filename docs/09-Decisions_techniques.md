@@ -35,6 +35,7 @@ Journal des décisions structurantes, dans le même format que l'ancien projet (
 | ADR-119 | Graphique de trésorerie construit ; pointillé dessiné à la main (pas d'API native) | ACCEPTED |
 | ADR-120 | Opérations récurrentes : avertissement de premier cycle sauté + suppression conditionnelle | ACCEPTED |
 | ADR-121 | Graphique barres budget construit ; texte des catégories en `Label` superposés, pas en Painter2D | ACCEPTED |
+| ADR-122 | Anneau des dépenses construit ; légende textuelle comme réponse à « jamais uniquement par la couleur » | ACCEPTED |
 
 ---
 
@@ -354,5 +355,23 @@ Journal des décisions structurantes, dans le même format que l'ancien projet (
 **Ce qui reste vérifiable en batchmode, et ce qui ne l'est pas** : compilation, mapping `ChartGroups` (montants bruts corrects, cf. `UISmokeTest.cs`), présence de l'élément et `flexGrow == 1f` (même garde-fou que la courbe, ADR-119), absence d'exception sans budget/sans allocation — tout vert du premier coup. Le rendu effectif (proportions des barres, lisibilité des labels de catégorie repositionnés) ne l'est pas ; à confirmer par capture d'écran.
 
 **Conséquences négatives** : pas d'infobulle au survol (§8.4), même report qu'ADR-119. Avec beaucoup de catégories allouées, les groupes de barres et leurs labels vont se resserrer — pas de défilement horizontal ni de regroupement/agrégation prévu dans cette première version, à revoir si un usage réel avec de nombreuses catégories le rend illisible. Le graphique de répartition des dépenses (anneau, Tableau de bord) et celui de l'évolution de l'épargne (Budget) restent à construire.
+
+**Documents concernés** : `07-Interface.md` §5/§8.
+
+---
+
+# 24. ADR-122 — Anneau des dépenses construit sur le patron `Painter2D` établi
+
+**Contexte** : troisième et avant-dernier graphique du catalogue (`07-Interface.md` §8.2), sur le Tableau de bord — répartition des dépenses du mois par catégorie.
+
+**Décision** : `ExpenseDonutElement` (`Assets/Scripts/UI/ExpenseDonutElement.cs`), même famille `Painter2D` que les deux précédents (ADR-103/119/121). Chaque quartier est un polygone (bord extérieur puis bord intérieur, uniquement `MoveTo`/`LineTo`/`ClosePath`/`Fill`) approximant un arc en `MinSegmentAngleRadians` (0,05 rad, ≈2,9°) par segment — `Painter2D.Arc` de nouveau volontairement évité (même raisonnement qu'ADR-119 pour le marqueur en losange). `Slices` ne prend que les montants bruts, la palette de 8 couleurs (`ExpenseDonutElement.Palette`, statique et publique) est partagée avec le contrôleur pour que chaque quartier et sa ligne de légende utilisent exactement la même couleur — cycle (modulo) au-delà de 8 catégories, limite assumée pour cette première version comme les autres graphiques.
+
+**Alimentation** : `DashboardViewModel.ExpenseBreakdown` (nouveau champ, `ExpenseCategorySliceViewModel`), construit par `DashboardViewModelBuilder.BuildExpenseBreakdown` à partir des transactions réelles du compte principal sur le mois courant (montant négatif, hors virement interne, catégorie assignée) — même filtre que la colonne « réel » de `BudgetService.GetSummary`, restreint à un seul compte puisque le Tableau de bord l'est déjà pour tout le reste. Trié par montant décroissant, cohérent entre l'anneau et la légende.
+
+**« Jamais uniquement par la couleur » (§8.4) sans équivalent trait plein/pointillé ni ordre de groupe fixe** : contrairement aux barres (ordre gauche-à-droite fixe, §ADR-121), un anneau n'a pas de position stable par catégorie — le nombre et l'identité des quartiers changent d'un mois à l'autre. Seule solution robuste : une **légende textuelle** (pastille de couleur + nom de catégorie + montant + pourcentage), construite par `DashboardController` comme de vrais `Label`/`VisualElement`, pas peinte sur le canevas. Elle sert doublement : distinction non basée sur la seule couleur, et alternative textuelle du graphique (§8.4) — les deux exigences satisfaites par le même composant plutôt que par deux mécanismes séparés.
+
+**Ce qui reste vérifiable en batchmode, et ce qui ne l'est pas** : compilation, mapping `ExpenseBreakdown` (montants, tri, pourcentages — vérifié contre de vraies transactions de test, pas seulement asserté), présence de l'élément et `flexGrow == 1f` (même garde-fou que les deux graphiques précédents), nombre de lignes de légende, absence d'exception sans dépense ce mois-ci — tout vert du premier coup. Le rendu effectif (quartiers correctement proportionnés, légende lisible, couleurs cohérentes entre anneau et légende) ne l'est pas ; à confirmer par capture d'écran, comme les deux précédents.
+
+**Conséquences négatives** : pas d'infobulle au survol (§8.4), même report que les deux graphiques précédents. Palette limitée à 8 couleurs distinctes — au-delà, deux catégories peuvent partager visuellement la même couleur (le cycle modulo), acceptable pour une première version mais à revoir si un usage réel avec plus de 8 catégories dépensières le rend ambigu. Le graphique d'évolution de l'épargne (Budget) reste le dernier du catalogue à construire.
 
 **Documents concernés** : `07-Interface.md` §5/§8.

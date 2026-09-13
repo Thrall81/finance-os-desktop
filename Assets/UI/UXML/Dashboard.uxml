@@ -32,6 +32,18 @@
       <ui:VisualElement name="cashflow-chart-container" class="chart" />
     </ui:VisualElement>
 
+    <ui:VisualElement name="donut-card" class="card">
+      <ui:VisualElement class="card-header">
+        <ui:Label text="Répartition des dépenses" class="card-title" />
+      </ui:VisualElement>
+      <ui:Label text="Dépenses du mois en cours par catégorie, triées de la plus grande à la plus petite." class="card-caption" />
+      <ui:Label name="donut-empty" text="Aucune dépense ce mois-ci." class="empty-state" />
+      <ui:VisualElement name="donut-row" class="donut-row">
+        <ui:VisualElement name="donut-chart-container" class="donut-container" />
+        <ui:VisualElement name="donut-legend" class="donut-legend" />
+      </ui:VisualElement>
+    </ui:VisualElement>
+
     <ui:VisualElement name="verification-card" class="card">
       <ui:VisualElement class="card-header">
         <ui:Label text="Opérations à vérifier" class="card-title" />

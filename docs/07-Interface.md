@@ -75,7 +75,7 @@ Navigation clavier complète, `aria`-équivalent UI Toolkit pour l'étape couran
 
 Cartes reprises de l'ancien projet : Solde disponible, Solde prévu en fin de mois, Point bas prévisionnel, Reste à vivre — puis graphique de trésorerie, **file de vérification** (occurrences arrivées à échéance non confirmées, mise en avant si non vide), prochaines opérations, synthèse budgétaire, alertes calculées à l'affichage (solde faible, dépassement de budget).
 
-**État d'implémentation** : `Dashboard.uxml` + `DashboardController` affichent Solde disponible, Solde prévu en fin de mois, Point bas prévisionnel, la courbe de trésorerie (`LineChartElement`, §8, ADR-119 — même patron que Prévisions, horizon fin du mois courant) et la file de vérification, alimentés par `DashboardViewModelBuilder` (`Assets/Scripts/UI/`). Reste à vivre, prochaines opérations, synthèse budgétaire et alertes ne sont pas encore construits.
+**État d'implémentation** : `Dashboard.uxml` + `DashboardController` affichent Solde disponible, Solde prévu en fin de mois, Point bas prévisionnel, la courbe de trésorerie (`LineChartElement`, §8, ADR-119 — même patron que Prévisions, horizon fin du mois courant), la répartition des dépenses (`ExpenseDonutElement`, §8, ADR-122 — dépenses réelles du mois en cours, catégorie par catégorie, compte principal uniquement) et la file de vérification, alimentés par `DashboardViewModelBuilder` (`Assets/Scripts/UI/`). Reste à vivre, prochaines opérations, synthèse budgétaire et alertes ne sont pas encore construits.
 
 **Navigation** : une barre latérale (`Shell.uxml` + `ShellController`) donne accès aux sept écrans de §3 — Tableau de bord, Comptes, Transactions, Opérations récurrentes, Prévisions, Budget et Paramètres ; chaque écran est un `VisualTreeAsset` instancié dans la zone de contenu du shell plutôt qu'une scène séparée (cf. `09-Decisions_techniques.md`, ADR-113).
 
@@ -135,7 +135,7 @@ Tous les graphiques sont des `VisualElement` personnalisés qui redéfinissent `
 |---|---|---|---|
 | Courbe de trésorerie | Ligne, avec segment plein (réel) puis pointillé (prévu), marqueur du point bas | Prévisions, Tableau de bord | **Construit** (`LineChartElement`) |
 | Budget prévu/réel/engagé | Barres groupées par catégorie | Budget | **Construit** (`BudgetBarChartElement`) |
-| Répartition des dépenses | Anneau (donut) | Tableau de bord | À construire |
+| Répartition des dépenses | Anneau (donut) | Tableau de bord | **Construit** (`ExpenseDonutElement`) |
 | Évolution de l'épargne | Ligne ou barres | Budget | À construire |
 
 La courbe de trésorerie sur Prévisions a été confirmée par capture d'écran le 2026-09-13 (ADR-119) puis répliquée telle quelle sur le Tableau de bord — même composant, mêmes couleurs, horizon différent (fin du mois courant plutôt que l'horizon de prévision réglable).
@@ -168,13 +168,17 @@ public sealed class LineChartElement : VisualElement
 
 Même famille que `LineChartElement` (`Painter2D`, aucune bibliothèque tierce), pour les barres groupées prévu/réel/engagé du Budget (ADR-121). Différence structurelle : `Painter2D` ne dessine pas de texte, donc les noms de catégorie (indispensables pour lire un graphique à barres, contrairement à la courbe où les KPI environnants suffisaient) sont de vrais `Label` UI Toolkit, enfants du même `VisualElement`, repositionnés sous chaque groupe de barres à chaque changement de géométrie (`GeometryChangedEvent`) — le canevas dessine les barres, les enfants portent le texte. `Groups` prend un `BudgetChartBarGroupViewModel` (nom de catégorie + trois montants bruts) construit par `BudgetsViewModelBuilder` depuis `BudgetService.GetSummary`. Ordre gauche-à-droite fixe par groupe (prévu, réel, engagé), expliqué dans la légende textuelle de la carte plutôt que répété en légende graphique — c'est ce qui tient lieu de distinction « pas uniquement par la couleur » (§8.4) en l'absence d'un équivalent du trait plein/pointillé pour des barres.
 
+## 8.3ter Composant `ExpenseDonutElement`
+
+Troisième graphique de la même famille (`Painter2D`, ADR-103), sur le Tableau de bord. Chaque quartier est un polygone plein approximant un arc (bord extérieur puis retour par le bord intérieur, uniquement `MoveTo`/`LineTo`/`ClosePath`/`Fill`) — `Painter2D.Arc` volontairement évité, même raisonnement que le marqueur en losange de la courbe (ADR-119) : plus grande confiance avec des membres d'API déjà éprouvés qu'avec un jamais utilisé. `Slices` ne prend que des montants bruts (les proportions suffisent au calcul des angles) ; le nom de catégorie et le pourcentage, eux, sont du texte — et `Painter2D` n'en dessine pas. Solution : `DashboardController` construit une légende (`Label` + pastille de couleur, vrais `VisualElement`) à côté de l'anneau plutôt que d'essayer de peindre du texte sur le canevas — même schéma « canevas pour les formes, éléments UI pour le texte » que `BudgetBarChartElement` (ADR-121), mais ici la légende sert aussi de réponse à l'exigence « jamais uniquement par la couleur » (§8.4) : chaque couleur porte son nom de catégorie juste à côté. Alimenté par `DashboardViewModel.ExpenseBreakdown` (`ExpenseCategorySliceViewModel`), construit par `DashboardViewModelBuilder` à partir des dépenses réelles (transactions au montant négatif, hors virement interne, catégorisées) du compte principal sur le mois courant — même filtre que la colonne « réel » de `BudgetService.GetSummary`, sans son périmètre multi-compte (cet écran est déjà cadré sur un seul compte). Triées du plus gros au plus petit poste, dans le donut comme dans la légende.
+
 ## 8.4 Exigences conservées de l'ancien projet
 
 - chaque graphique possède un titre et, si utile, une légende ;
-- une infobulle apparaît au survol d'un point/d'une barre (valeur exacte, date, détail) — **pas encore construite**, ni sur `LineChartElement` ni sur `BudgetBarChartElement` : demanderait une détection de position de pointeur sur un rendu vectoriel, différée tant que le tracé de base n'est pas confirmé visuellement (cf. ADR-119) ;
-- une alternative textuelle existe toujours à côté du graphique (les valeurs principales restent lisibles sans lui) — le « Journal des mouvements prévus » pour la courbe, le tableau des catégories (prévu/réel/engagé/restant) pour les barres ;
-- aucune information n'est transmise uniquement par la couleur (le trait plein/pointillé porte la distinction réel/prévu sur la courbe ; l'ordre gauche-à-droite fixe, expliqué en légende, porte la distinction prévu/réel/engagé sur les barres) ;
-- comportement correct géré pour l'absence de données — `LineChartElement` ne dessine rien avec moins de deux points, `BudgetBarChartElement` ne dessine rien sans groupe ou si la valeur maximale est nulle, aucun des deux ne lève d'exception.
+- une infobulle apparaît au survol d'un point/d'une barre (valeur exacte, date, détail) — **pas encore construite** sur aucun des trois graphiques : demanderait une détection de position de pointeur sur un rendu vectoriel, différée tant que le tracé de base n'est pas confirmé visuellement (cf. ADR-119) ;
+- une alternative textuelle existe toujours à côté du graphique (les valeurs principales restent lisibles sans lui) — le « Journal des mouvements prévus » pour la courbe, le tableau des catégories (prévu/réel/engagé/restant) pour les barres, la légende (nom + montant + pourcentage) pour l'anneau ;
+- aucune information n'est transmise uniquement par la couleur — le trait plein/pointillé porte la distinction réel/prévu sur la courbe, l'ordre gauche-à-droite fixe porte la distinction prévu/réel/engagé sur les barres, et le nom de catégorie en toutes lettres dans la légende porte l'identification de chaque quartier de l'anneau ;
+- comportement correct géré pour l'absence de données — aucun des trois graphiques ne lève d'exception sans données (`LineChartElement` : moins de deux points ; `BudgetBarChartElement` : pas de groupe ou valeur maximale nulle ; `ExpenseDonutElement` : pas de quartier ou total nul).
 
 ---
 

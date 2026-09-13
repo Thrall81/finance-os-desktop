@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using FinanceOS.App;
 using FinanceOS.Domain;
@@ -39,6 +40,8 @@ namespace FinanceOS.UI
                 .Select(day => new ChartPointViewModel(day.Date, day.ClosingBalanceMinor, day.IsActual))
                 .ToList();
 
+            var expenseBreakdown = BuildExpenseBreakdown(app, account, monthStart, monthEnd);
+
             return new DashboardViewModel(
                 account.Name,
                 MoneyFormat.Format(account.OfficialBalanceMinor, account.Currency),
@@ -46,7 +49,53 @@ namespace FinanceOS.UI
                 MoneyFormat.Format(forecast.LowestBalanceMinor, account.Currency),
                 DateFormat.Short(forecast.LowestBalanceDate),
                 chartSeries,
+                expenseBreakdown,
                 verificationQueue);
+        }
+
+        /// <summary>Real expense transactions only (negative amounts, no internal transfer, a
+        /// category assigned) for the account's own currency — same filter as
+        /// `BudgetService.GetSummary`'s "réel" column, minus the account-agnostic scope (this
+        /// screen is already scoped to one account, unlike the budget). Sorted by amount
+        /// descending so both the donut's slice order and the legend below it read the same way:
+        /// biggest expense first.</summary>
+        private static IReadOnlyList<ExpenseCategorySliceViewModel> BuildExpenseBreakdown(
+            AppContainer app, Account account, DateTime monthStart, DateTime monthEnd)
+        {
+            var categoryNames = app.Categories.ListActive().ToDictionary(c => c.Id, c => c.Name);
+
+            var byCategory = app.Transactions.ListForAccount(account.Id)
+                .Where(t => t.OperationDate >= monthStart && t.OperationDate <= monthEnd)
+                .Where(t => !t.IsInternalTransfer && t.CategoryId.HasValue && t.AmountMinor < 0)
+                .GroupBy(t => t.CategoryId!.Value)
+                .Select(g => (CategoryId: g.Key, AmountMinor: -g.Sum(t => t.AmountMinor)))
+                .Where(g => g.AmountMinor > 0)
+                .OrderByDescending(g => g.AmountMinor)
+                .ToList();
+
+            var total = byCategory.Sum(g => g.AmountMinor);
+            if (total <= 0)
+            {
+                return Array.Empty<ExpenseCategorySliceViewModel>();
+            }
+
+            return byCategory
+                .Select(g => new ExpenseCategorySliceViewModel(
+                    categoryNames.TryGetValue(g.CategoryId, out var name) ? name : "—",
+                    g.AmountMinor,
+                    MoneyFormat.Format(g.AmountMinor, account.Currency),
+                    FormatPercent(100.0 * g.AmountMinor / total)))
+                .ToList();
+        }
+
+        /// <summary>"12,3 %" — same rounding/formatting choice as
+        /// `BudgetsViewModelBuilder.FormatPercent` (InvariantCulture round, comma swapped in by
+        /// hand — never trust CurrentCulture for French decimals on this runtime).</summary>
+        private static string FormatPercent(double value)
+        {
+            var rounded = Math.Round(value, 1, MidpointRounding.AwayFromZero);
+            var text = rounded.ToString("0.#", System.Globalization.CultureInfo.InvariantCulture);
+            return $"{text.Replace('.', ',')} %";
         }
 
         private static Account? ResolvePrimaryAccount(AppContainer app)
