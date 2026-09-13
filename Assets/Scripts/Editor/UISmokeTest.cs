@@ -118,6 +118,13 @@ namespace FinanceOS.EditorTools
             var dashboardChart = root.Q<LineChartElement>();
             Check(dashboardChart!.Points.Count == viewModel.ChartSeries.Count, "dashboard chart element receives the full chart series");
             Check(dashboardChart.style.flexGrow.value == 1f, "dashboard chart element grows to fill its fixed-height container");
+            Check(dashboardChart.Q<Label>(className: "chart-tooltip") is not null, "cash-flow chart's hover tooltip label exists");
+            Check(dashboardChart.Q<Label>(className: "chart-tooltip")!.style.display == DisplayStyle.None, "cash-flow chart's hover tooltip is hidden by default");
+            Check(LineChartElement.FindNearestPointIndex(pointCount: 0, elementWidth: 300, sidePadding: 6, localX: 100) is null, "no nearest point with zero points");
+            Check(LineChartElement.FindNearestPointIndex(pointCount: 1, elementWidth: 300, sidePadding: 6, localX: 100) is null, "no nearest point with a single point either — nothing is drawn below two points");
+            Check(LineChartElement.FindNearestPointIndex(pointCount: 5, elementWidth: 300, sidePadding: 6, localX: 6) == 0, "leftmost pointer position resolves to the first point");
+            Check(LineChartElement.FindNearestPointIndex(pointCount: 5, elementWidth: 300, sidePadding: 6, localX: 294) == 4, "rightmost pointer position resolves to the last point");
+            Check(LineChartElement.FindNearestPointIndex(pointCount: 5, elementWidth: 300, sidePadding: 6, localX: 150) == 2, "middle pointer position resolves to the middle point");
 
             Check(viewModel.ExpenseBreakdown.Count == 0, "no September expense transactions exist yet at this point in the scenario");
             Check(root.Q<Label>("donut-empty").style.display == DisplayStyle.Flex, "donut empty-state shown with no expenses this month");
@@ -222,6 +229,18 @@ namespace FinanceOS.EditorTools
             Check(donutChart is not null, "donut chart element added to the chart container");
             Check(donutChart!.Slices.Count == 2, "donut chart element receives one slice per category");
             Check(donutChart.style.flexGrow.value == 1f, "donut chart element grows to fill its fixed-size container, same requirement as the other two charts");
+            Check(donutChart.Q<Label>(className: "chart-tooltip") is not null, "donut chart's hover tooltip label exists");
+            Check(donutChart.Q<Label>(className: "chart-tooltip")!.style.display == DisplayStyle.None, "donut chart's hover tooltip is hidden by default");
+
+            // 200x200 square, matching the private padding/inner-radius constants: center (100,100),
+            // outer radius 94, inner radius ~51.7 — a mid-ring point straight right of center sits
+            // deep inside the biggest slice (Logement, 75%), straight up-left inside the smaller one
+            // (Alimentation, 25%, the last 90° before wrapping back to the top).
+            Check(ExpenseDonutElement.FindSliceUnderPointer(donutChart.Slices, 200, 200, 175, 100) == 0, "pointer to the right of center hits the biggest (first) slice");
+            Check(ExpenseDonutElement.FindSliceUnderPointer(donutChart.Slices, 200, 200, 47, 47) == 1, "pointer up-and-left of center hits the smaller (second) slice");
+            Check(ExpenseDonutElement.FindSliceUnderPointer(donutChart.Slices, 200, 200, 100, 100) is null, "pointer at dead center (inside the hole) hits nothing");
+            Check(ExpenseDonutElement.FindSliceUnderPointer(donutChart.Slices, 200, 200, 1000, 1000) is null, "pointer far outside the ring hits nothing");
+            Check(ExpenseDonutElement.FindSliceUnderPointer(Array.Empty<ExpenseCategorySliceViewModel>(), 200, 200, 175, 100) is null, "no slice to hit with an empty list");
             Check(root.Q<VisualElement>("donut-legend").childCount == 2, "one legend row per category");
 
             var salary = app.RecurringOperations.Create(
@@ -421,12 +440,36 @@ namespace FinanceOS.EditorTools
             Check(budgetChart is not null, "bar chart element added to the chart card");
             Check(budgetChart!.Groups.Count == budgetsViewModel.ChartGroups.Count, "bar chart element receives every bar group");
             Check(budgetChart.style.flexGrow.value == 1f, "bar chart element grows to fill its fixed-height container, same requirement as the cash-flow chart");
+            Check(budgetChart.Q<Label>(className: "chart-tooltip") is not null, "budget bar chart's hover tooltip label exists");
+            Check(budgetChart.Q<Label>(className: "chart-tooltip")!.style.display == DisplayStyle.None, "budget bar chart's hover tooltip is hidden by default");
+
+            // 300x200: one group (Logement, planned 70 000 / actual 9 000 / committed 65 000 minor
+            // at this point in the scenario), groupWidth 300, drawableHeight 170 (200-12-18).
+            // Prévu is the tallest bar (it's the max), so any y in-bounds hits it; Réel is short
+            // (≈22px tall out of 170), so the same x with a y above its drawn top must miss.
+            var budgetGroups = budgetChart.Groups;
+            Check(BudgetBarChartElement.FindBarUnderPointer(budgetGroups, 300, 200, 50, 100) == (0, 0), "pointer over the tall Prévu bar hits group 0 / série 0");
+            Check(BudgetBarChartElement.FindBarUnderPointer(budgetGroups, 300, 200, 150, 170) == (0, 1), "pointer low enough over the short Réel bar hits group 0 / série 1");
+            Check(BudgetBarChartElement.FindBarUnderPointer(budgetGroups, 300, 200, 150, 100) is null, "pointer above the short Réel bar's actual drawn height hits nothing");
+            Check(BudgetBarChartElement.FindBarUnderPointer(budgetGroups, 300, 200, 101, 100) is null, "pointer in the gap between two bars hits nothing");
+            Check(BudgetBarChartElement.FindBarUnderPointer(budgetGroups, 300, 200, 350, 100) is null, "pointer past the only group hits nothing");
 
             Check(budgetsRoot.Q<VisualElement>("savings-chart-card").style.display == DisplayStyle.Flex, "savings chart card shown when a budget exists");
             var savingsChart = budgetsRoot.Q<SavingsEvolutionElement>();
             Check(savingsChart is not null, "savings chart element added to the savings chart card");
             Check(savingsChart!.Points.Count == budgetsViewModel.SavingsEvolution.Count, "savings chart element receives every month's point");
             Check(savingsChart.style.flexGrow.value == 1f, "savings chart element grows to fill its fixed-height container, same requirement as the other two charts");
+            Check(savingsChart.Q<Label>(className: "chart-tooltip") is not null, "savings chart's hover tooltip label exists");
+            Check(savingsChart.Q<Label>(className: "chart-tooltip")!.style.display == DisplayStyle.None, "savings chart's hover tooltip is hidden by default");
+
+            // 600 wide over 6 months: 100px/slot. Only September (index 5, the last one) has real
+            // savings in this scenario — every other month's bar isn't drawn at all (zero value),
+            // so hovering its slot must miss even though the x/y would otherwise look plausible.
+            var savingsPoints = savingsChart.Points;
+            Check(SavingsEvolutionElement.FindBarUnderPointer(savingsPoints, 600, 200, 550, 100) == 5, "pointer over September's bar hits point index 5");
+            Check(SavingsEvolutionElement.FindBarUnderPointer(savingsPoints, 600, 200, 50, 100) is null, "pointer over April's slot hits nothing — its bar has zero savings, nothing drawn there");
+            Check(SavingsEvolutionElement.FindBarUnderPointer(savingsPoints, 600, 200, 505, 100) is null, "pointer in the gap next to September's bar hits nothing");
+            Check(SavingsEvolutionElement.FindBarUnderPointer(savingsPoints, 600, 200, 700, 100) is null, "pointer past the last month's slot hits nothing");
             Check(budgetsRoot.Q<Label>("savings-empty").style.display == DisplayStyle.None, "savings empty-state hidden once September has real savings activity");
             Check(budgetsRoot.Q<VisualElement>("savings-chart-container").style.display == DisplayStyle.Flex, "savings chart container shown once September has real savings activity");
 

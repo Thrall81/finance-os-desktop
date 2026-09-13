@@ -11,8 +11,8 @@ namespace FinanceOS.UI
     /// charting library (ADR-103). Solid segment for the real (already-happened) portion of the
     /// timeline, dashed for the forecast portion, a small marker at the lowest point.
     /// See docs/07-Interface.md §8.3. Always paired in the UXML with a textual table right below
-    /// it (§8.4's "toujours une alternative textuelle à côté du graphique") — this component
-    /// itself carries no text/tooltip; the numbers are already readable next to it.
+    /// it (§8.4's "toujours une alternative textuelle à côté du graphique"). Hover shows the
+    /// nearest day's exact date/balance/réel-ou-prévu in a tooltip (§8.4, ADR-124).
     /// </summary>
     public sealed class LineChartElement : VisualElement
     {
@@ -27,6 +27,7 @@ namespace FinanceOS.UI
         private const float LineWidth = 2f;
         private const float MarkerSize = 5f;
 
+        private readonly Label _tooltip;
         private IReadOnlyList<ChartPointViewModel> _points = Array.Empty<ChartPointViewModel>();
 
         public IReadOnlyList<ChartPointViewModel> Points
@@ -42,6 +43,47 @@ namespace FinanceOS.UI
         public LineChartElement()
         {
             generateVisualContent += OnGenerateVisualContent;
+            _tooltip = ChartTooltip.Create(this);
+            RegisterCallback<PointerMoveEvent>(OnPointerMove);
+            RegisterCallback<PointerLeaveEvent>(_ => ChartTooltip.Hide(_tooltip));
+        }
+
+        private void OnPointerMove(PointerMoveEvent evt)
+        {
+            var index = FindNearestPointIndex(_points.Count, contentRect.width, SidePadding, evt.localPosition.x);
+            if (index is null)
+            {
+                ChartTooltip.Hide(_tooltip);
+                return;
+            }
+
+            var point = _points[index.Value];
+            var certainty = point.IsActual ? "réel" : "prévu";
+            var text = $"{DateFormat.Short(point.Date)} — {MoneyFormat.Format(point.ClosingBalanceMinor)} ({certainty})";
+            ChartTooltip.Show(_tooltip, contentRect, text, evt.localPosition);
+        }
+
+        /// <summary>Which day's point is closest to a given horizontal pointer position — pure
+        /// geometry, no dependency on this instance's state, so it can be unit-tested directly
+        /// (batchmode cannot simulate pointer events). Mirrors <c>PointAt</c>'s own X placement in
+        /// <see cref="OnGenerateVisualContent"/> exactly, just inverted. Null below two points,
+        /// matching the draw guard: nothing is drawn, so nothing should be hoverable either.
+        /// See docs/07-Interface.md §8.4, ADR-124.</summary>
+        public static int? FindNearestPointIndex(int pointCount, float elementWidth, float sidePadding, float localX)
+        {
+            if (pointCount < 2)
+            {
+                return null;
+            }
+
+            var drawableWidth = elementWidth - 2 * sidePadding;
+            if (drawableWidth <= 0)
+            {
+                return null;
+            }
+
+            var t = Mathf.Clamp01((localX - sidePadding) / drawableWidth);
+            return Mathf.RoundToInt(t * (pointCount - 1));
         }
 
         private void OnGenerateVisualContent(MeshGenerationContext context)

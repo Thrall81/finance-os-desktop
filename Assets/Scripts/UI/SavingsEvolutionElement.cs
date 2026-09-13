@@ -13,7 +13,8 @@ namespace FinanceOS.UI
     /// concern here, since there is only ever one color to read. Month labels are real
     /// <see cref="Label"/> children positioned under each bar on <see cref="GeometryChangedEvent"/>,
     /// same reason and same technique as <see cref="BudgetBarChartElement"/>'s category labels:
-    /// Painter2D cannot draw text. See docs/07-Interface.md §8.
+    /// Painter2D cannot draw text. Hover shows the exact month/montant under the cursor in a
+    /// tooltip (§8.4, ADR-124). See docs/07-Interface.md §8.
     /// </summary>
     public sealed class SavingsEvolutionElement : VisualElement
     {
@@ -23,6 +24,7 @@ namespace FinanceOS.UI
         private const float LabelRowHeight = 18f;
         private const float BarGapRatio = 0.3f;
 
+        private readonly Label _tooltip;
         private IReadOnlyList<SavingsEvolutionPointViewModel> _points = Array.Empty<SavingsEvolutionPointViewModel>();
         private readonly List<Label> _monthLabels = new();
 
@@ -41,6 +43,80 @@ namespace FinanceOS.UI
         {
             generateVisualContent += OnGenerateVisualContent;
             RegisterCallback<GeometryChangedEvent>(_ => RepositionMonthLabels());
+            _tooltip = ChartTooltip.Create(this);
+            RegisterCallback<PointerMoveEvent>(OnPointerMove);
+            RegisterCallback<PointerLeaveEvent>(_ => ChartTooltip.Hide(_tooltip));
+        }
+
+        private void OnPointerMove(PointerMoveEvent evt)
+        {
+            var rect = contentRect;
+            var index = FindBarUnderPointer(_points, rect.width, rect.height, evt.localPosition.x, evt.localPosition.y);
+            if (index is null)
+            {
+                ChartTooltip.Hide(_tooltip);
+                return;
+            }
+
+            var point = _points[index.Value];
+            var text = $"{point.MonthLabel} — {point.SavingsText}";
+            ChartTooltip.Show(_tooltip, rect, text, evt.localPosition);
+        }
+
+        /// <summary>Which month's bar sits under a given pointer position — pure geometry
+        /// mirroring <see cref="OnGenerateVisualContent"/> exactly, so it can be unit-tested
+        /// directly (batchmode cannot simulate pointer events). Null over a gap, an undrawn
+        /// (zero-value) bar, or outside every slot. See docs/07-Interface.md §8.4, ADR-124.</summary>
+        public static int? FindBarUnderPointer(
+            IReadOnlyList<SavingsEvolutionPointViewModel> points, float elementWidth, float elementHeight, float localX, float localY)
+        {
+            if (points is null || points.Count == 0)
+            {
+                return null;
+            }
+
+            var drawableHeight = elementHeight - TopPadding - LabelRowHeight;
+            if (elementWidth <= 0 || drawableHeight <= 0)
+            {
+                return null;
+            }
+
+            var maxValue = points.Select(p => p.SavingsMinor).DefaultIfEmpty(0L).Max();
+            if (maxValue <= 0)
+            {
+                return null;
+            }
+
+            var slotWidth = elementWidth / points.Count;
+            var index = Mathf.FloorToInt(localX / slotWidth);
+            if (index < 0 || index >= points.Count)
+            {
+                return null;
+            }
+
+            var barWidth = slotWidth * (1f - BarGapRatio);
+            var barLeftOffset = slotWidth * BarGapRatio / 2f;
+            var xInSlot = localX - index * slotWidth;
+            if (xInSlot < barLeftOffset || xInSlot > barLeftOffset + barWidth)
+            {
+                return null;
+            }
+
+            var value = points[index].SavingsMinor;
+            if (value <= 0)
+            {
+                return null;
+            }
+
+            var barHeight = drawableHeight * (float)((double)value / maxValue);
+            var top = TopPadding + drawableHeight - barHeight;
+            var bottom = TopPadding + drawableHeight;
+            if (localY < top || localY > bottom)
+            {
+                return null;
+            }
+
+            return index;
         }
 
         private void RebuildMonthLabels()

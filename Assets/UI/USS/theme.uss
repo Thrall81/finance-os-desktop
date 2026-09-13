@@ -427,3 +427,12 @@
     -unity-text-align: middle-right;
     -unity-font-definition: url("../../Fonts/IBMPlexMono-Regular.ttf");
 }
+
+.chart-tooltip {
+    background-color: var(--color-ink-900);
+    color: var(--color-surface);
+    font-size: 11px;
+    padding: 4px 8px;
+    border-radius: 4px;
+    white-space: normal;
+}

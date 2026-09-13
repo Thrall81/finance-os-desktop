@@ -11,7 +11,8 @@ namespace FinanceOS.UI
     /// component, same family as <see cref="LineChartElement"/> (ADR-103, no third-party charting
     /// library). Category names can't be drawn via Painter2D (no text API), so they're real
     /// <see cref="Label"/> children positioned under each bar group instead — Painter2D only draws
-    /// the bars themselves. See docs/07-Interface.md §8.2.
+    /// the bars themselves. Hover shows the exact category/série/montant under the cursor in a
+    /// tooltip (§8.4, ADR-124). See docs/07-Interface.md §8.2.
     /// </summary>
     public sealed class BudgetBarChartElement : VisualElement
     {
@@ -19,11 +20,14 @@ namespace FinanceOS.UI
         private static readonly Color ActualColor = new(0.663f, 0.463f, 0.184f); // --color-gold
         private static readonly Color CommittedColor = new(0.525f, 0.549f, 0.580f); // --color-ink-400
 
+        private static readonly string[] SeriesLabels = { "Prévu", "Réel", "Engagé" };
+
         private const float TopPadding = 12f;
         private const float LabelRowHeight = 18f;
         private const float GroupGap = 10f;
         private const float BarGap = 2f;
 
+        private readonly Label _tooltip;
         private IReadOnlyList<BudgetChartBarGroupViewModel> _groups = Array.Empty<BudgetChartBarGroupViewModel>();
         private readonly List<Label> _categoryLabels = new();
 
@@ -45,6 +49,115 @@ namespace FinanceOS.UI
         {
             generateVisualContent += OnGenerateVisualContent;
             RegisterCallback<GeometryChangedEvent>(_ => RepositionCategoryLabels());
+            _tooltip = ChartTooltip.Create(this);
+            RegisterCallback<PointerMoveEvent>(OnPointerMove);
+            RegisterCallback<PointerLeaveEvent>(_ => ChartTooltip.Hide(_tooltip));
+        }
+
+        private void OnPointerMove(PointerMoveEvent evt)
+        {
+            var rect = contentRect;
+            var hit = FindBarUnderPointer(_groups, rect.width, rect.height, evt.localPosition.x, evt.localPosition.y);
+            if (hit is null)
+            {
+                ChartTooltip.Hide(_tooltip);
+                return;
+            }
+
+            var (groupIndex, seriesIndex) = hit.Value;
+            var group = _groups[groupIndex];
+            var value = seriesIndex switch
+            {
+                0 => group.PlannedMinor,
+                1 => group.ActualMinor,
+                _ => group.CommittedMinor,
+            };
+            var text = $"{group.CategoryName} — {SeriesLabels[seriesIndex]} : {MoneyFormat.Format(value)}";
+            ChartTooltip.Show(_tooltip, rect, text, evt.localPosition);
+        }
+
+        /// <summary>Which bar (group + prévu/réel/engagé slot) sits under a given pointer position
+        /// — pure geometry mirroring <see cref="OnGenerateVisualContent"/>/<see cref="DrawBar"/>
+        /// exactly, so it can be unit-tested directly (batchmode cannot simulate pointer events).
+        /// Null when the pointer is over a gap, an undrawn (zero-value) bar, or outside every
+        /// group. See docs/07-Interface.md §8.4, ADR-124.</summary>
+        public static (int GroupIndex, int SeriesIndex)? FindBarUnderPointer(
+            IReadOnlyList<BudgetChartBarGroupViewModel> groups, float elementWidth, float elementHeight, float localX, float localY)
+        {
+            if (groups is null || groups.Count == 0)
+            {
+                return null;
+            }
+
+            var drawableHeight = elementHeight - TopPadding - LabelRowHeight;
+            if (elementWidth <= 0 || drawableHeight <= 0)
+            {
+                return null;
+            }
+
+            var maxValue = groups
+                .SelectMany(g => new[] { g.PlannedMinor, g.ActualMinor, g.CommittedMinor })
+                .DefaultIfEmpty(0L)
+                .Max();
+            if (maxValue <= 0)
+            {
+                return null;
+            }
+
+            var groupWidth = elementWidth / groups.Count;
+            var groupIndex = Mathf.FloorToInt(localX / groupWidth);
+            if (groupIndex < 0 || groupIndex >= groups.Count)
+            {
+                return null;
+            }
+
+            var barsWidth = Mathf.Max(0f, groupWidth - GroupGap);
+            var barWidth = Mathf.Max(0f, (barsWidth - 2 * BarGap) / 3f);
+            if (barWidth <= 0)
+            {
+                return null;
+            }
+
+            var xInGroup = localX - (groupIndex * groupWidth + GroupGap / 2f);
+            int seriesIndex;
+            if (xInGroup >= 0 && xInGroup < barWidth)
+            {
+                seriesIndex = 0;
+            }
+            else if (xInGroup >= barWidth + BarGap && xInGroup < 2 * barWidth + BarGap)
+            {
+                seriesIndex = 1;
+            }
+            else if (xInGroup >= 2 * (barWidth + BarGap) && xInGroup < 3 * barWidth + 2 * BarGap)
+            {
+                seriesIndex = 2;
+            }
+            else
+            {
+                return null; // in a gap between bars, or past the third bar
+            }
+
+            var group = groups[groupIndex];
+            var value = seriesIndex switch
+            {
+                0 => group.PlannedMinor,
+                1 => group.ActualMinor,
+                _ => group.CommittedMinor,
+            };
+            if (value <= 0)
+            {
+                return null;
+            }
+
+            var barHeight = drawableHeight * (float)((double)value / maxValue);
+            var top = TopPadding + drawableHeight - barHeight;
+            var bottom = TopPadding + drawableHeight;
+            if (localY < top || localY > bottom)
+            {
+                return null;
+            }
+
+            return (groupIndex, seriesIndex);
         }
 
         private void RebuildCategoryLabels()

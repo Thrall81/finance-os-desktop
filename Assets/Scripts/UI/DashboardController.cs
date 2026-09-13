@@ -1,4 +1,3 @@
-using System.Linq;
 using UnityEngine;
 using UnityEngine.UIElements;
 
@@ -61,7 +60,7 @@ namespace FinanceOS.UI
             var hasExpenses = viewModel.ExpenseBreakdown.Count > 0;
             _donutEmptyLabel.style.display = hasExpenses ? DisplayStyle.None : DisplayStyle.Flex;
             _donutRow.style.display = hasExpenses ? DisplayStyle.Flex : DisplayStyle.None;
-            _donutChart.Slices = viewModel.ExpenseBreakdown.Select(s => s.AmountMinor).ToList();
+            _donutChart.Slices = viewModel.ExpenseBreakdown;
 
             _donutLegend.Clear();
             for (var i = 0; i < viewModel.ExpenseBreakdown.Count; i++)

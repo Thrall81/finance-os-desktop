@@ -37,6 +37,7 @@ Journal des décisions structurantes, dans le même format que l'ancien projet (
 | ADR-121 | Graphique barres budget construit ; texte des catégories en `Label` superposés, pas en Painter2D | ACCEPTED |
 | ADR-122 | Anneau des dépenses construit ; légende textuelle comme réponse à « jamais uniquement par la couleur » | ACCEPTED |
 | ADR-123 | Évolution de l'épargne construite (barres) ; historique indépendant de l'existence d'un budget | ACCEPTED |
+| ADR-124 | Infobulles au survol sur les quatre graphiques ; détection géométrique statique et publique pour rester testable | ACCEPTED |
 
 ---
 
@@ -398,3 +399,21 @@ Journal des décisions structurantes, dans le même format que l'ancien projet (
 **Confirmé le 2026-09-13, avec un vrai bug trouvé** : première capture d'écran du Budget avec un compte réel — les barres prévu/réel/engagé s'affichent correctement (Alimentation, Transport), mais la carte « Évolution de l'épargne » était **totalement vide** (aucune barre, seuls les libellés de mois visibles), cohérent avec « Épargne du mois : 0,00 € » dans la synthèse — donc pas un défaut de calcul, mais l'absence d'un état vide explicite (`§11` : « aucune donnée » doit toujours être un message, jamais une zone silencieusement vide). `LineChartElement`/`BudgetBarChartElement`/`ExpenseDonutElement` n'avaient jamais été testés avec zéro donnée réelle *en même temps qu'un écran par ailleurs peuplé* — le donut a bien un `donut-empty`, mais la savings-evolution ne l'avait pas encore. Corrigé avec `savings-empty` (même classe `empty-state` que le reste de l'app), basculé non pas sur « liste vide » (la liste a toujours 6 points par construction) mais sur « aucun montant strictement positif parmi les 6 » — condition différente du donut, ajoutée comme cas de test dédié (mois d'août, budget créé, fenêtre de 6 mois ne recoupant aucune transaction d'épargne réelle) plutôt que supposée couverte par les tests existants.
 
 **Documents concernés** : `07-Interface.md` §5/§8.
+
+---
+
+# 26. ADR-124 — Infobulles au survol sur les quatre graphiques
+
+**Contexte** : dernière exigence de `07-Interface.md` §8.4 restée différée depuis ADR-119 sur chacun des quatre graphiques du catalogue — « une infobulle apparaît au survol d'un point/d'une barre », volontairement reportée jusqu'à ce que le tracé de base de chaque graphique soit confirmé visuellement, ce qui est désormais le cas des quatre (ADR-119/121/122/123).
+
+**Décision** : `ChartTooltip` (`Assets/Scripts/UI/ChartTooltip.cs`, `internal static`) factorise uniquement la partie strictement commune — créer un `Label` flottant (`.chart-tooltip`, nouvelle classe dans `theme.uss`), l'afficher/le positionner près du pointeur en le contenant dans les limites du graphique (marge estimée, aucune mesure de layout réelle disponible avant le prochain passage — approximation assumée, pas un calcul exact), le masquer. Chaque graphique garde sa propre détection géométrique (quel point/quelle barre/quel quartier est sous le pointeur) : `LineChartElement.FindNearestPointIndex`, `BudgetBarChartElement.FindBarUnderPointer`, `ExpenseDonutElement.FindSliceUnderPointer`, `SavingsEvolutionElement.FindBarUnderPointer` — quatre géométries différentes, pas de tentative de les unifier au-delà de ce que `ChartTooltip` fait déjà.
+
+**Rendu testable malgré l'absence de souris réelle en batchmode** : chaque fonction de détection est **statique, publique et pure** (aucune dépendance à l'état de l'instance), exposée spécifiquement pour que `UISmokeTest.cs` puisse l'appeler directement avec des coordonnées choisies à la main plutôt que de simuler un `PointerMoveEvent` — batchmode ne peut ni ouvrir de fenêtre ni simuler d'interaction pointeur. Même logique que `RecurringOperationService.PreviewFirstOccurrenceDate` (ADR-120) : une fonction rendue publique uniquement pour la rendre vérifiable indépendamment du mécanisme qui l'invoque en usage réel (ici, `RegisterCallback<PointerMoveEvent>`, jamais exercé par les tests). Chaque géométrie de test reproduit à la main les constantes privées du composant (`GroupGap`, `BarGap`, `TopPadding`, etc., lues dans le fichier source, pas devinées) pour calculer des coordonnées de survol precises et leurs résultats attendus — vérifie aussi bien les cas positifs (sur une barre) que négatifs (dans un espacement, au-dessus d'une barre trop courte, hors zone) plutôt que seulement l'existence de l'élément.
+
+**`ExpenseDonutElement.Slices` change de type à cette occasion** : `IReadOnlyList<long>` (montants bruts seuls, décision initiale d'ADR-122 — « le donut n'a besoin que des proportions ») devient `IReadOnlyList<ExpenseCategorySliceViewModel>`, parce que l'infobulle a besoin du nom de catégorie et du texte déjà formaté (montant, pourcentage) que la légende externe possédait déjà mais que l'élément n'avait jamais reçu. `DashboardController` simplifié d'autant (plus de `.Select(s => s.AmountMinor)` intermédiaire). Les trois autres graphiques n'ont pas eu besoin d'un changement de type équivalent : leurs view models portaient déjà tout le texte nécessaire à l'infobulle.
+
+**Ce qui reste vérifiable en batchmode, et ce qui ne l'est pas** : la géométrie de détection (les quatre fonctions statiques, positif et négatif), la présence du `Label` d'infobulle et son état masqué par défaut — tout vert du premier coup, quatre géométries différentes toutes validées sans ajustement après écriture. Ce qui ne l'est pas, comme toujours : le rendu visuel réel de l'infobulle (position, lisibilité, chevauchement éventuel avec le bord du graphique) — nécessite une interaction souris réelle en Play Mode, à confirmer par l'utilisateur.
+
+**Conséquences négatives** : positionnement de l'infobulle approximatif (marge estimée, pas de mesure de layout réelle) — pourrait déborder légèrement dans un cas limite non testé. Pas de support tactile (sans objet, application desktop souris/clavier uniquement).
+
+**Documents concernés** : `07-Interface.md` §8.3quinquies/§8.4.
