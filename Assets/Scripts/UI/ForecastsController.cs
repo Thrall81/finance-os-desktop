@@ -219,6 +219,20 @@ namespace FinanceOS.UI
 
         private void RebuildAccountChoices()
         {
+            if (_accountOptions.Count == 0)
+            {
+                // Unlike every other screen's account picker, this one stays visible even with
+                // zero accounts (it is not gated behind an already-disabled "create" button) —
+                // an empty DropdownField renders as blank text with no explanation, so it needs
+                // its own placeholder rather than falling back to string.Empty.
+                _accountField.choices = new List<string> { "Aucun compte" };
+                _accountField.SetValueWithoutNotify("Aucun compte");
+                _accountField.SetEnabled(false);
+                _simulationRunButton.SetEnabled(false);
+                return;
+            }
+
+            _accountField.SetEnabled(true);
             var choices = _accountOptions.Select(o => o.Name).ToList();
             _accountField.choices = choices;
 

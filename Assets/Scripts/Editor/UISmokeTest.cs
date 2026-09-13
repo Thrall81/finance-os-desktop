@@ -376,6 +376,8 @@ namespace FinanceOS.EditorTools
                 _ = new ForecastsController(emptyForecastsRoot, noAccountApp);
                 Check(emptyForecastsRoot.Q<Label>("kpi-current-value").text == "—", "empty synthesis falls back to placeholders");
                 Check(!emptyForecastsRoot.Q<Button>("simulation-run-button").enabledSelf, "simulation disabled with no account");
+                Check(emptyForecastsRoot.Q<DropdownField>("forecast-account-select").value == "Aucun compte", "account selector shows a placeholder instead of rendering blank");
+                Check(!emptyForecastsRoot.Q<DropdownField>("forecast-account-select").enabledSelf, "account selector disabled with no account to choose");
 
                 var emptySettingsRoot = settingsTree.Instantiate();
                 _ = new SettingsController(
