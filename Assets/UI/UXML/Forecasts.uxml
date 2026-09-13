@@ -82,7 +82,7 @@
       <ui:VisualElement class="card-header">
         <ui:Label text="Journal des mouvements prévus" class="card-title" />
       </ui:VisualElement>
-      <ui:Label text="Alternative textuelle au graphique de trésorerie (différé, cf. ADR-112) : un jour par ligne, uniquement les jours avec un mouvement." class="page-subtitle" />
+      <ui:Label text="Alternative textuelle au graphique de trésorerie (différé, cf. ADR-112) : un jour par ligne, uniquement les jours avec un mouvement." class="card-caption" />
       <ui:Label name="timeline-empty" text="Aucun mouvement prévu sur cet horizon." class="empty-state" />
       <ui:MultiColumnListView name="timeline-list-view" class="transactions-table" style="display: none;" />
     </ui:VisualElement>
@@ -91,7 +91,7 @@
       <ui:VisualElement class="card-header">
         <ui:Label text="Simulation — « Et si ? »" class="card-title" />
       </ui:VisualElement>
-      <ui:Label text="Jamais enregistré : une projection à titre indicatif, écartée dès que vous quittez cet écran." class="page-subtitle" />
+      <ui:Label text="Jamais enregistré : une projection à titre indicatif, écartée dès que vous quittez cet écran." class="card-caption" />
 
       <ui:VisualElement class="form-row">
         <ui:Label text="Libellé" class="form-label" />

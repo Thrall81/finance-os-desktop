@@ -217,7 +217,8 @@ namespace FinanceOS.UI
             _emptyLabel.style.display = hasRows ? DisplayStyle.None : DisplayStyle.Flex;
             _listView.style.display = hasRows ? DisplayStyle.Flex : DisplayStyle.None;
             _listView.itemsSource = _rows;
-            _listView.RefreshItems();
+            // Rebuild, not just RefreshItems — see TransactionsController.Refresh for why (ADR-116).
+            _listView.Rebuild();
         }
 
         private void OnRowSelected()

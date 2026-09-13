@@ -29,6 +29,7 @@ Journal des décisions structurantes, dans le même format que l'ancien projet (
 | ADR-113 | Navigation par échange de contenu dans un UIDocument unique (pas de scènes multiples) | ACCEPTED |
 | ADR-114 | Éviter les membres .NET Standard 2.1 (ex. `Dictionary.GetValueOrDefault`) dans `FinanceOS.UI` | ACCEPTED |
 | ADR-115 | Définition retenue pour « reste à vivre » et « taux d'épargne du mois » | ACCEPTED |
+| ADR-116 | Corrections de mise en page trouvées uniquement via captures d'écran réelles | ACCEPTED |
 
 ---
 
@@ -231,3 +232,22 @@ Journal des décisions structurantes, dans le même format que l'ancien projet (
 **Conditions de réévaluation** : si l'utilisateur precise une définition différente, ou en écrivant le Tableau de bord complet (qui doit aussi afficher « reste à vivre » — réutiliser cette même définition par cohérence, sauf décision contraire explicite).
 
 **Documents concernés** : `01-Perimetre.md` §2.9, `07-Interface.md`.
+
+---
+
+# 18. ADR-116 — Corrections de mise en page trouvées uniquement via captures d'écran réelles
+
+**Contexte** : ADR-112 documente déjà que ce projet ne peut pas vérifier visuellement l'UI par lui-même — seules la structure et la liaison de données sont vérifiables en batchmode. Une fois l'utilisateur passé en revue chaque écran par capture d'écran (d'abord à vide, puis avec de vraies données), plusieurs défauts de mise en page réels sont apparus qu'aucun test structurel n'aurait jamais pu détecter, puisqu'un champ vide et un champ contenant le mauvais texte, ou une colonne trop étroite et une colonne bien dimensionnée, sont indiscernables pour une assertion `.text == "..."` tant que personne n'a pensé à vérifier précisément la valeur ou la largeur en cause.
+
+**Défauts trouvés et corrigés, par ordre chronologique de découverte** :
+1. **Sélecteur de compte vide sur Prévisions** (écran à vide) — corrigé en amont de cet ADR, voir commit `c4ac3be`.
+2. **Colonnes de `MultiColumnListView` sans largeur explicite** — aucun des 5 tableaux de l'application (Transactions, Opérations récurrentes, Prévisions ×2, Budget) ne donnait de `width`/`minWidth` à ses colonnes ; Unity les réduisait à quelques pixels chacune, tronquant en-têtes et valeurs. Resté invisible tant que les captures ne montraient que des tableaux vides. Corrigé : largeur + largeur minimale explicites sur chaque colonne, une colonne `stretchable` par tableau pour absorber l'espace restant, hauteur de ligne fixe (`fixedItemHeight = 28`).
+3. **Chevauchement de texte généralisé** (chiffres de KPI débordant de leur carte, libellés de formulaire trop proches du champ précédent, légende trop proche du titre de carte) — la cause exacte (métriques réelles de la police par défaut d'Unity, jamais vérifiées visuellement avant) n'a pas pu être confirmée avec certitude sans inspecteur en direct ; corrigé par des marges nettement plus généreuses (`.form-row` 10px → 30px en deux passes, `.kpi-row` 16px → 24px) et, pour le débordement horizontal des valeurs de KPI, par `flex-wrap` + une largeur minimale par carte (`.kpi-card { min-width: 190px }`) plutôt qu'une largeur purement proportionnelle qui s'écrasait à cinq cartes par ligne.
+4. **Réemploi incorrect de `.page-subtitle` comme légende de carte** — cette classe est conçue pour un espacement serré directement sous le grand titre de page ; réutilisée telle quelle sous un titre de carte ou un label de formulaire, elle donnait un espacement bien trop faible. Nouvelle classe dédiée `.card-caption`, avec un espacement propre à ce contexte.
+5. **Titre de carte caché sous son propre tableau** (« Occurrences prévues » rendu sous la `MultiColumnListView` qui le suit dans le document) — cause probable : la liste est créée cachée (`style="display: none"` dans l'UXML) puis rendue visible par code ; `RefreshItems()` seul ne semble pas invalider une géométrie devenue obsolète pendant que le contrôle était caché. Corrigé en appelant `Rebuild()` (reconstruction complète des lignes virtualisées) plutôt que `RefreshItems()` à chaque `Refresh()` des quatre contrôleurs concernés — pas confirmé visuellement au moment d'écrire cet ADR.
+
+**Conséquences négatives** : les points 3 et 5 sont corrigés à partir d'indices et d'hypothèses raisonnables, pas d'un diagnostic certain — un inspecteur d'UI en direct aurait permis de confirmer la cause exacte en quelques secondes au lieu de plusieurs itérations de capture d'écran.
+
+**Conditions de réévaluation** : mêmes conditions qu'ADR-112 ; en particulier, si le point 5 réapparaît après le correctif `Rebuild()`, il faudra reconsidérer l'hypothèse et potentiellement ne plus cacher les `MultiColumnListView` via `display: none` du tout (garder le contrôle visible en permanence, vide, et ne faire varier que le libellé d'état vide).
+
+**Documents concernés** : aucun autre — plusieurs petits correctifs de code/USS, déjà répercutés dans `Assets/UI/USS/theme.uss` et les contrôleurs concernés.

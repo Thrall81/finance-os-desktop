@@ -61,7 +61,7 @@
 
       <ui:VisualElement class="form-row">
         <ui:Label text="Sauvegarde manuelle" class="form-label" />
-        <ui:Label text="Copie horodatée du fichier SQLite dans un dossier « backups » à côté des données." class="page-subtitle" />
+        <ui:Label text="Copie horodatée du fichier SQLite dans un dossier « backups » à côté des données." class="card-caption" />
         <ui:VisualElement class="form-actions">
           <ui:Button name="backup-button" text="Créer une sauvegarde maintenant" class="secondary-button" />
         </ui:VisualElement>

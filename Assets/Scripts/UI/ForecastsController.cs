@@ -221,14 +221,15 @@ namespace FinanceOS.UI
             _occurrencesEmptyLabel.style.display = hasOccurrences ? DisplayStyle.None : DisplayStyle.Flex;
             _occurrencesListView.style.display = hasOccurrences ? DisplayStyle.Flex : DisplayStyle.None;
             _occurrencesListView.itemsSource = _occurrenceRows;
-            _occurrencesListView.RefreshItems();
+            // Rebuild, not just RefreshItems — see TransactionsController.Refresh for why (ADR-116).
+            _occurrencesListView.Rebuild();
 
             _timelineRows = viewModel.Timeline.ToList();
             var hasTimeline = _timelineRows.Count > 0;
             _timelineEmptyLabel.style.display = hasTimeline ? DisplayStyle.None : DisplayStyle.Flex;
             _timelineListView.style.display = hasTimeline ? DisplayStyle.Flex : DisplayStyle.None;
             _timelineListView.itemsSource = _timelineRows;
-            _timelineListView.RefreshItems();
+            _timelineListView.Rebuild();
         }
 
         private void RebuildAccountChoices()

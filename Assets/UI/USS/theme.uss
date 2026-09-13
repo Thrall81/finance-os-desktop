@@ -87,18 +87,21 @@
 
 .kpi-row {
     flex-direction: row;
+    flex-wrap: wrap;
     margin-bottom: 24px;
 }
 
 .kpi-card {
     flex-grow: 1;
-    flex-basis: 0;
+    flex-basis: 190px;
+    min-width: 190px;
     background-color: var(--color-surface);
     border-width: 1px;
     border-color: var(--color-border);
     border-radius: 12px;
     padding: 14px 16px 18px 16px;
     margin-right: 12px;
+    margin-bottom: 12px;
 }
 
 /* UI Toolkit's USS does not support the structural pseudo-class :last-child (web-CSS only) —
@@ -142,6 +145,16 @@
     font-size: 15px;
     -unity-font-style: bold;
     color: var(--color-ink-900);
+}
+
+/* An explanatory line under a card's own title (not to be confused with .page-subtitle, which
+   sits tight under the big page title and is deliberately closer — reusing .page-subtitle here
+   read as "too close to the title" once real text metrics were involved, see ADR-116). */
+.card-caption {
+    font-size: 12px;
+    color: var(--color-ink-400);
+    margin-top: 4px;
+    margin-bottom: 14px;
 }
 
 .badge {
@@ -227,7 +240,7 @@
 }
 
 .form-row {
-    margin-bottom: 20px;
+    margin-bottom: 30px;
 }
 
 .form-label {

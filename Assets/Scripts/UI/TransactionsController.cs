@@ -199,7 +199,10 @@ namespace FinanceOS.UI
             _emptyLabel.style.display = hasRows ? DisplayStyle.None : DisplayStyle.Flex;
             _listView.style.display = hasRows ? DisplayStyle.Flex : DisplayStyle.None;
             _listView.itemsSource = _rows;
-            _listView.RefreshItems();
+            // Rebuild, not just RefreshItems — this list's display is toggled between None and
+            // Flex, and a bare item refresh left stale geometry from before the toggle in place,
+            // rendering the table over its own card title. See ADR-116.
+            _listView.Rebuild();
         }
 
         private void RebuildFilterChoices(IReadOnlyList<DropdownOption> options)

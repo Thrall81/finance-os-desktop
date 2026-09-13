@@ -208,7 +208,8 @@ namespace FinanceOS.UI
             _allocationsEmptyLabel.style.display = hasRows ? DisplayStyle.None : DisplayStyle.Flex;
             _allocationsListView.style.display = hasRows ? DisplayStyle.Flex : DisplayStyle.None;
             _allocationsListView.itemsSource = _rows;
-            _allocationsListView.RefreshItems();
+            // Rebuild, not just RefreshItems — see TransactionsController.Refresh for why (ADR-116).
+            _allocationsListView.Rebuild();
 
             CloseForm();
         }
