@@ -427,6 +427,17 @@ namespace FinanceOS.EditorTools
             Check(savingsChart is not null, "savings chart element added to the savings chart card");
             Check(savingsChart!.Points.Count == budgetsViewModel.SavingsEvolution.Count, "savings chart element receives every month's point");
             Check(savingsChart.style.flexGrow.value == 1f, "savings chart element grows to fill its fixed-height container, same requirement as the other two charts");
+            Check(budgetsRoot.Q<Label>("savings-empty").style.display == DisplayStyle.None, "savings empty-state hidden once September has real savings activity");
+            Check(budgetsRoot.Q<VisualElement>("savings-chart-container").style.display == DisplayStyle.Flex, "savings chart container shown once September has real savings activity");
+
+            // A month whose own 6-month window (March–August) contains none of the September
+            // savings transaction above — the "budget exists but literally zero savings
+            // everywhere" case a real screenshot showed as a blank, message-less chart area.
+            app.Budget.GetOrCreate(2026, 8);
+            var augustRoot = budgetsTree.Instantiate();
+            _ = new BudgetsController(augustRoot, app.Budget, app.Categories, new DateTime(2026, 8, 15));
+            Check(augustRoot.Q<Label>("savings-empty").style.display == DisplayStyle.Flex, "savings empty-state shown when every month in the window has zero savings");
+            Check(augustRoot.Q<VisualElement>("savings-chart-container").style.display == DisplayStyle.None, "savings chart container hidden when every month in the window has zero savings");
 
             budgetsController.Refresh();
             Check(allocationsListView.itemsSource.Count == 1, "refresh re-renders without duplication");

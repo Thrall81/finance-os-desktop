@@ -36,6 +36,8 @@ namespace FinanceOS.UI
         private readonly Label _kpiSavingsRateLabel;
 
         private readonly VisualElement _savingsChartCard;
+        private readonly Label _savingsEmptyLabel;
+        private readonly VisualElement _savingsChartContainer;
         private readonly SavingsEvolutionElement _savingsChart;
 
         private readonly VisualElement _chartCard;
@@ -95,9 +97,11 @@ namespace FinanceOS.UI
             _kpiSavingsRateLabel = root.Q<Label>("kpi-savings-rate-value");
 
             _savingsChartCard = root.Q<VisualElement>("savings-chart-card");
+            _savingsEmptyLabel = root.Q<Label>("savings-empty");
+            _savingsChartContainer = root.Q<VisualElement>("savings-chart-container");
             _savingsChart = new SavingsEvolutionElement();
             _savingsChart.style.flexGrow = 1;
-            root.Q<VisualElement>("savings-chart-container").Add(_savingsChart);
+            _savingsChartContainer.Add(_savingsChart);
 
             _chartCard = root.Q<VisualElement>("chart-card");
             _chart = new BudgetBarChartElement();
@@ -207,7 +211,11 @@ namespace FinanceOS.UI
             _chartCard.style.display = viewModel.BudgetExists ? DisplayStyle.Flex : DisplayStyle.None;
             _allocationsCard.style.display = viewModel.BudgetExists ? DisplayStyle.Flex : DisplayStyle.None;
 
+            var hasSavings = viewModel.SavingsEvolution.Any(p => p.SavingsMinor > 0);
+            _savingsEmptyLabel.style.display = hasSavings ? DisplayStyle.None : DisplayStyle.Flex;
+            _savingsChartContainer.style.display = hasSavings ? DisplayStyle.Flex : DisplayStyle.None;
             _savingsChart.Points = viewModel.SavingsEvolution;
+
             _chart.Groups = viewModel.ChartGroups;
 
             _statusBadge.style.display = viewModel.BudgetExists ? DisplayStyle.Flex : DisplayStyle.None;

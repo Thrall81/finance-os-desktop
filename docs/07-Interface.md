@@ -176,6 +176,8 @@ Troisième graphique de la même famille (`Painter2D`, ADR-103), sur le Tableau 
 
 Quatrième et dernier graphique du catalogue (§8.2), sur l'écran Budget — une barre par mois plutôt que des barres groupées (une seule série, donc aucun enjeu « pas uniquement par la couleur » : rien d'autre à distinguer). Mêmes techniques que les graphiques précédents : uniquement `MoveTo`/`LineTo` pour les barres, `Label` enfants repositionnés à chaque `GeometryChangedEvent` pour les libellés de mois (`DateFormat.MonthAbbreviationYear`, ex. « sept. 2026 » — trop étroit pour le nom complet du mois sous six barres). Alimenté par `BudgetService.GetSavingsEvolution` (nouveau), qui calcule l'épargne réelle + engagée des 6 derniers mois **indépendamment de l'existence d'un budget** pour ces mois-là — contrairement à `GetOverview`, dont dépendent les autres cartes de cet écran. Simplification assumée : la carte reste malgré tout masquée tant qu'aucun budget n'existe pour le mois *affiché*, même si la donnée elle-même ne le requiert pas — un seul interrupteur d'affichage pour tout l'écran plutôt qu'un cas particulier pour cette seule carte.
 
+État vide explicite (`savings-empty`, § 11) quand les 6 mois sont tous à zéro — un vrai compte capturé en capture d'écran l'a montré : sans ce message, la zone de graphique reste visuellement vide (seuls les libellés de mois restent visibles), indiscernable d'un graphique cassé. Condition volontairement plus fine que celle du donut (liste vide) : ici la liste de points a toujours 6 éléments par construction, donc le vide est détecté par « aucun montant strictement positif », pas par un compte de zéro.
+
 ## 8.4 Exigences conservées de l'ancien projet
 
 Les quatre graphiques du catalogue (§8.2) sont désormais tous construits.
