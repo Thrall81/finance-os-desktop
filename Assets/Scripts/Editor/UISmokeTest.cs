@@ -97,6 +97,7 @@ namespace FinanceOS.EditorTools
             Check(Normalize(viewModel.AvailableBalanceText) == "1 748,60 €", "available balance formatted correctly");
             Check(viewModel.ChartSeries.Count > 0, "chart series is populated when an account exists");
             Check(viewModel.RemainingToLiveText == "—", "reste à vivre falls back to a placeholder with no budget created yet for this month");
+            Check(viewModel.UpcomingOperations.Count == 0, "no upcoming operations yet — the only occurrence so far (September's rent) is already overdue, not upcoming");
 
             var visualTree = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(DashboardUxmlPath);
             if (visualTree == null)
@@ -132,6 +133,39 @@ namespace FinanceOS.EditorTools
             Check(root.Q<Label>("donut-empty").style.display == DisplayStyle.Flex, "donut empty-state shown with no expenses this month");
             Check(root.Q<VisualElement>("donut-row").style.display == DisplayStyle.None, "donut row hidden with no expenses this month");
             Check(root.Q<ExpenseDonutElement>()!.Slices.Count == 0, "donut chart has no slices with no expenses — constructing/rendering it did not throw");
+
+            Check(root.Q<Label>("upcoming-empty").style.display == DisplayStyle.Flex, "upcoming-operations empty-state shown with nothing upcoming yet");
+            Check(root.Q<VisualElement>("upcoming-list").childCount == 0, "no upcoming-operations rows rendered yet");
+
+            // Isolated fixture (own temp database) rather than reusing `app`/`account`: by the time
+            // enough recurring operations exist later in this scenario to have real upcoming
+            // occurrences, several of them (Loyer, Salaire, Épargne mensuelle) would all land in
+            // the same few future months, making exact order/count fragile to assert against. One
+            // recurring (Attendue) + one one-off (Estimée) occurrence here instead, fully controlled.
+            var upcomingTestPath = Path.Combine(Path.GetTempPath(), $"financeos-ui-smoke-upcoming-{Guid.NewGuid():N}.db");
+            using (var upcomingApp = new AppContainer(upcomingTestPath))
+            {
+                upcomingApp.Categories.SeedDefaultCategoriesIfEmpty();
+                var upcomingAccount = upcomingApp.Accounts.CreateAccount("Compte test", AccountType.Current, "EUR", 100_000);
+                upcomingApp.Accounts.RecordOfficialBalance(upcomingAccount.Id, 100_000, today);
+
+                var subscription = upcomingApp.RecurringOperations.Create(
+                    "Abonnement", RecurringOperationType.Expense, 1_000, RecurringFrequency.Monthly,
+                    new DateTime(2026, 9, 1), sourceAccountId: upcomingAccount.Id, expectedDayOfMonth: 20);
+                upcomingApp.RecurringOperations.GenerateOccurrences(subscription.Id, new DateTime(2026, 9, 1), new DateTime(2026, 9, 30));
+                upcomingApp.ForecastOccurrences.Create(upcomingAccount.Id, "Remboursement ami", new DateTime(2026, 9, 25), 5_000);
+
+                var upcomingViewModel = DashboardViewModelBuilder.Build(upcomingApp, today);
+                Check(upcomingViewModel!.UpcomingOperations.Count == 2, "both the recurring and the one-off future occurrence appear");
+                Check(upcomingViewModel.UpcomingOperations[0].Label == "Abonnement", "sorted ascending — the 20th comes before the 25th");
+                Check(upcomingViewModel.UpcomingOperations[0].CertaintyText == "Attendue", "tied to a recurring operation");
+                Check(Normalize(upcomingViewModel.UpcomingOperations[0].AmountText) == "−10,00 €", "expense amount formatted with its sign");
+                Check(upcomingViewModel.UpcomingOperations[1].Label == "Remboursement ami", "the one-off occurrence sorts second");
+                Check(upcomingViewModel.UpcomingOperations[1].CertaintyText == "Estimée", "no recurring operation behind a manually created occurrence");
+                Check(Normalize(upcomingViewModel.UpcomingOperations[1].AmountText) == "+50,00 €", "a positive amount is force-signed, matching the mockup");
+            }
+
+            TryDeleteQuietly(upcomingTestPath);
 
             var savings = app.Accounts.CreateAccount("Ancien Livret", AccountType.Savings, "EUR", 20_000);
             app.Accounts.Archive(savings.Id);

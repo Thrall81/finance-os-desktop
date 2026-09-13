@@ -5,6 +5,13 @@ namespace FinanceOS.UI
     /// <summary>One row in the "file de vérification" — see docs/07-Interface.md §6.</summary>
     public sealed record DashboardVerificationItem(int OccurrenceId, string Label, string DateText, string AmountText);
 
+    /// <summary>One row in "Prochaines opérations" — still-future occurrences, unlike the
+    /// verification queue's arrived-or-overdue ones. CertaintyText is "Attendue" (tied to a
+    /// recurring operation) or "Estimée" (a one-off occurrence) — the same distinction
+    /// `FinanceOS.Forecast.ForecastEventCertainty` makes internally, just not otherwise surfaced
+    /// as UI text yet. See docs/07-Interface.md §5.</summary>
+    public sealed record DashboardUpcomingItem(string Label, string DateText, string AmountText, string CertaintyText);
+
     /// <summary>One category's slice of this month's expenses — raw amount for the donut's angle
     /// math plus already-formatted text for the legend row next to it. See docs/07-Interface.md §8.</summary>
     public sealed record ExpenseCategorySliceViewModel(
@@ -22,5 +29,6 @@ namespace FinanceOS.UI
         string RemainingToLiveText,
         IReadOnlyList<ChartPointViewModel> ChartSeries,
         IReadOnlyList<ExpenseCategorySliceViewModel> ExpenseBreakdown,
-        IReadOnlyList<DashboardVerificationItem> VerificationQueue);
+        IReadOnlyList<DashboardVerificationItem> VerificationQueue,
+        IReadOnlyList<DashboardUpcomingItem> UpcomingOperations);
 }

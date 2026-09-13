@@ -56,5 +56,13 @@
       <ui:Label name="verification-empty" text="Rien à vérifier pour l'instant." class="empty-state" />
       <ui:VisualElement name="verification-list" class="list" />
     </ui:VisualElement>
+
+    <ui:VisualElement name="upcoming-card" class="card">
+      <ui:VisualElement class="card-header">
+        <ui:Label text="Prochaines opérations" class="card-title" />
+      </ui:VisualElement>
+      <ui:Label name="upcoming-empty" text="Rien de prévu pour l'instant." class="empty-state" />
+      <ui:VisualElement name="upcoming-list" class="list" />
+    </ui:VisualElement>
   </ui:ScrollView>
 </ui:UXML>

@@ -39,6 +39,7 @@ Journal des décisions structurantes, dans le même format que l'ancien projet (
 | ADR-123 | Évolution de l'épargne construite (barres) ; historique indépendant de l'existence d'un budget | ACCEPTED |
 | ADR-124 | Infobulles au survol sur les quatre graphiques ; détection géométrique statique et publique pour rester testable | ACCEPTED |
 | ADR-125 | Reste à vivre sur le Tableau de bord ; placeholder « — » sans budget plutôt qu'un calcul erroné | ACCEPTED |
+| ADR-126 | Prochaines opérations sur le Tableau de bord ; badge Attendue/Estimée | ACCEPTED |
 
 ---
 
@@ -434,5 +435,19 @@ Journal des décisions structurantes, dans le même format que l'ancien projet (
 **Pourquoi un placeholder plutôt qu'un calcul silencieux** : contrairement à l'évolution de l'épargne (ADR-123), qui reste calculable sans `Budget` créé (simple somme de transactions/occurrences réelles), le reste à vivre est structurellement une notion budgétaire — sans allocation prévue par catégorie, il n'y a rien de sensé à soustraire. Pas de `GetOrCreate` déguisé ni de valeur à zéro trompeuse : `"—"`, cohérent avec le principe déjà énoncé au §11 (« aucune donnée » doit être un message explicite, jamais une valeur silencieusement fausse).
 
 **Vérifié en batchmode** : les deux branches (avec et sans budget pour le mois affiché), plus la cohérence de valeur entre le Tableau de bord et l'écran Budget pour le même mois (même montant formaté des deux côtés) — vert du premier coup.
+
+**Documents concernés** : `07-Interface.md` §5.
+
+---
+
+# 28. ADR-126 — Prochaines opérations sur le Tableau de bord
+
+**Contexte** : avant-dernière carte du Tableau de bord listée dans `07-Interface.md` §5 (« puis graphique de trésorerie, file de vérification..., prochaines opérations, synthèse budgétaire, alertes ») à ne pas être construite. La maquette (`docs/mockups/dashboard.html`) montre une liste courte — date, libellé, montant signé, badge « Attendue »/« Estimée » par ligne.
+
+**Décision** : `DashboardViewModelBuilder.BuildUpcomingOperations` prend les occurrences non encore échues du compte principal (`ForecastOccurrenceService.ListForAccount`, borne basse `today + 1 jour` — celles échues aujourd'hui sont déjà dans la file de vérification juste au-dessus, pas dupliquées ici ; borne haute l'horizon de prévision réglé dans les Paramètres), triées par date, limitées aux 5 premières — une prévisualisation, pas la liste complète (qui existe déjà sur l'écran Prévisions, « Occurrences prévues »). Le badge « Attendue »/« Estimée » reprend directement `occurrence.RecurringOperationId.HasValue` — exactement la même règle qu'utilise `ForecastEventBuilder` en interne pour distinguer `ForecastEventCertainty.Expected`/`Estimated` (`06-Moteur_de_prevision.md`), reformulée ici en une ligne plutôt que réutilisée telle quelle : le moteur de prévision construit des `ForecastEvent` fusionnant transactions et occurrences, plus qu'il n'en faut pour une simple étiquette sur une ligne de liste. Nouvelle classe `.badge-muted` (gris neutre) pour « Estimée », distincte du `.badge` doré déjà utilisé ailleurs (compteur de vérification, statut de budget) — cohérent avec la maquette, qui distingue visuellement les deux badges.
+
+**Une différence structurelle de plus, comme Reste à vivre (ADR-125)** : les montants sont affichés avec `forceSign: true` (signe + explicite sur un revenu à venir, ex. Salaire) — contrairement à la file de vérification juste au-dessus, qui n'utilise pas `forceSign`. Choix délibéré pour coller à la maquette et à la convention déjà utilisée pour les figures « attendues » ailleurs (Revenus/Dépenses attendus sur Prévisions), pas une incohérence : la file de vérification n'a simplement jamais eu d'exemple positif à afficher jusqu'ici pour que la question se pose.
+
+**Testé sur un jeu de données isolé plutôt que le scénario partagé** : au point du scénario de test où assez d'opérations récurrentes existent pour avoir de vraies occurrences à venir, plusieurs (Loyer, Salaire, Épargne mensuelle) tombent toutes dans les mêmes prochains mois — rendre l'ordre/le compte exact vérifiable aurait demandé de dépendre d'un ordre de tri secondaire (deux occurrences à la même date) non garanti par la requête SQL. Un `AppContainer` temporaire dédié, une opération récurrente (« Attendue ») + une occurrence ponctuelle (« Estimée ») à des dates distinctes, évite entièrement le problème — même stratégie que le cas « suppression bloquée par une occurrence rapprochée » d'ADR-120.
 
 **Documents concernés** : `07-Interface.md` §5.

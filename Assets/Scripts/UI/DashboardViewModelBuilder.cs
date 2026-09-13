@@ -42,6 +42,7 @@ namespace FinanceOS.UI
 
             var expenseBreakdown = BuildExpenseBreakdown(app, account, monthStart, monthEnd);
             var remainingToLiveText = BuildRemainingToLiveText(app, today);
+            var upcomingOperations = BuildUpcomingOperations(app, account, today);
 
             return new DashboardViewModel(
                 account.Name,
@@ -52,7 +53,29 @@ namespace FinanceOS.UI
                 remainingToLiveText,
                 chartSeries,
                 expenseBreakdown,
-                verificationQueue);
+                verificationQueue,
+                upcomingOperations);
+        }
+
+        private const int UpcomingOperationsLimit = 5;
+
+        /// <summary>The next few occurrences still ahead of today — deliberately excludes today
+        /// itself (an occurrence due today already belongs in the verification queue above, not
+        /// here too) and anything already overdue. Capped to a small count rather than a date
+        /// range: this card previews what's coming, it isn't meant to be the full list (that's
+        /// the Prévisions screen's "Occurrences prévues").</summary>
+        private static IReadOnlyList<DashboardUpcomingItem> BuildUpcomingOperations(AppContainer app, Account account, DateTime today)
+        {
+            var horizonDays = app.Settings.Get().ForecastHorizonDays;
+            return app.ForecastOccurrences.ListForAccount(account.Id, today.AddDays(1), today.AddDays(horizonDays))
+                .OrderBy(o => o.ExpectedDate)
+                .Take(UpcomingOperationsLimit)
+                .Select(o => new DashboardUpcomingItem(
+                    o.Label,
+                    DateFormat.Short(o.ExpectedDate),
+                    MoneyFormat.Format(o.ExpectedAmountMinor, account.Currency, forceSign: true),
+                    o.RecurringOperationId.HasValue ? "Attendue" : "Estimée"))
+                .ToList();
         }
 
         /// <summary>"—" when no budget exists for the current month — unlike the savings-evolution

@@ -24,6 +24,8 @@ namespace FinanceOS.UI
         private readonly VisualElement _donutRow;
         private readonly ExpenseDonutElement _donutChart;
         private readonly VisualElement _donutLegend;
+        private readonly Label _upcomingEmptyLabel;
+        private readonly VisualElement _upcomingList;
 
         public DashboardController(VisualElement root)
         {
@@ -47,6 +49,9 @@ namespace FinanceOS.UI
             _donutChart.style.flexGrow = 1;
             root.Q<VisualElement>("donut-chart-container").Add(_donutChart);
             _donutLegend = root.Q<VisualElement>("donut-legend");
+
+            _upcomingEmptyLabel = root.Q<Label>("upcoming-empty");
+            _upcomingList = root.Q<VisualElement>("upcoming-list");
         }
 
         public void Render(DashboardViewModel viewModel)
@@ -81,6 +86,16 @@ namespace FinanceOS.UI
             {
                 _verificationList.Add(BuildVerificationRow(item));
             }
+
+            _upcomingEmptyLabel.style.display = viewModel.UpcomingOperations.Count == 0
+                ? DisplayStyle.Flex
+                : DisplayStyle.None;
+
+            _upcomingList.Clear();
+            foreach (var item in viewModel.UpcomingOperations)
+            {
+                _upcomingList.Add(BuildUpcomingRow(item));
+            }
         }
 
         private static VisualElement BuildVerificationRow(DashboardVerificationItem item)
@@ -101,6 +116,34 @@ namespace FinanceOS.UI
 
             row.Add(textColumn);
             row.Add(amountElement);
+            return row;
+        }
+
+        private static VisualElement BuildUpcomingRow(DashboardUpcomingItem item)
+        {
+            var row = new VisualElement();
+            row.AddToClassList("verification-row");
+
+            var textColumn = new VisualElement { style = { flexGrow = 1 } };
+            var labelElement = new Label(item.Label);
+            labelElement.AddToClassList("verification-row-label");
+            var dateElement = new Label(item.DateText);
+            dateElement.AddToClassList("verification-row-date");
+            textColumn.Add(labelElement);
+            textColumn.Add(dateElement);
+
+            var rightColumn = new VisualElement();
+            rightColumn.AddToClassList("upcoming-row-right");
+            var amountElement = new Label(item.AmountText);
+            amountElement.AddToClassList("verification-row-amount");
+            var certaintyElement = new Label(item.CertaintyText);
+            certaintyElement.AddToClassList(item.CertaintyText == "Attendue" ? "badge" : "badge-muted");
+            certaintyElement.AddToClassList("upcoming-row-badge");
+            rightColumn.Add(amountElement);
+            rightColumn.Add(certaintyElement);
+
+            row.Add(textColumn);
+            row.Add(rightColumn);
             return row;
         }
 
