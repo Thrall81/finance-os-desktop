@@ -19,6 +19,7 @@ namespace FinanceOS.UI
         public VisualTreeAsset? TransactionsAsset;
         public VisualTreeAsset? RecurringOperationsAsset;
         public VisualTreeAsset? ForecastsAsset;
+        public VisualTreeAsset? BudgetsAsset;
 
         public static AppContainer? Container { get; private set; }
 
@@ -28,6 +29,7 @@ namespace FinanceOS.UI
         private TransactionsController? _transactionsController;
         private RecurringOperationsController? _recurringOperationsController;
         private ForecastsController? _forecastsController;
+        private BudgetsController? _budgetsController;
 
         private void Awake()
         {
@@ -43,7 +45,8 @@ namespace FinanceOS.UI
             Container.ForecastOccurrences.MarkStaleAsMissed(DateTime.Now, settings.MissedThresholdDays);
 
             var root = GetComponent<UIDocument>().rootVisualElement;
-            _shell = new ShellController(root, ShowDashboard, ShowAccounts, ShowTransactions, ShowRecurringOperations, ShowForecasts);
+            _shell = new ShellController(
+                root, ShowDashboard, ShowAccounts, ShowTransactions, ShowRecurringOperations, ShowForecasts, ShowBudgets);
             ShowDashboard();
         }
 
@@ -123,12 +126,27 @@ namespace FinanceOS.UI
             _shell.SetActive(ShellScreen.Forecasts);
         }
 
+        private void ShowBudgets()
+        {
+            if (Container is null || _shell is null || BudgetsAsset is null)
+            {
+                return;
+            }
+
+            var content = BudgetsAsset.Instantiate();
+            _shell.SetContent(content);
+            _budgetsController = new BudgetsController(content, Container.Budget, Container.Categories);
+            ClearOtherControllers(keepBudgets: true);
+            _shell.SetActive(ShellScreen.Budgets);
+        }
+
         private void ClearOtherControllers(
             bool keepDashboard = false,
             bool keepAccounts = false,
             bool keepTransactions = false,
             bool keepRecurringOperations = false,
-            bool keepForecasts = false)
+            bool keepForecasts = false,
+            bool keepBudgets = false)
         {
             if (!keepDashboard)
             {
@@ -153,6 +171,11 @@ namespace FinanceOS.UI
             if (!keepForecasts)
             {
                 _forecastsController = null;
+            }
+
+            if (!keepBudgets)
+            {
+                _budgetsController = null;
             }
         }
 

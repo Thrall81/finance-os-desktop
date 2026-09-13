@@ -154,6 +154,7 @@ MonoBehaviour:
   TransactionsAsset: {fileID: 9197481963319205126, guid: 2c295f1886aeb6948acfdf48fc1a8abf, type: 3}
   RecurringOperationsAsset: {fileID: 9197481963319205126, guid: 802be9a8a3574aa43b01d77a05df07e6, type: 3}
   ForecastsAsset: {fileID: 9197481963319205126, guid: 1411dccda9656a84fa27005b38bf1c33, type: 3}
+  BudgetsAsset: {fileID: 9197481963319205126, guid: 50f50ff8bef6ead4790ddaae7840e7bd, type: 3}
 --- !u!114 &130698396
 MonoBehaviour:
   m_ObjectHideFlags: 0

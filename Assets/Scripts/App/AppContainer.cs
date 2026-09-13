@@ -55,7 +55,7 @@ namespace FinanceOS.App
             ForecastOccurrences = new ForecastOccurrenceService(
                 occurrenceRepository, transactionRepository, transferLinkRepository, accountRepository);
             Forecast = new ForecastService(accountRepository, transactionRepository, occurrenceRepository);
-            Budget = new BudgetService(budgetRepository, budgetAllocationRepository, transactionRepository, occurrenceRepository);
+            Budget = new BudgetService(budgetRepository, budgetAllocationRepository, transactionRepository, occurrenceRepository, categoryRepository);
             Settings = new AppSettingsService(appSettingsRepository);
         }
 

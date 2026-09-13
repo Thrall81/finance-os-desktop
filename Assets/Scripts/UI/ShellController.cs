@@ -10,6 +10,7 @@ namespace FinanceOS.UI
         Transactions,
         RecurringOperations,
         Forecasts,
+        Budgets,
     }
 
     /// <summary>
@@ -25,6 +26,7 @@ namespace FinanceOS.UI
         private readonly Button _navTransactions;
         private readonly Button _navRecurringOperations;
         private readonly Button _navForecasts;
+        private readonly Button _navBudgets;
 
         public ShellController(
             VisualElement root,
@@ -32,7 +34,8 @@ namespace FinanceOS.UI
             Action onNavigateToAccounts,
             Action onNavigateToTransactions,
             Action onNavigateToRecurringOperations,
-            Action onNavigateToForecasts)
+            Action onNavigateToForecasts,
+            Action onNavigateToBudgets)
         {
             _contentArea = root.Q<VisualElement>("content-area");
             _navDashboard = root.Q<Button>("nav-dashboard");
@@ -40,12 +43,14 @@ namespace FinanceOS.UI
             _navTransactions = root.Q<Button>("nav-transactions");
             _navRecurringOperations = root.Q<Button>("nav-recurring-operations");
             _navForecasts = root.Q<Button>("nav-forecasts");
+            _navBudgets = root.Q<Button>("nav-budgets");
 
             _navDashboard.clicked += onNavigateToDashboard;
             _navAccounts.clicked += onNavigateToAccounts;
             _navTransactions.clicked += onNavigateToTransactions;
             _navRecurringOperations.clicked += onNavigateToRecurringOperations;
             _navForecasts.clicked += onNavigateToForecasts;
+            _navBudgets.clicked += onNavigateToBudgets;
         }
 
         public void SetContent(VisualElement content)
@@ -61,6 +66,7 @@ namespace FinanceOS.UI
             _navTransactions.EnableInClassList("nav-item-active", screen == ShellScreen.Transactions);
             _navRecurringOperations.EnableInClassList("nav-item-active", screen == ShellScreen.RecurringOperations);
             _navForecasts.EnableInClassList("nav-item-active", screen == ShellScreen.Forecasts);
+            _navBudgets.EnableInClassList("nav-item-active", screen == ShellScreen.Budgets);
         }
     }
 }

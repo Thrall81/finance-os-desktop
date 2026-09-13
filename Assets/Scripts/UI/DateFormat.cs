@@ -21,6 +21,15 @@ namespace FinanceOS.UI
         /// <summary>"27 août 2026" — unambiguous, for detail views.</summary>
         public static string Long(DateTime date) => $"{date.Day} {MonthNames[date.Month - 1]} {date.Year}";
 
+        /// <summary>"Septembre 2026" — a calendar-month heading (Budget screen). Capitalized
+        /// unlike the other formats here, which stay lowercase mid-sentence; single-character
+        /// invariant casing carries no culture-data risk.</summary>
+        public static string MonthYear(DateTime date)
+        {
+            var name = MonthNames[date.Month - 1];
+            return $"{char.ToUpperInvariant(name[0])}{name[1..]} {date.Year}";
+        }
+
         /// <summary>"il y a 5 jours" / "aujourd'hui" / "dans 3 jours" — for the verification queue.
         /// See docs/07-Interface.md §6.</summary>
         public static string RelativeToToday(DateTime date, DateTime today)

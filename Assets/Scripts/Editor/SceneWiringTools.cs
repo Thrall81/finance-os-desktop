@@ -24,6 +24,7 @@ namespace FinanceOS.EditorTools
         private const string TransactionsUxmlPath = "Assets/UI/UXML/Transactions.uxml";
         private const string RecurringOperationsUxmlPath = "Assets/UI/UXML/RecurringOperations.uxml";
         private const string ForecastsUxmlPath = "Assets/UI/UXML/Forecasts.uxml";
+        private const string BudgetsUxmlPath = "Assets/UI/UXML/Budgets.uxml";
 
         [MenuItem("Finance OS/Wire Shell Into Main Scene")]
         public static void WireShellIntoMainScene()
@@ -43,6 +44,7 @@ namespace FinanceOS.EditorTools
             var transactionsTree = LoadRequired<VisualTreeAsset>(TransactionsUxmlPath);
             var recurringOperationsTree = LoadRequired<VisualTreeAsset>(RecurringOperationsUxmlPath);
             var forecastsTree = LoadRequired<VisualTreeAsset>(ForecastsUxmlPath);
+            var budgetsTree = LoadRequired<VisualTreeAsset>(BudgetsUxmlPath);
 
             var bootstrap = Object.FindFirstObjectByType<AppBootstrap>(FindObjectsInactive.Include);
             var uiObject = bootstrap != null ? bootstrap.gameObject : new GameObject("UI");
@@ -67,6 +69,7 @@ namespace FinanceOS.EditorTools
             appBootstrap.TransactionsAsset = transactionsTree;
             appBootstrap.RecurringOperationsAsset = recurringOperationsTree;
             appBootstrap.ForecastsAsset = forecastsTree;
+            appBootstrap.BudgetsAsset = budgetsTree;
 
             EditorSceneManager.MarkSceneDirty(scene);
             EditorSceneManager.SaveScene(scene);

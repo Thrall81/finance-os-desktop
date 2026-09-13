@@ -1,0 +1,90 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="False">
+  <Style src="../USS/theme.uss" />
+  <ui:VisualElement name="budgets-root" class="page">
+    <ui:VisualElement class="page-header accounts-header">
+      <ui:VisualElement>
+        <ui:Label text="Budget" class="page-title" />
+        <ui:Label text="Allocation par catégorie, suivi prévu / réel / engagé / restant." class="page-subtitle" />
+      </ui:VisualElement>
+      <ui:VisualElement name="budget-status-row" class="form-row-inline">
+        <ui:Label name="budget-status-badge" text="" class="badge" style="display: none;" />
+        <ui:Button name="budget-toggle-status-button" text="Clôturer" class="secondary-button" style="display: none;" />
+      </ui:VisualElement>
+    </ui:VisualElement>
+
+    <ui:VisualElement name="month-nav-row" class="filter-row">
+      <ui:Button name="month-prev-button" text="◀" class="secondary-button" />
+      <ui:Label name="month-label" text="—" class="card-title" />
+      <ui:Button name="month-next-button" text="▶" class="secondary-button" />
+    </ui:VisualElement>
+
+    <ui:VisualElement name="empty-state-card" class="card">
+      <ui:Label name="empty-state-label" text="Aucun budget pour ce mois." class="empty-state" />
+      <ui:VisualElement class="form-row form-row-inline">
+        <ui:Toggle name="empty-copy-previous-toggle" label="Copier les montants du mois précédent" />
+      </ui:VisualElement>
+      <ui:VisualElement class="form-actions">
+        <ui:Button name="empty-create-button" text="Créer le budget de ce mois" class="primary-button" />
+      </ui:VisualElement>
+    </ui:VisualElement>
+
+    <ui:VisualElement name="overview-card" class="card">
+      <ui:VisualElement class="card-header">
+        <ui:Label text="Synthèse du mois" class="card-title" />
+      </ui:VisualElement>
+      <ui:VisualElement class="kpi-row">
+        <ui:VisualElement class="kpi-card">
+          <ui:Label text="Reste à vivre" class="kpi-label" />
+          <ui:Label name="kpi-remaining-value" text="—" class="kpi-value" />
+        </ui:VisualElement>
+        <ui:VisualElement class="kpi-card">
+          <ui:Label text="Revenus du mois" class="kpi-label" />
+          <ui:Label name="kpi-income-value" text="—" class="kpi-value" />
+        </ui:VisualElement>
+        <ui:VisualElement class="kpi-card">
+          <ui:Label text="Épargne du mois" class="kpi-label" />
+          <ui:Label name="kpi-savings-value" text="—" class="kpi-value" />
+        </ui:VisualElement>
+        <ui:VisualElement class="kpi-card">
+          <ui:Label text="Taux d'épargne" class="kpi-label" />
+          <ui:Label name="kpi-savings-rate-value" text="—" class="kpi-value" />
+        </ui:VisualElement>
+      </ui:VisualElement>
+    </ui:VisualElement>
+
+    <ui:VisualElement name="allocations-card" class="card">
+      <ui:VisualElement class="card-header">
+        <ui:Label text="Catégories" class="card-title" />
+        <ui:Button name="new-allocation-button" text="+ Ajouter une catégorie" class="primary-button" />
+      </ui:VisualElement>
+      <ui:Label name="allocations-empty" text="Aucune catégorie allouée pour l'instant." class="empty-state" />
+      <ui:MultiColumnListView name="allocations-list-view" class="transactions-table" style="display: none;" />
+
+      <ui:VisualElement name="allocation-form-card" class="form-card" style="display: none;">
+        <ui:Label name="allocation-form-title" text="Ajouter une catégorie" class="card-title" />
+
+        <ui:VisualElement name="allocation-form-category-row" class="form-row">
+          <ui:Label text="Catégorie" class="form-label" />
+          <ui:DropdownField name="allocation-form-category" class="form-field" />
+        </ui:VisualElement>
+        <ui:VisualElement name="allocation-form-category-readonly-row" class="form-row" style="display: none;">
+          <ui:Label text="Catégorie" class="form-label" />
+          <ui:Label name="allocation-form-category-readonly" text="—" class="form-readonly-value" />
+        </ui:VisualElement>
+
+        <ui:VisualElement class="form-row">
+          <ui:Label text="Montant prévu (€)" class="form-label" />
+          <ui:TextField name="allocation-form-planned" class="form-field" />
+        </ui:VisualElement>
+
+        <ui:Label name="allocation-form-error" text="" class="form-error" style="display: none;" />
+
+        <ui:VisualElement class="form-actions">
+          <ui:Button name="allocation-form-remove-button" text="Retirer" class="danger-button" style="display: none;" />
+          <ui:Button name="allocation-form-cancel-button" text="Annuler" class="secondary-button" />
+          <ui:Button name="allocation-form-submit-button" text="Ajouter" class="primary-button" />
+        </ui:VisualElement>
+      </ui:VisualElement>
+    </ui:VisualElement>
+  </ui:VisualElement>
+</ui:UXML>

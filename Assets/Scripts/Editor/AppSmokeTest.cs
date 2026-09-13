@@ -108,6 +108,18 @@ namespace FinanceOS.EditorTools
             Check(summary.PlannedAmountMinor == 70_000, "budget planned amount");
             Check(summary.ActualAmountMinor == 65_000, "budget actual amount excludes the internal transfer, includes the rent");
             Check(summary.RemainingAmountMinor == 5_000, "budget remaining = 70000 - 65000");
+            Check(summary.AllocationId != 0, "the allocation's own id is carried through the summary, not just the category id");
+
+            var revenus = app.Categories.ListActive().First(c => c.Name == "Revenus");
+            var epargne = app.Categories.ListActive().First(c => c.Name == "Épargne");
+            app.Transactions.CreateManual(current.Id, 220_000, "EUR", new DateTime(2026, 9, 2), "Salaire", categoryId: revenus.Id);
+            app.Transactions.CreateManual(current.Id, -30_000, "EUR", new DateTime(2026, 9, 3), "Virement Livret A", categoryId: epargne.Id);
+
+            var overview = app.Budget.GetOverview(budget.Id);
+            Check(overview.IncomeMinor == 220_000, "income sums transactions categorized as Income within the month");
+            Check(overview.SavingsMinor == 30_000, "savings sums transactions categorized as Savings within the month (magnitude)");
+            Check(overview.RemainingToLiveMinor == 5_000, "reste à vivre only sums Expense-category remaining, unaffected by income/savings");
+            Check(Math.Abs(overview.SavingsRatePercent - 13.6363636) < 0.01, "savings rate = savings / income * 100");
 
             var settings = app.Settings.Get();
             Check(settings.ForecastHorizonDays == 90, "default forecast horizon");

@@ -23,6 +23,7 @@ namespace FinanceOS.EditorTools
         private const string TransactionsUxmlPath = "Assets/UI/UXML/Transactions.uxml";
         private const string RecurringOperationsUxmlPath = "Assets/UI/UXML/RecurringOperations.uxml";
         private const string ForecastsUxmlPath = "Assets/UI/UXML/Forecasts.uxml";
+        private const string BudgetsUxmlPath = "Assets/UI/UXML/Budgets.uxml";
         private const string ShellUxmlPath = "Assets/UI/UXML/Shell.uxml";
 
         [MenuItem("Finance OS/Run UI Smoke Test")]
@@ -276,6 +277,46 @@ namespace FinanceOS.EditorTools
             forecastsController.Refresh();
             Check(forecastOccurrencesListView.itemsSource.Count == forecastsViewModel.Occurrences.Count, "refresh re-renders without duplication");
 
+            var septemberBudget = app.Budget.GetOrCreate(2026, 9);
+            app.Budget.UpsertAllocation(septemberBudget.Id, housing.Id, 70_000);
+
+            var budgetsViewModel = BudgetsViewModelBuilder.Build(app.Budget, app.Categories, 2026, 9);
+            Check(budgetsViewModel.BudgetExists, "budget exists for September once created");
+            Check(budgetsViewModel.MonthLabel == "Septembre 2026", "month label capitalized");
+            Check(budgetsViewModel.Allocations.Count == 1, "one allocation appears in the view model");
+            Check(budgetsViewModel.Allocations[0].CategoryName == "Logement", "category resolved by name");
+            Check(budgetsViewModel.Overview is not null, "overview built once a budget exists");
+
+            var octoberViewModel = BudgetsViewModelBuilder.Build(app.Budget, app.Categories, 2026, 10);
+            Check(!octoberViewModel.BudgetExists, "no budget exists yet for a month never created");
+            Check(octoberViewModel.Overview is null, "no overview without a budget");
+            Check(octoberViewModel.UnallocatedCategories.Count == 10, "all active categories are unallocated for a fresh month");
+
+            var budgetsTree = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(BudgetsUxmlPath);
+            if (budgetsTree == null)
+            {
+                throw new FileNotFoundException($"Budgets UXML not found at {BudgetsUxmlPath}");
+            }
+
+            var budgetsRoot = budgetsTree.Instantiate();
+            var budgetsController = new BudgetsController(budgetsRoot, app.Budget, app.Categories, today);
+
+            Check(budgetsRoot.Q<Label>("month-label").text == "Septembre 2026", "controller shows September's label by default");
+            Check(budgetsRoot.Q<VisualElement>("empty-state-card").style.display == DisplayStyle.None, "empty-state hidden when a budget exists");
+            Check(budgetsRoot.Q<VisualElement>("overview-card").style.display == DisplayStyle.Flex, "overview shown when a budget exists");
+
+            var allocationsListView = budgetsRoot.Q<MultiColumnListView>("allocations-list-view");
+            Check(allocationsListView.itemsSource.Count == 1, "controller renders the one seeded allocation");
+            Check(allocationsListView.columns.Count == 5, "five allocation columns configured");
+
+            budgetsController.Refresh();
+            Check(allocationsListView.itemsSource.Count == 1, "refresh re-renders without duplication");
+
+            var emptyBudgetsRoot = budgetsTree.Instantiate();
+            _ = new BudgetsController(emptyBudgetsRoot, app.Budget, app.Categories, new DateTime(2026, 10, 15));
+            Check(emptyBudgetsRoot.Q<VisualElement>("empty-state-card").style.display == DisplayStyle.Flex, "empty-state shown for a month with no budget yet");
+            Check(emptyBudgetsRoot.Q<VisualElement>("overview-card").style.display == DisplayStyle.None, "overview hidden for a month with no budget yet");
+
             var noAccountPath = Path.Combine(Path.GetTempPath(), $"financeos-ui-smoke-empty-{Guid.NewGuid():N}.db");
             using (var noAccountApp = new AppContainer(noAccountPath))
             {
@@ -323,9 +364,10 @@ namespace FinanceOS.EditorTools
             var transactionsCalls = 0;
             var recurringOperationsCalls = 0;
             var forecastsCalls = 0;
+            var budgetsCalls = 0;
             var shell = new ShellController(
                 root, () => dashboardCalls++, () => accountsCalls++, () => transactionsCalls++,
-                () => recurringOperationsCalls++, () => forecastsCalls++);
+                () => recurringOperationsCalls++, () => forecastsCalls++, () => budgetsCalls++);
 
             var content = new VisualElement();
             shell.SetContent(content);
@@ -350,12 +392,17 @@ namespace FinanceOS.EditorTools
             Check(root.Q<Button>("nav-forecasts").ClassListContains("nav-item-active"), "forecasts nav item marked active");
             Check(!root.Q<Button>("nav-recurring-operations").ClassListContains("nav-item-active"), "recurring operations nav item not active");
 
+            shell.SetActive(ShellScreen.Budgets);
+            Check(root.Q<Button>("nav-budgets").ClassListContains("nav-item-active"), "budgets nav item marked active");
+            Check(!root.Q<Button>("nav-forecasts").ClassListContains("nav-item-active"), "forecasts nav item not active");
+
             shell.SetActive(ShellScreen.Dashboard);
             Check(root.Q<Button>("nav-dashboard").ClassListContains("nav-item-active"), "dashboard nav item marked active");
             Check(!root.Q<Button>("nav-accounts").ClassListContains("nav-item-active"), "accounts nav item not active");
             Check(!root.Q<Button>("nav-transactions").ClassListContains("nav-item-active"), "transactions nav item not active");
             Check(!root.Q<Button>("nav-recurring-operations").ClassListContains("nav-item-active"), "recurring operations nav item not active");
             Check(!root.Q<Button>("nav-forecasts").ClassListContains("nav-item-active"), "forecasts nav item not active");
+            Check(!root.Q<Button>("nav-budgets").ClassListContains("nav-item-active"), "budgets nav item not active");
 
             using (var clickEvent = ClickEvent.GetPooled())
             {
@@ -363,7 +410,7 @@ namespace FinanceOS.EditorTools
                 root.Q<Button>("nav-accounts").SendEvent(clickEvent);
             }
 
-            Debug.Log($"[UISmokeTest] Shell nav click delivery: dashboard={dashboardCalls}, accounts={accountsCalls}, transactions={transactionsCalls}, recurringOperations={recurringOperationsCalls}, forecasts={forecastsCalls} (best-effort without an attached panel).");
+            Debug.Log($"[UISmokeTest] Shell nav click delivery: dashboard={dashboardCalls}, accounts={accountsCalls}, transactions={transactionsCalls}, recurringOperations={recurringOperationsCalls}, forecasts={forecastsCalls}, budgets={budgetsCalls} (best-effort without an attached panel).");
         }
 
         private static void TryDeleteQuietly(string path)

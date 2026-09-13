@@ -323,3 +323,7 @@
     flex-grow: 1;
     min-height: 240px;
 }
+
+.amount-negative {
+    color: var(--color-danger);
+}
