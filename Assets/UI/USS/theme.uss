@@ -378,3 +378,10 @@
     height: 200px;
     margin-bottom: 4px;
 }
+
+.chart-axis-label {
+    font-size: 10px;
+    color: var(--color-ink-400);
+    -unity-text-align: upper-center;
+    white-space: normal;
+}

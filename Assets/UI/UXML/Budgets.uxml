@@ -52,6 +52,14 @@
       </ui:VisualElement>
     </ui:VisualElement>
 
+    <ui:VisualElement name="chart-card" class="card">
+      <ui:VisualElement class="card-header">
+        <ui:Label text="Prévu / réel / engagé" class="card-title" />
+      </ui:VisualElement>
+      <ui:Label text="Ordre fixe par catégorie, de gauche à droite : prévu · réel · engagé." class="card-caption" />
+      <ui:VisualElement name="budget-chart-container" class="chart" />
+    </ui:VisualElement>
+
     <ui:VisualElement name="allocations-card" class="card">
       <ui:VisualElement class="card-header">
         <ui:Label text="Catégories" class="card-title" />

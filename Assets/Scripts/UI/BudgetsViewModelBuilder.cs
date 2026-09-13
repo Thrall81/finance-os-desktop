@@ -26,6 +26,7 @@ namespace FinanceOS.UI
                 return new BudgetsViewModel(
                     year, month, monthLabel, false, null, false, null,
                     Array.Empty<BudgetAllocationRowViewModel>(),
+                    Array.Empty<BudgetChartBarGroupViewModel>(),
                     categoryList.Select(c => new DropdownOption(c.Id, c.Name)).ToList());
             }
 
@@ -45,6 +46,13 @@ namespace FinanceOS.UI
                 .OrderBy(r => r.CategoryName)
                 .ToList();
 
+            var chartGroups = summary
+                .Select(s => new BudgetChartBarGroupViewModel(
+                    categoryNames.TryGetValue(s.CategoryId, out var name) ? name : "—",
+                    s.PlannedAmountMinor, s.ActualAmountMinor, s.CommittedAmountMinor))
+                .OrderBy(g => g.CategoryName)
+                .ToList();
+
             var allocatedCategoryIds = summary.Select(s => s.CategoryId).ToHashSet();
             var unallocated = categoryList
                 .Where(c => !allocatedCategoryIds.Contains(c.Id))
@@ -59,7 +67,7 @@ namespace FinanceOS.UI
 
             return new BudgetsViewModel(
                 year, month, monthLabel, true, budget.Id, budget.Status == BudgetStatus.Closed,
-                overviewViewModel, rows, unallocated);
+                overviewViewModel, rows, chartGroups, unallocated);
         }
 
         /// <summary>"12,3 %" — rounds via InvariantCulture (safe, no ICU data involved) then

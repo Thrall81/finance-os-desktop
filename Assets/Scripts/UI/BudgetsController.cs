@@ -35,6 +35,9 @@ namespace FinanceOS.UI
         private readonly Label _kpiSavingsLabel;
         private readonly Label _kpiSavingsRateLabel;
 
+        private readonly VisualElement _chartCard;
+        private readonly BudgetBarChartElement _chart;
+
         private readonly VisualElement _allocationsCard;
         private readonly Button _newAllocationButton;
         private readonly Label _allocationsEmptyLabel;
@@ -87,6 +90,11 @@ namespace FinanceOS.UI
             _kpiIncomeLabel = root.Q<Label>("kpi-income-value");
             _kpiSavingsLabel = root.Q<Label>("kpi-savings-value");
             _kpiSavingsRateLabel = root.Q<Label>("kpi-savings-rate-value");
+
+            _chartCard = root.Q<VisualElement>("chart-card");
+            _chart = new BudgetBarChartElement();
+            _chart.style.flexGrow = 1;
+            root.Q<VisualElement>("budget-chart-container").Add(_chart);
 
             _allocationsCard = root.Q<VisualElement>("allocations-card");
             _newAllocationButton = root.Q<Button>("new-allocation-button");
@@ -187,7 +195,10 @@ namespace FinanceOS.UI
 
             _emptyStateCard.style.display = viewModel.BudgetExists ? DisplayStyle.None : DisplayStyle.Flex;
             _overviewCard.style.display = viewModel.BudgetExists ? DisplayStyle.Flex : DisplayStyle.None;
+            _chartCard.style.display = viewModel.BudgetExists ? DisplayStyle.Flex : DisplayStyle.None;
             _allocationsCard.style.display = viewModel.BudgetExists ? DisplayStyle.Flex : DisplayStyle.None;
+
+            _chart.Groups = viewModel.ChartGroups;
 
             _statusBadge.style.display = viewModel.BudgetExists ? DisplayStyle.Flex : DisplayStyle.None;
             _toggleStatusButton.style.display = viewModel.BudgetExists ? DisplayStyle.Flex : DisplayStyle.None;

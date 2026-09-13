@@ -351,6 +351,9 @@ namespace FinanceOS.EditorTools
             Check(budgetsViewModel.Allocations.Count == 1, "one allocation appears in the view model");
             Check(budgetsViewModel.Allocations[0].CategoryName == "Logement", "category resolved by name");
             Check(budgetsViewModel.Overview is not null, "overview built once a budget exists");
+            Check(budgetsViewModel.ChartGroups.Count == 1, "one bar group appears in the view model, matching the one allocation");
+            Check(budgetsViewModel.ChartGroups[0].CategoryName == "Logement", "bar group resolved by category name");
+            Check(budgetsViewModel.ChartGroups[0].PlannedMinor == 70_000, "bar group carries the raw planned amount, not display text");
 
             var octoberViewModel = BudgetsViewModelBuilder.Build(app.Budget, app.Categories, 2026, 10);
             Check(!octoberViewModel.BudgetExists, "no budget exists yet for a month never created");
@@ -374,6 +377,12 @@ namespace FinanceOS.EditorTools
             Check(allocationsListView.itemsSource.Count == 1, "controller renders the one seeded allocation");
             Check(allocationsListView.columns.Count == 5, "five allocation columns configured");
 
+            Check(budgetsRoot.Q<VisualElement>("chart-card").style.display == DisplayStyle.Flex, "bar chart card shown when a budget exists");
+            var budgetChart = budgetsRoot.Q<BudgetBarChartElement>();
+            Check(budgetChart is not null, "bar chart element added to the chart card");
+            Check(budgetChart!.Groups.Count == budgetsViewModel.ChartGroups.Count, "bar chart element receives every bar group");
+            Check(budgetChart.style.flexGrow.value == 1f, "bar chart element grows to fill its fixed-height container, same requirement as the cash-flow chart");
+
             budgetsController.Refresh();
             Check(allocationsListView.itemsSource.Count == 1, "refresh re-renders without duplication");
 
@@ -381,6 +390,8 @@ namespace FinanceOS.EditorTools
             _ = new BudgetsController(emptyBudgetsRoot, app.Budget, app.Categories, new DateTime(2026, 10, 15));
             Check(emptyBudgetsRoot.Q<VisualElement>("empty-state-card").style.display == DisplayStyle.Flex, "empty-state shown for a month with no budget yet");
             Check(emptyBudgetsRoot.Q<VisualElement>("overview-card").style.display == DisplayStyle.None, "overview hidden for a month with no budget yet");
+            Check(emptyBudgetsRoot.Q<VisualElement>("chart-card").style.display == DisplayStyle.None, "bar chart card hidden for a month with no budget yet");
+            Check(emptyBudgetsRoot.Q<BudgetBarChartElement>()!.Groups.Count == 0, "bar chart has no groups with no budget — constructing it did not throw");
 
             var settingsViewModel = SettingsViewModelBuilder.Build(app.Settings, app.Accounts, app.DatabasePath);
             Check(settingsViewModel.Currency == "EUR", "currency is fixed EUR in V1");

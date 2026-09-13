@@ -19,6 +19,12 @@ namespace FinanceOS.UI
     public sealed record BudgetOverviewViewModel(
         string RemainingToLiveText, string IncomeText, string SavingsText, string SavingsRateText);
 
+    /// <summary>One category's grouped bar (prévu/réel/engagé), raw minor amounts rather than
+    /// display text — <see cref="BudgetBarChartElement"/> needs them to scale bars against each
+    /// other. See docs/07-Interface.md §8.</summary>
+    public sealed record BudgetChartBarGroupViewModel(
+        string CategoryName, long PlannedMinor, long ActualMinor, long CommittedMinor);
+
     /// <summary>Everything the Budget screen displays for one calendar month. Null
     /// <see cref="Overview"/>/empty <see cref="Allocations"/> with <see cref="BudgetExists"/>
     /// false means no budget row exists yet for this month — the screen shows a create prompt
@@ -32,5 +38,6 @@ namespace FinanceOS.UI
         bool IsClosed,
         BudgetOverviewViewModel? Overview,
         IReadOnlyList<BudgetAllocationRowViewModel> Allocations,
+        IReadOnlyList<BudgetChartBarGroupViewModel> ChartGroups,
         IReadOnlyList<DropdownOption> UnallocatedCategories);
 }

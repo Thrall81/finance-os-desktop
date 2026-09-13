@@ -95,7 +95,7 @@ Deux vraies lacunes fonctionnelles corrigées à l'occasion de cet écran (aucun
 
 **Paramètres — état d'implémentation** : `Settings.uxml` + `SettingsController` couvrent l'horizon de prévision, le seuil de solde faible, le seuil « Manquée » (§6, `AppSettings.MissedThresholdDays`) et le compte par défaut du tableau de bord — un seul formulaire, un seul bouton Enregistrer, plutôt que le patron créer/modifier des autres écrans puisqu'il n'existe qu'un seul objet réglages. La devise est affichée en lecture seule (EUR fixe en V1, cf. `01-Perimetre.md` §2.11). L'emplacement du fichier de données est affiché (lecture seule, bouton « Copier le chemin ») et une sauvegarde manuelle est disponible : `BackupService` (nouveau, `FinanceOS.App`) copie le fichier SQLite vivant vers un dossier `backups/` horodaté à côté des données — seule la copie de fichier est construite, pas l'export JSON que `01-Perimetre.md` §2.11 propose en alternative (« copie du fichier SQLite **ou** export JSON » — un seul des deux suffit pour ce besoin).
 
-**Budget — état d'implémentation** : `Budgets.uxml` + `BudgetsController` couvrent la navigation par mois (◀ / ▶), la création du budget du mois affiché — avec l'option « copier les montants du mois précédent » (§2.9) — l'activation/clôture, les allocations par catégorie (ajout, modification du seul montant prévu, retrait) avec le suivi prévu/réel/engagé/restant (`MultiColumnListView`), et la synthèse du mois (reste à vivre, revenus, épargne, taux d'épargne). Un mois sans budget affiche un état vide explicite avec l'action de création plutôt que d'en créer un silencieusement — seul le mois courant, au premier affichage de l'écran, est prêt automatiquement.
+**Budget — état d'implémentation** : `Budgets.uxml` + `BudgetsController` couvrent la navigation par mois (◀ / ▶), la création du budget du mois affiché — avec l'option « copier les montants du mois précédent » (§2.9) — l'activation/clôture, les allocations par catégorie (ajout, modification du seul montant prévu, retrait) avec le suivi prévu/réel/engagé/restant (`MultiColumnListView`), et la synthèse du mois (reste à vivre, revenus, épargne, taux d'épargne). Un mois sans budget affiche un état vide explicite avec l'action de création plutôt que d'en créer un silencieusement — seul le mois courant, au premier affichage de l'écran, est prêt automatiquement. Les barres prévu/réel/engagé (`BudgetBarChartElement`, §8) sont affichées entre la synthèse et le tableau des catégories, masquées comme le reste tant qu'aucun budget n'existe pour le mois affiché.
 
 Aucune définition précise de « reste à vivre » et « taux d'épargne du mois » n'existait dans la documentation avant cet écran (seule la maquette montrait un nombre) — définitions retenues, ajoutées à `BudgetService.GetOverview`/`BudgetOverview` : le reste à vivre est la somme du restant (prévu − réel − engagé) de chaque catégorie de type Dépense allouée au budget ; le taux d'épargne est le rapport (mouvements réel+engagé vers une catégorie de type Épargne) / (mouvements réel+engagé vers une catégorie de type Revenu) du mois, 0 % en l'absence de revenu. Les deux se recalculent uniquement à partir de ce que `GetSummary`/les périodes de transactions et occurrences fournissent déjà — aucune nouvelle donnée stockée.
 
@@ -134,7 +134,7 @@ Tous les graphiques sont des `VisualElement` personnalisés qui redéfinissent `
 | Graphique | Type | Écran | État |
 |---|---|---|---|
 | Courbe de trésorerie | Ligne, avec segment plein (réel) puis pointillé (prévu), marqueur du point bas | Prévisions, Tableau de bord | **Construit** (`LineChartElement`) |
-| Budget prévu/réel/engagé | Barres groupées par catégorie | Budget | À construire |
+| Budget prévu/réel/engagé | Barres groupées par catégorie | Budget | **Construit** (`BudgetBarChartElement`) |
 | Répartition des dépenses | Anneau (donut) | Tableau de bord | À construire |
 | Évolution de l'épargne | Ligne ou barres | Budget | À construire |
 
@@ -164,13 +164,17 @@ public sealed class LineChartElement : VisualElement
 
 `Points` prend un `ChartPointViewModel` (`FinanceOS.UI`, déjà formaté pour l'écran) plutôt qu'un `ForecastDayPoint` brut du moteur (`FinanceOS.Forecast`) — cohérent avec le reste de l'UI, qui ne référence jamais un type du moteur directement (`ForecastsViewModelBuilder` fait la conversion). Pas de grille de fond ni d'axes légendés dans cette première version — jugé pas indispensable une fois le solde déjà affiché en toutes lettres dans la synthèse et le journal juste en dessous.
 
+## 8.3bis Composant `BudgetBarChartElement`
+
+Même famille que `LineChartElement` (`Painter2D`, aucune bibliothèque tierce), pour les barres groupées prévu/réel/engagé du Budget (ADR-121). Différence structurelle : `Painter2D` ne dessine pas de texte, donc les noms de catégorie (indispensables pour lire un graphique à barres, contrairement à la courbe où les KPI environnants suffisaient) sont de vrais `Label` UI Toolkit, enfants du même `VisualElement`, repositionnés sous chaque groupe de barres à chaque changement de géométrie (`GeometryChangedEvent`) — le canevas dessine les barres, les enfants portent le texte. `Groups` prend un `BudgetChartBarGroupViewModel` (nom de catégorie + trois montants bruts) construit par `BudgetsViewModelBuilder` depuis `BudgetService.GetSummary`. Ordre gauche-à-droite fixe par groupe (prévu, réel, engagé), expliqué dans la légende textuelle de la carte plutôt que répété en légende graphique — c'est ce qui tient lieu de distinction « pas uniquement par la couleur » (§8.4) en l'absence d'un équivalent du trait plein/pointillé pour des barres.
+
 ## 8.4 Exigences conservées de l'ancien projet
 
 - chaque graphique possède un titre et, si utile, une légende ;
-- une infobulle apparaît au survol d'un point/d'une barre (valeur exacte, date, détail) — **pas encore construite** sur `LineChartElement` : demanderait une détection de position de pointeur sur un rendu vectoriel, différée tant que le tracé de base n'est pas confirmé visuellement (cf. ADR-119) ;
-- une alternative textuelle existe toujours à côté du graphique (les valeurs principales restent lisibles sans lui) — le « Journal des mouvements prévus » juste en dessous de la courbe de trésorerie ;
-- aucune information n'est transmise uniquement par la couleur (le trait plein/pointillé porte déjà la distinction réel/prévu) ;
-- comportement correct géré pour l'absence de données — `LineChartElement` ne dessine rien avec moins de deux points, sans lever d'exception.
+- une infobulle apparaît au survol d'un point/d'une barre (valeur exacte, date, détail) — **pas encore construite**, ni sur `LineChartElement` ni sur `BudgetBarChartElement` : demanderait une détection de position de pointeur sur un rendu vectoriel, différée tant que le tracé de base n'est pas confirmé visuellement (cf. ADR-119) ;
+- une alternative textuelle existe toujours à côté du graphique (les valeurs principales restent lisibles sans lui) — le « Journal des mouvements prévus » pour la courbe, le tableau des catégories (prévu/réel/engagé/restant) pour les barres ;
+- aucune information n'est transmise uniquement par la couleur (le trait plein/pointillé porte la distinction réel/prévu sur la courbe ; l'ordre gauche-à-droite fixe, expliqué en légende, porte la distinction prévu/réel/engagé sur les barres) ;
+- comportement correct géré pour l'absence de données — `LineChartElement` ne dessine rien avec moins de deux points, `BudgetBarChartElement` ne dessine rien sans groupe ou si la valeur maximale est nulle, aucun des deux ne lève d'exception.
 
 ---
 

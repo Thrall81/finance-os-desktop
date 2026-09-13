@@ -34,6 +34,7 @@ Journal des décisions structurantes, dans le même format que l'ancien projet (
 | ADR-118 | Polices statiques vendorisées (Spectral, IBM Plex Sans/Mono) plutôt que variables | ACCEPTED |
 | ADR-119 | Graphique de trésorerie construit ; pointillé dessiné à la main (pas d'API native) | ACCEPTED |
 | ADR-120 | Opérations récurrentes : avertissement de premier cycle sauté + suppression conditionnelle | ACCEPTED |
+| ADR-121 | Graphique barres budget construit ; texte des catégories en `Label` superposés, pas en Painter2D | ACCEPTED |
 
 ---
 
@@ -337,3 +338,21 @@ Journal des décisions structurantes, dans le même format que l'ancien projet (
 **Conséquences négatives** : l'avertissement de premier cycle sauté ne couvre que les fréquences mensuelles et assimilées (bimestrielle, trimestrielle, semestrielle, annuelle) — une fréquence hebdomadaire ne peut structurellement pas produire ce décalage (sa première occurrence est toujours la date de début elle-même), donc rien à avertir là. La suppression reste un correctif d'urgence, pas une vraie édition : si l'utilisateur veut *changer* une date de début plutôt que corriger une erreur de saisie évidente, il doit supprimer et recréer. Pas de confirmation avant suppression (« Supprimer » agit immédiatement) — cohérent avec le reste de l'app, mais à revoir si un utilisateur supprime accidentellement une opération encore utile.
 
 **Documents concernés** : `07-Interface.md` §3, `Assets/Scripts/UI/README.md`.
+
+---
+
+# 23. ADR-121 — Graphique barres budget construit sur le patron `LineChartElement`
+
+**Contexte** : deuxième des quatre graphiques du catalogue (`07-Interface.md` §8.2), une fois la courbe de trésorerie confirmée visuellement et répliquée sur le Tableau de bord (ADR-119). Barres groupées prévu/réel/engagé par catégorie, sur l'écran Budget.
+
+**Décision** : `BudgetBarChartElement` (`Assets/Scripts/UI/BudgetBarChartElement.cs`), même famille que `LineChartElement` — `Painter2D`, aucune bibliothèque tierce (ADR-103). Alimenté par `BudgetsViewModel.ChartGroups` (nouveau champ, `BudgetChartBarGroupViewModel` : nom de catégorie + trois montants bruts), construit par `BudgetsViewModelBuilder` depuis `BudgetService.GetSummary` — déjà des magnitudes positives directement comparables (contrairement au solde signé de la courbe de trésorerie, ce graphique n'a aucun signe à gérer). Carte « Prévu / réel / engagé » insérée entre la synthèse et le tableau des catégories dans `Budgets.uxml`, masquée/affichée comme le reste tant qu'aucun budget n'existe pour le mois affiché (même bascule que `overview-card`/`allocations-card` dans `BudgetsController.Refresh`).
+
+**Différence structurelle avec la courbe** : `Painter2D` ne sait pas dessiner de texte. La courbe s'en passait (les KPI environnants suffisaient à situer les valeurs), mais un graphique à barres sans le nom de chaque catégorie n'est pas lisible. Solution : de vrais `Label` UI Toolkit, enfants du même `VisualElement` que celui qui dessine les barres, repositionnés sous chaque groupe à chaque `GeometryChangedEvent` — le canevas Painter2D reste seul responsable des formes, les enfants UI Toolkit seuls responsables du texte. Pattern standard (canvas pour les formes, DOM/éléments UI pour le texte), toujours sans dépendance externe.
+
+**Distinction « pas uniquement par la couleur » (§8.4) sans équivalent du trait plein/pointillé** : la courbe distingue réel/prévu par la forme du trait (dessiné à la main faute d'API native, cf. ADR-119). Un graphique à barres n'a pas d'équivalent simple. Choix retenu : un **ordre gauche-à-droite fixe** par groupe (prévu, réel, engagé), documenté dans la légende textuelle de la carte (`.card-caption`) plutôt que répété en légende graphique dans le canevas lui-même (aurait demandé, encore, du texte que `Painter2D` ne sait pas dessiner). Couleurs reprises telles quelles de `LineChartElement` (accent navy = prévu, or = réel, gris ink-400 = engagé) — même duplication de palette assumée qu'ADR-119.
+
+**Ce qui reste vérifiable en batchmode, et ce qui ne l'est pas** : compilation, mapping `ChartGroups` (montants bruts corrects, cf. `UISmokeTest.cs`), présence de l'élément et `flexGrow == 1f` (même garde-fou que la courbe, ADR-119), absence d'exception sans budget/sans allocation — tout vert du premier coup. Le rendu effectif (proportions des barres, lisibilité des labels de catégorie repositionnés) ne l'est pas ; à confirmer par capture d'écran.
+
+**Conséquences négatives** : pas d'infobulle au survol (§8.4), même report qu'ADR-119. Avec beaucoup de catégories allouées, les groupes de barres et leurs labels vont se resserrer — pas de défilement horizontal ni de regroupement/agrégation prévu dans cette première version, à revoir si un usage réel avec de nombreuses catégories le rend illisible. Le graphique de répartition des dépenses (anneau, Tableau de bord) et celui de l'évolution de l'épargne (Budget) restent à construire.
+
+**Documents concernés** : `07-Interface.md` §5/§8.
