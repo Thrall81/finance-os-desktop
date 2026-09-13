@@ -24,6 +24,14 @@
       </ui:VisualElement>
     </ui:VisualElement>
 
+    <ui:VisualElement name="cashflow-card" class="card">
+      <ui:VisualElement class="card-header">
+        <ui:Label text="Courbe de trésorerie" class="card-title" />
+      </ui:VisualElement>
+      <ui:Label text="Trait plein : réel. Pointillé : prévu. Marqueur : point bas." class="card-caption" />
+      <ui:VisualElement name="cashflow-chart-container" class="chart" />
+    </ui:VisualElement>
+
     <ui:VisualElement name="verification-card" class="card">
       <ui:VisualElement class="card-header">
         <ui:Label text="Opérations à vérifier" class="card-title" />

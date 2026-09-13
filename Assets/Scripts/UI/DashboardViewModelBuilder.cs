@@ -35,12 +35,17 @@ namespace FinanceOS.UI
                     MoneyFormat.Format(o.ExpectedAmountMinor, account.Currency)))
                 .ToList();
 
+            var chartSeries = forecast.Timeline
+                .Select(day => new ChartPointViewModel(day.Date, day.ClosingBalanceMinor, day.IsActual))
+                .ToList();
+
             return new DashboardViewModel(
                 account.Name,
                 MoneyFormat.Format(account.OfficialBalanceMinor, account.Currency),
                 MoneyFormat.Format(forecast.ClosingBalanceMinor, account.Currency),
                 MoneyFormat.Format(forecast.LowestBalanceMinor, account.Currency),
                 DateFormat.Short(forecast.LowestBalanceDate),
+                chartSeries,
                 verificationQueue);
         }
 

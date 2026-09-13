@@ -75,7 +75,7 @@ Navigation clavier complète, `aria`-équivalent UI Toolkit pour l'étape couran
 
 Cartes reprises de l'ancien projet : Solde disponible, Solde prévu en fin de mois, Point bas prévisionnel, Reste à vivre — puis graphique de trésorerie, **file de vérification** (occurrences arrivées à échéance non confirmées, mise en avant si non vide), prochaines opérations, synthèse budgétaire, alertes calculées à l'affichage (solde faible, dépassement de budget).
 
-**État d'implémentation** : `Dashboard.uxml` + `DashboardController` affichent Solde disponible, Solde prévu en fin de mois, Point bas prévisionnel et la file de vérification, alimentés par `DashboardViewModelBuilder` (`Assets/Scripts/UI/`). Reste à vivre, prochaines opérations, synthèse budgétaire, alertes et le graphique de trésorerie ne sont pas encore construits — le graphique en particulier est différé volontairement : son rendu `Painter2D` ne peut être vérifié qu'à l'exécution réelle (un rendu), impossible à contrôler en mode batch dans cet environnement de développement (cf. `09-Decisions_techniques.md`, ADR-112). Aucune police personnalisée n'est encore intégrée : l'interface utilise la police par défaut d'Unity en attendant une passe de style dédiée.
+**État d'implémentation** : `Dashboard.uxml` + `DashboardController` affichent Solde disponible, Solde prévu en fin de mois, Point bas prévisionnel, la courbe de trésorerie (`LineChartElement`, §8, ADR-119 — même patron que Prévisions, horizon fin du mois courant) et la file de vérification, alimentés par `DashboardViewModelBuilder` (`Assets/Scripts/UI/`). Reste à vivre, prochaines opérations, synthèse budgétaire et alertes ne sont pas encore construits.
 
 **Navigation** : une barre latérale (`Shell.uxml` + `ShellController`) donne accès aux sept écrans de §3 — Tableau de bord, Comptes, Transactions, Opérations récurrentes, Prévisions, Budget et Paramètres ; chaque écran est un `VisualTreeAsset` instancié dans la zone de contenu du shell plutôt qu'une scène séparée (cf. `09-Decisions_techniques.md`, ADR-113).
 
@@ -131,12 +131,12 @@ Tous les graphiques sont des `VisualElement` personnalisés qui redéfinissent `
 
 | Graphique | Type | Écran | État |
 |---|---|---|---|
-| Courbe de trésorerie | Ligne, avec segment plein (réel) puis pointillé (prévu), marqueur du point bas | Prévisions | **Construit** (`LineChartElement`) |
+| Courbe de trésorerie | Ligne, avec segment plein (réel) puis pointillé (prévu), marqueur du point bas | Prévisions, Tableau de bord | **Construit** (`LineChartElement`) |
 | Budget prévu/réel/engagé | Barres groupées par catégorie | Budget | À construire |
 | Répartition des dépenses | Anneau (donut) | Tableau de bord | À construire |
 | Évolution de l'épargne | Ligne ou barres | Budget | À construire |
 
-La courbe de trésorerie n'est construite que sur Prévisions pour l'instant, pas sur le Tableau de bord — à répliquer une fois son rendu confirmé.
+La courbe de trésorerie sur Prévisions a été confirmée par capture d'écran le 2026-09-13 (ADR-119) puis répliquée telle quelle sur le Tableau de bord — même composant, mêmes couleurs, horizon différent (fin du mois courant plutôt que l'horizon de prévision réglable).
 
 ## 8.3 Composant `LineChartElement`
 

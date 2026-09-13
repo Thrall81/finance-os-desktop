@@ -17,6 +17,7 @@ namespace FinanceOS.UI
         private readonly Label _verificationCountLabel;
         private readonly Label _verificationEmptyLabel;
         private readonly VisualElement _verificationList;
+        private readonly LineChartElement _cashFlowChart;
 
         public DashboardController(VisualElement root)
         {
@@ -28,6 +29,10 @@ namespace FinanceOS.UI
             _verificationCountLabel = root.Q<Label>("verification-count");
             _verificationEmptyLabel = root.Q<Label>("verification-empty");
             _verificationList = root.Q<VisualElement>("verification-list");
+
+            _cashFlowChart = new LineChartElement();
+            _cashFlowChart.style.flexGrow = 1;
+            root.Q<VisualElement>("cashflow-chart-container").Add(_cashFlowChart);
         }
 
         public void Render(DashboardViewModel viewModel)
@@ -37,6 +42,8 @@ namespace FinanceOS.UI
             _endOfMonthValueLabel.text = viewModel.EndOfMonthBalanceText;
             _lowestValueLabel.text = viewModel.LowestBalanceText;
             _lowestDateLabel.text = viewModel.LowestBalanceDateText;
+
+            _cashFlowChart.Points = viewModel.ChartSeries;
 
             _verificationCountLabel.text = viewModel.VerificationQueue.Count.ToString();
             _verificationEmptyLabel.style.display = viewModel.VerificationQueue.Count == 0

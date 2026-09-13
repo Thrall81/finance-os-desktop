@@ -95,6 +95,7 @@ namespace FinanceOS.EditorTools
             Check(viewModel is not null, "view model is built when an account exists");
             Check(viewModel!.VerificationQueue.Count == 1, "September's rent occurrence is due for verification");
             Check(Normalize(viewModel.AvailableBalanceText) == "1 748,60 €", "available balance formatted correctly");
+            Check(viewModel.ChartSeries.Count > 0, "chart series is populated when an account exists");
 
             var visualTree = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(DashboardUxmlPath);
             if (visualTree == null)
@@ -113,6 +114,10 @@ namespace FinanceOS.EditorTools
 
             var verificationList = root.Q<VisualElement>("verification-list");
             Check(verificationList.childCount == 1, "one verification row rendered");
+
+            var dashboardChart = root.Q<LineChartElement>();
+            Check(dashboardChart!.Points.Count == viewModel.ChartSeries.Count, "dashboard chart element receives the full chart series");
+            Check(dashboardChart.style.flexGrow.value == 1f, "dashboard chart element grows to fill its fixed-height container");
 
             var savings = app.Accounts.CreateAccount("Ancien Livret", AccountType.Savings, "EUR", 20_000);
             app.Accounts.Archive(savings.Id);
