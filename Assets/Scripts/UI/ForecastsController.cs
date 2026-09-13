@@ -44,6 +44,7 @@ namespace FinanceOS.UI
         private readonly Label _occurrencesEmptyLabel;
         private readonly MultiColumnListView _occurrencesListView;
 
+        private readonly LineChartElement _cashFlowChart;
         private readonly Label _timelineEmptyLabel;
         private readonly MultiColumnListView _timelineListView;
 
@@ -100,6 +101,9 @@ namespace FinanceOS.UI
 
             _occurrencesEmptyLabel = root.Q<Label>("occurrences-empty");
             _occurrencesListView = root.Q<MultiColumnListView>("occurrences-list-view");
+
+            _cashFlowChart = new LineChartElement();
+            root.Q<VisualElement>("cashflow-chart-container").Add(_cashFlowChart);
 
             _timelineEmptyLabel = root.Q<Label>("timeline-empty");
             _timelineListView = root.Q<MultiColumnListView>("timeline-list-view");
@@ -236,6 +240,7 @@ namespace FinanceOS.UI
 
             RenderSynthesis(viewModel.Synthesis);
             RenderVerificationQueue(viewModel.VerificationQueue);
+            _cashFlowChart.Points = viewModel.ChartSeries;
 
             _occurrenceRows = viewModel.Occurrences.ToList();
             var hasOccurrences = _occurrenceRows.Count > 0;

@@ -85,7 +85,7 @@ Cartes reprises de l'ancien projet : Solde disponible, Solde prévu en fin de mo
 
 **Opérations récurrentes — état d'implémentation** : `RecurringOperations.uxml` + `RecurringOperationsController` couvrent la liste (`MultiColumnListView`, colonnes Nom/Type/Compte/Fréquence/Montant/Statut), la création — Dépense, Revenu, Virement épargne ou Virement interne, avec les champs compte(s) qui s'adaptent au type choisi — et, en modification, uniquement le montant attendu et la suspension/reprise, cohérent avec ce qu'expose `RecurringOperationService` (nom, type, comptes, fréquence, date de début, jour du mois, catégorie et tiers ne sont modifiables qu'à la création). `RecurringOperationService.GenerateUpcomingOccurrences` (nouveau) est appelé au démarrage de l'application et après chaque création/reprise, pour que les occurrences futures existent réellement en base sans étape manuelle — jusque-là, seuls les tests appelaient la génération. La création d'une occurrence ponctuelle sans récurrence (§2.7 de `01-Perimetre.md`) n'est pas construite sur cet écran, plutôt prévue pour l'écran Prévisions.
 
-**Prévisions — état d'implémentation** : `Forecasts.uxml` + `ForecastsController` couvrent, pour le compte sélectionné, la synthèse (solde actuel, solde prévu en fin d'horizon, point bas, revenus/dépenses attendus, avertissements du moteur), la file de vérification complète (avec un formulaire de confirmation partagé pour « C'est arrivé », préempli et modifiable, plus une action « Annuler » directe), la liste des occurrences prévues (`MultiColumnListView`) et la simulation « Et si ? » (jamais persistée). Le graphique de trésorerie reste différé (ADR-112) ; en attendant, le « Journal des mouvements prévus » sert d'alternative textuelle explicite (§8.4) — un jour par ligne, uniquement les jours avec un mouvement. Simplification assumée par rapport à §6 : le bouton « Pas encore » n'existe pas séparément — comme il ne change aucune donnée (« repousse silencieusement, reste dans la file »), ne pas ouvrir le formulaire de confirmation produit exactement le même résultat.
+**Prévisions — état d'implémentation** : `Forecasts.uxml` + `ForecastsController` couvrent, pour le compte sélectionné, la synthèse (solde actuel, solde prévu en fin d'horizon, point bas, revenus/dépenses attendus, avertissements du moteur), la file de vérification complète (avec un formulaire de confirmation partagé pour « C'est arrivé », préempli et modifiable, plus une action « Annuler » directe), la liste des occurrences prévues (`MultiColumnListView`) et la simulation « Et si ? » (jamais persistée). La courbe de trésorerie (`LineChartElement`, §8, ADR-119) est maintenant construite au-dessus du « Journal des mouvements prévus », qui reste son alternative textuelle explicite (§8.4) — un jour par ligne, uniquement les jours avec un mouvement. Simplification assumée par rapport à §6 : le bouton « Pas encore » n'existe pas séparément — comme il ne change aucune donnée (« repousse silencieusement, reste dans la file »), ne pas ouvrir le formulaire de confirmation produit exactement le même résultat.
 
 Cet écran empile six cartes (synthèse, vérification, occurrences, journal, simulation) — trop pour tenir dans une fenêtre, ce qui rendait chaque petit défaut de marge très visible (`09-Decisions_techniques.md`, ADR-116). La section Simulation est donc **repliée par défaut**, réduite à son titre et un bouton « Simuler un scénario » ; le formulaire ne s'affiche qu'au clic. Le même traitement pourra s'appliquer au Journal des mouvements prévus si la densité reste un problème une fois un vrai compte en usage courant observé.
 
@@ -129,19 +129,21 @@ Tous les graphiques sont des `VisualElement` personnalisés qui redéfinissent `
 
 ## 8.2 Types nécessaires en V1
 
-| Graphique | Type | Écran |
-|---|---|---|
-| Courbe de trésorerie | Ligne, avec segment plein (réel) puis pointillé (prévu), marqueur du point bas | Tableau de bord, Prévisions |
-| Budget prévu/réel/engagé | Barres groupées par catégorie | Budget |
-| Répartition des dépenses | Anneau (donut) | Tableau de bord |
-| Évolution de l'épargne | Ligne ou barres | Budget |
+| Graphique | Type | Écran | État |
+|---|---|---|---|
+| Courbe de trésorerie | Ligne, avec segment plein (réel) puis pointillé (prévu), marqueur du point bas | Prévisions | **Construit** (`LineChartElement`) |
+| Budget prévu/réel/engagé | Barres groupées par catégorie | Budget | À construire |
+| Répartition des dépenses | Anneau (donut) | Tableau de bord | À construire |
+| Évolution de l'épargne | Ligne ou barres | Budget | À construire |
 
-## 8.3 Composant `LineChartElement` (exemple)
+La courbe de trésorerie n'est construite que sur Prévisions pour l'instant, pas sur le Tableau de bord — à répliquer une fois son rendu confirmé.
+
+## 8.3 Composant `LineChartElement`
 
 ```csharp
 public sealed class LineChartElement : VisualElement
 {
-    public IReadOnlyList<ForecastDayPoint> Points { get; set; } = Array.Empty<ForecastDayPoint>();
+    public IReadOnlyList<ChartPointViewModel> Points { get; set; } = Array.Empty<ChartPointViewModel>();
 
     public LineChartElement()
     {
@@ -151,19 +153,22 @@ public sealed class LineChartElement : VisualElement
     private void OnGenerateVisualContent(MeshGenerationContext context)
     {
         var painter = context.painter2D;
-        // tracé du segment "réel" en trait plein, du segment "prévu" en pointillé,
-        // marqueur au point bas, grille de fond, axes légendés.
+        // tracé du segment "réel" en trait plein, du segment "prévu" en pointillé (dessiné à la
+        // main — Painter2D n'a pas de propriété de pointillé native, cf. ADR-119),
+        // marqueur en losange au point bas.
     }
 }
 ```
 
+`Points` prend un `ChartPointViewModel` (`FinanceOS.UI`, déjà formaté pour l'écran) plutôt qu'un `ForecastDayPoint` brut du moteur (`FinanceOS.Forecast`) — cohérent avec le reste de l'UI, qui ne référence jamais un type du moteur directement (`ForecastsViewModelBuilder` fait la conversion). Pas de grille de fond ni d'axes légendés dans cette première version — jugé pas indispensable une fois le solde déjà affiché en toutes lettres dans la synthèse et le journal juste en dessous.
+
 ## 8.4 Exigences conservées de l'ancien projet
 
 - chaque graphique possède un titre et, si utile, une légende ;
-- une infobulle apparaît au survol d'un point/d'une barre (valeur exacte, date, détail) ;
-- une alternative textuelle existe toujours à côté du graphique (les valeurs principales restent lisibles sans lui) ;
+- une infobulle apparaît au survol d'un point/d'une barre (valeur exacte, date, détail) — **pas encore construite** sur `LineChartElement` : demanderait une détection de position de pointeur sur un rendu vectoriel, différée tant que le tracé de base n'est pas confirmé visuellement (cf. ADR-119) ;
+- une alternative textuelle existe toujours à côté du graphique (les valeurs principales restent lisibles sans lui) — le « Journal des mouvements prévus » juste en dessous de la courbe de trésorerie ;
 - aucune information n'est transmise uniquement par la couleur (le trait plein/pointillé porte déjà la distinction réel/prévu) ;
-- comportement correct géré pour l'absence de données.
+- comportement correct géré pour l'absence de données — `LineChartElement` ne dessine rien avec moins de deux points, sans lever d'exception.
 
 ---
 

@@ -32,6 +32,7 @@ Journal des décisions structurantes, dans le même format que l'ancien projet (
 | ADR-116 | Corrections de mise en page trouvées uniquement via captures d'écran réelles | ACCEPTED |
 | ADR-117 | Défilement de page sur les 7 écrans ; repli de la section Simulation | ACCEPTED |
 | ADR-118 | Polices statiques vendorisées (Spectral, IBM Plex Sans/Mono) plutôt que variables | ACCEPTED |
+| ADR-119 | Graphique de trésorerie construit ; pointillé dessiné à la main (pas d'API native) | ACCEPTED |
 
 ---
 
@@ -183,6 +184,8 @@ Journal des décisions structurantes, dans le même format que l'ancien projet (
 
 **Conditions de réévaluation** : si un outil de capture d'écran pour une application Unity locale devient disponible dans cet environnement, ou lorsqu'une session avec accès visuel prend le relais.
 
+**Mise à jour (2026-09-14)** : condition de réévaluation atteinte, sous une forme manuelle plutôt qu'outillée — l'utilisateur capture désormais lui-même l'éditeur en Play Mode et partage l'image en retour, ce qui joue le rôle du « relais visuel » envisagé ci-dessus. Le graphique de trésorerie (`LineChartElement`, `Painter2D`) a été construit sur cette base : écrit à partir de la meilleure connaissance de l'API, vérifié en batchmode pour tout ce qui est vérifiable sans rendu (compilation, mapping des données `ChartSeries`, absence d'exception à la construction), puis confirmé — ou corrigé — par une capture d'écran de l'utilisateur, exactement comme pour les corrections de mise en page de l'ADR-116. Le reste (barres du budget, anneau des dépenses) suivra le même patron. Voir aussi ADR-119.
+
 **Documents concernés** : `07-Interface.md`.
 
 ---
@@ -288,3 +291,24 @@ Journal des décisions structurantes, dans le même format que l'ancien projet (
 **Conditions de réévaluation** : si Unity ajoute un moyen scriptable et vérifiable dans cet environnement de sélectionner un poids d'une police variable importée, ou si `google/fonts` republie des fichiers statiques pour ces familles.
 
 **Documents concernés** : `07-Interface.md` §8bis, `Assets/Fonts/THIRD-PARTY-NOTICES.md`.
+
+---
+
+# 21. ADR-119 — Graphique de trésorerie construit sur la base d'une vérification par capture d'écran
+
+**Contexte** : ADR-112 différait le graphique de trésorerie faute de moyen de vérifier visuellement un rendu `Painter2D` en batchmode. Depuis, l'utilisateur capture régulièrement l'éditeur en Play Mode et partage l'image — un relais visuel manuel qui satisfait la condition de réévaluation d'ADR-112 (voir sa mise à jour du 2026-09-14).
+
+**Décision** : `LineChartElement` (`Assets/Scripts/UI/LineChartElement.cs`), une `VisualElement` qui redéfinit `generateVisualContent` et dessine via `context.painter2D`, comme esquissé dans `07-Interface.md` §8.3. Intégré dans la carte « Courbe de trésorerie » de l'écran Prévisions, juste au-dessus du « Journal des mouvements prévus » qui en reste l'alternative textuelle (§8.4). Alimenté par un nouveau champ du view model, `ChartSeries` (`ForecastsViewModelBuilder`) — la série quotidienne **complète** de l'horizon (contrairement à `Timeline`, filtré aux seuls jours avec mouvement pour le journal textuel), avec le solde brut et un indicateur réel/prévu par jour.
+
+**Choix techniques notables** :
+- **Aucun `-unity-font-*`/`Painter2D.lineDash` natif** : contrairement à Canvas HTML, `Painter2D` n'a pas de propriété de pointillé. Le segment prévu est dessiné à la main (`DrawDashedLine`) — un seul `BeginPath`/`Stroke` par segment, avec des `MoveTo`/`LineTo` alternés en tirets/espaces le long du vecteur.
+- **Marqueur du point bas en losange**, pas en cercle — évite `Painter2D.Arc`/`Angle`, dont la signature exacte était moins certaine de mémoire ; un losange (`MoveTo`/`LineTo` ×4/`ClosePath`/`Fill`) atteint le même objectif avec uniquement les membres de l'API déjà utilisés ailleurs dans ce fichier, donc à plus haute confiance.
+- **Couleurs codées en dur** dans la classe C# (pas de lecture des variables USS `--color-*` depuis le code) — reprennent exactement la palette de `theme.uss` (accent navy pour le réel, gris ink-400 pour le prévu, or pour le point bas), au prix d'une duplication à maintenir si la palette change.
+
+**Ce qui reste vérifiable en batchmode, et ce qui ne l'est pas** : compilation, mapping `ChartSeries` (nombre de points, indicateur réel/prévu par date, cf. `UISmokeTest.cs`), absence d'exception à la construction du contrôleur — tout cela vérifié et vert du premier coup. Le rendu effectif (positions, couleurs, lisibilité du pointillé) ne l'est pas et ne peut pas l'être ici ; seule la capture d'écran suivante de l'utilisateur le confirmera.
+
+**Conséquences négatives** : les trois autres graphiques du catalogue (§8.2 — barres budget prévu/réel/engagé, anneau des dépenses, évolution de l'épargne) restent à construire, sur le même patron. Pas d'infobulle au survol (§8.4) sur ce premier graphique — demanderait une détection de position de pointeur sur un rendu vectoriel, jugé disproportionné avant même d'avoir confirmé que le tracé de base est correct.
+
+**Conditions de réévaluation** : après la prochaine capture d'écran — si le rendu ne correspond pas à l'intention, corriger sur preuve comme pour l'ADR-116, pas en devinant une seconde fois à l'aveugle.
+
+**Documents concernés** : `07-Interface.md` §5/§8.

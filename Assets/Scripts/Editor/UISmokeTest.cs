@@ -250,6 +250,9 @@ namespace FinanceOS.EditorTools
             Check(forecastsViewModel.VerificationQueue.Any(v => v.Label == "Loyer"), "rent occurrence appears in the verification queue");
             Check(forecastsViewModel.Occurrences.Count > 0, "occurrences list is non-empty for an account with recurring operations");
             Check(forecastsViewModel.Timeline.All(t => !string.IsNullOrEmpty(t.EventsText)), "every timeline row carries at least one event");
+            Check(forecastsViewModel.ChartSeries.Count > forecastsViewModel.Timeline.Count, "chart series covers every day in the horizon, not just event days like the textual timeline");
+            Check(forecastsViewModel.ChartSeries.Where(p => p.Date <= today).All(p => p.IsActual), "chart points up to today are flagged actual");
+            Check(forecastsViewModel.ChartSeries.Where(p => p.Date > today).All(p => !p.IsActual), "chart points after today are flagged forecast, not actual");
 
             var livretPersoViewModel = ForecastsViewModelBuilder.Build(app, newSavings.Id, today);
             Check(livretPersoViewModel.SelectedAccountId == newSavings.Id, "explicit account selection is honored");
@@ -267,6 +270,10 @@ namespace FinanceOS.EditorTools
             var forecastOccurrencesListView = forecastsRoot.Q<MultiColumnListView>("occurrences-list-view");
             Check(forecastOccurrencesListView.itemsSource.Count == forecastsViewModel.Occurrences.Count, "forecasts controller renders the same occurrence count as the view model");
             Check(forecastOccurrencesListView.columns.Count == 4, "four occurrence columns configured");
+
+            var cashFlowChart = forecastsRoot.Q<LineChartElement>();
+            Check(cashFlowChart is not null, "cash-flow chart element added to the timeline card");
+            Check(cashFlowChart!.Points.Count == forecastsViewModel.ChartSeries.Count, "chart element receives the full chart series");
 
             var forecastTimelineListView = forecastsRoot.Q<MultiColumnListView>("timeline-list-view");
             Check(forecastTimelineListView.columns.Count == 3, "three timeline columns configured");
@@ -381,6 +388,7 @@ namespace FinanceOS.EditorTools
                 Check(!emptyForecastsRoot.Q<Button>("simulation-run-button").enabledSelf, "simulation disabled with no account");
                 Check(emptyForecastsRoot.Q<DropdownField>("forecast-account-select").value == "Aucun compte", "account selector shows a placeholder instead of rendering blank");
                 Check(!emptyForecastsRoot.Q<DropdownField>("forecast-account-select").enabledSelf, "account selector disabled with no account to choose");
+                Check(emptyForecastsRoot.Q<LineChartElement>()!.Points.Count == 0, "chart has no points with no account — constructing it did not throw");
 
                 var emptySettingsRoot = settingsTree.Instantiate();
                 _ = new SettingsController(

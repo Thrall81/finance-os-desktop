@@ -30,6 +30,7 @@ namespace FinanceOS.UI
             {
                 return new ForecastsViewModel(
                     accountOptions, null, null,
+                    Array.Empty<ChartPointViewModel>(),
                     Array.Empty<ForecastTimelineRowViewModel>(),
                     Array.Empty<ForecastOccurrenceRowViewModel>(),
                     Array.Empty<VerificationRowViewModel>(),
@@ -48,6 +49,10 @@ namespace FinanceOS.UI
                 MoneyFormat.Format(forecast.ExpectedIncomeMinor, account.Currency, forceSign: true),
                 MoneyFormat.Format(forecast.ExpectedExpensesMinor, account.Currency, forceSign: true),
                 forecast.Warnings);
+
+            var chartSeries = forecast.Timeline
+                .Select(day => new ChartPointViewModel(day.Date, day.ClosingBalanceMinor, day.IsActual))
+                .ToList();
 
             var timeline = forecast.Timeline
                 .Where(day => day.Events.Count > 0)
@@ -81,7 +86,7 @@ namespace FinanceOS.UI
                 .ToList();
 
             return new ForecastsViewModel(
-                accountOptions, account.Id, synthesis, timeline, occurrences, verificationQueue, categoryOptions);
+                accountOptions, account.Id, synthesis, chartSeries, timeline, occurrences, verificationQueue, categoryOptions);
         }
 
         private static Account? ResolvePrimaryAccount(AppContainer app, IReadOnlyList<Account> activeAccounts)

@@ -367,3 +367,8 @@
 .cell-mono {
     -unity-font-definition: url("../../Fonts/IBMPlexMono-Regular.ttf");
 }
+
+.chart {
+    height: 200px;
+    margin-bottom: 4px;
+}
