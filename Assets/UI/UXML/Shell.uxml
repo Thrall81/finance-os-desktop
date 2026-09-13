@@ -10,6 +10,7 @@
         <ui:Button name="nav-recurring-operations" text="Opérations récurrentes" class="nav-item" />
         <ui:Button name="nav-forecasts" text="Prévisions" class="nav-item" />
         <ui:Button name="nav-budgets" text="Budget" class="nav-item" />
+        <ui:Button name="nav-categories" text="Catégories" class="nav-item" />
         <ui:Button name="nav-settings" text="Paramètres" class="nav-item" />
       </ui:VisualElement>
     </ui:VisualElement>

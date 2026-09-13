@@ -24,6 +24,7 @@ namespace FinanceOS.EditorTools
         private const string RecurringOperationsUxmlPath = "Assets/UI/UXML/RecurringOperations.uxml";
         private const string ForecastsUxmlPath = "Assets/UI/UXML/Forecasts.uxml";
         private const string BudgetsUxmlPath = "Assets/UI/UXML/Budgets.uxml";
+        private const string CategoriesUxmlPath = "Assets/UI/UXML/Categories.uxml";
         private const string SettingsUxmlPath = "Assets/UI/UXML/Settings.uxml";
         private const string ShellUxmlPath = "Assets/UI/UXML/Shell.uxml";
 
@@ -583,6 +584,85 @@ namespace FinanceOS.EditorTools
             Check(emptyBudgetsRoot.Q<VisualElement>("savings-chart-card").style.display == DisplayStyle.None, "savings chart card hidden for a month with no budget yet");
             Check(emptyBudgetsRoot.Q<SavingsEvolutionElement>()!.Points.Count == 0, "savings chart has no points with no budget — constructing it did not throw");
 
+            var restaurants = app.Categories.Create("Restaurants", CategoryType.Expense, parentId: groceries.Id);
+
+            var categoriesViewModel = CategoriesViewModelBuilder.Build(app.Categories);
+            Check(categoriesViewModel.Categories.Count == 11, "ten seeded defaults plus the new subcategory");
+            var categoriesList = categoriesViewModel.Categories.ToList();
+            var restaurantsRow = categoriesList.First(c => c.Name == "Restaurants");
+            Check(restaurantsRow.ParentId == groceries.Id, "subcategory's parent id carried through");
+            Check(restaurantsRow.ParentText == "Alimentation", "subcategory's parent name resolved");
+            Check(!restaurantsRow.IsSystem, "a user-created category is not a system category");
+            var groceriesIndex = categoriesList.FindIndex(c => c.Name == "Alimentation");
+            var restaurantsIndex = categoriesList.FindIndex(c => c.Name == "Restaurants");
+            Check(restaurantsIndex == groceriesIndex + 1, "a subcategory sorts immediately after its parent");
+            Check(categoriesViewModel.ParentOptions.All(o => o.Id != restaurants.Id), "a category that is itself a subcategory can never be offered as a parent");
+
+            var thirdLevelBlocked = false;
+            try
+            {
+                app.Categories.Create("Fast-food", CategoryType.Expense, parentId: restaurants.Id);
+            }
+            catch (ArgumentException)
+            {
+                thirdLevelBlocked = true;
+            }
+
+            Check(thirdLevelBlocked, "a subcategory cannot itself have a subcategory (deux niveaux maximum)");
+
+            var parentWithChildrenBlocked = false;
+            try
+            {
+                app.Categories.MoveUnder(groceries.Id, housing.Id);
+            }
+            catch (ArgumentException)
+            {
+                parentWithChildrenBlocked = true;
+            }
+
+            Check(parentWithChildrenBlocked, "a category with existing subcategories cannot itself become a subcategory");
+
+            var selfParentBlocked = false;
+            try
+            {
+                app.Categories.MoveUnder(housing.Id, housing.Id);
+            }
+            catch (ArgumentException)
+            {
+                selfParentBlocked = true;
+            }
+
+            Check(selfParentBlocked, "a category cannot be its own parent");
+
+            var systemArchiveBlocked = false;
+            try
+            {
+                app.Categories.Archive(housing.Id);
+            }
+            catch (InvalidOperationException)
+            {
+                systemArchiveBlocked = true;
+            }
+
+            Check(systemArchiveBlocked, "a system category cannot be archived");
+
+            var categoriesTree = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(CategoriesUxmlPath);
+            if (categoriesTree == null)
+            {
+                throw new FileNotFoundException($"Categories UXML not found at {CategoriesUxmlPath}");
+            }
+
+            var categoriesRoot = categoriesTree.Instantiate();
+            var categoriesController = new CategoriesController(categoriesRoot, app.Categories);
+
+            var categoriesListView = categoriesRoot.Q<MultiColumnListView>("categories-list-view");
+            Check(categoriesListView.itemsSource.Count == 11, "categories controller renders every category, including the new subcategory");
+            Check(categoriesListView.columns.Count == 4, "four category columns configured");
+            Check(categoriesRoot.Q<Label>("categories-empty").style.display == DisplayStyle.None, "empty-state hidden when categories exist");
+
+            categoriesController.Refresh();
+            Check(categoriesListView.itemsSource.Count == 11, "refresh re-renders without duplication");
+
             var settingsViewModel = SettingsViewModelBuilder.Build(app.Settings, app.Accounts, app.DatabasePath);
             Check(settingsViewModel.Currency == "EUR", "currency is fixed EUR in V1");
             Check(settingsViewModel.ForecastHorizonDays == 90, "default forecast horizon before any change");
@@ -649,6 +729,14 @@ namespace FinanceOS.EditorTools
                 _ = new SettingsController(
                     emptySettingsRoot, noAccountApp.Settings, noAccountApp.Accounts, noAccountApp.Backup, noAccountApp.DatabasePath);
                 Check(emptySettingsRoot.Q<DropdownField>("default-account-field").choices.Count == 1, "only 'Aucun (automatique)' when no accounts exist");
+
+                // noAccountApp never calls SeedDefaultCategoriesIfEmpty, so this is also the
+                // "zero categories at all" case — distinct from every other screen's empty state,
+                // which is about missing accounts, not missing categories.
+                var emptyCategoriesRoot = categoriesTree.Instantiate();
+                _ = new CategoriesController(emptyCategoriesRoot, noAccountApp.Categories);
+                Check(emptyCategoriesRoot.Q<Label>("categories-empty").style.display == DisplayStyle.Flex, "empty-state shown when no categories exist");
+                Check(emptyCategoriesRoot.Q<MultiColumnListView>("categories-list-view").style.display == DisplayStyle.None, "categories table hidden when no categories exist");
             }
 
             TryDeleteQuietly(noAccountPath);
@@ -669,10 +757,12 @@ namespace FinanceOS.EditorTools
             var recurringOperationsCalls = 0;
             var forecastsCalls = 0;
             var budgetsCalls = 0;
+            var categoriesCalls = 0;
             var settingsCalls = 0;
             var shell = new ShellController(
                 root, () => dashboardCalls++, () => accountsCalls++, () => transactionsCalls++,
-                () => recurringOperationsCalls++, () => forecastsCalls++, () => budgetsCalls++, () => settingsCalls++);
+                () => recurringOperationsCalls++, () => forecastsCalls++, () => budgetsCalls++,
+                () => categoriesCalls++, () => settingsCalls++);
 
             var content = new VisualElement();
             shell.SetContent(content);
@@ -701,9 +791,13 @@ namespace FinanceOS.EditorTools
             Check(root.Q<Button>("nav-budgets").ClassListContains("nav-item-active"), "budgets nav item marked active");
             Check(!root.Q<Button>("nav-forecasts").ClassListContains("nav-item-active"), "forecasts nav item not active");
 
+            shell.SetActive(ShellScreen.Categories);
+            Check(root.Q<Button>("nav-categories").ClassListContains("nav-item-active"), "categories nav item marked active");
+            Check(!root.Q<Button>("nav-budgets").ClassListContains("nav-item-active"), "budgets nav item not active");
+
             shell.SetActive(ShellScreen.Settings);
             Check(root.Q<Button>("nav-settings").ClassListContains("nav-item-active"), "settings nav item marked active");
-            Check(!root.Q<Button>("nav-budgets").ClassListContains("nav-item-active"), "budgets nav item not active");
+            Check(!root.Q<Button>("nav-categories").ClassListContains("nav-item-active"), "categories nav item not active");
 
             shell.SetActive(ShellScreen.Dashboard);
             Check(root.Q<Button>("nav-dashboard").ClassListContains("nav-item-active"), "dashboard nav item marked active");
@@ -712,6 +806,7 @@ namespace FinanceOS.EditorTools
             Check(!root.Q<Button>("nav-recurring-operations").ClassListContains("nav-item-active"), "recurring operations nav item not active");
             Check(!root.Q<Button>("nav-forecasts").ClassListContains("nav-item-active"), "forecasts nav item not active");
             Check(!root.Q<Button>("nav-budgets").ClassListContains("nav-item-active"), "budgets nav item not active");
+            Check(!root.Q<Button>("nav-categories").ClassListContains("nav-item-active"), "categories nav item not active");
             Check(!root.Q<Button>("nav-settings").ClassListContains("nav-item-active"), "settings nav item not active");
 
             using (var clickEvent = ClickEvent.GetPooled())

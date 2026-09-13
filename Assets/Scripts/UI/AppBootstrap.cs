@@ -20,6 +20,7 @@ namespace FinanceOS.UI
         public VisualTreeAsset? RecurringOperationsAsset;
         public VisualTreeAsset? ForecastsAsset;
         public VisualTreeAsset? BudgetsAsset;
+        public VisualTreeAsset? CategoriesAsset;
         public VisualTreeAsset? SettingsAsset;
 
         public static AppContainer? Container { get; private set; }
@@ -31,6 +32,7 @@ namespace FinanceOS.UI
         private RecurringOperationsController? _recurringOperationsController;
         private ForecastsController? _forecastsController;
         private BudgetsController? _budgetsController;
+        private CategoriesController? _categoriesController;
         private SettingsController? _settingsController;
 
         private void Awake()
@@ -49,7 +51,7 @@ namespace FinanceOS.UI
             var root = GetComponent<UIDocument>().rootVisualElement;
             _shell = new ShellController(
                 root, ShowDashboard, ShowAccounts, ShowTransactions, ShowRecurringOperations, ShowForecasts,
-                ShowBudgets, ShowSettings);
+                ShowBudgets, ShowCategories, ShowSettings);
             ShowDashboard();
         }
 
@@ -143,6 +145,20 @@ namespace FinanceOS.UI
             _shell.SetActive(ShellScreen.Budgets);
         }
 
+        private void ShowCategories()
+        {
+            if (Container is null || _shell is null || CategoriesAsset is null)
+            {
+                return;
+            }
+
+            var content = CategoriesAsset.Instantiate();
+            _shell.SetContent(content);
+            _categoriesController = new CategoriesController(content, Container.Categories);
+            ClearOtherControllers(keepCategories: true);
+            _shell.SetActive(ShellScreen.Categories);
+        }
+
         private void ShowSettings()
         {
             if (Container is null || _shell is null || SettingsAsset is null)
@@ -165,6 +181,7 @@ namespace FinanceOS.UI
             bool keepRecurringOperations = false,
             bool keepForecasts = false,
             bool keepBudgets = false,
+            bool keepCategories = false,
             bool keepSettings = false)
         {
             if (!keepDashboard)
@@ -195,6 +212,11 @@ namespace FinanceOS.UI
             if (!keepBudgets)
             {
                 _budgetsController = null;
+            }
+
+            if (!keepCategories)
+            {
+                _categoriesController = null;
             }
 
             if (!keepSettings)

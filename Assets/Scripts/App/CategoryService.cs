@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using FinanceOS.Data;
 using FinanceOS.Domain;
 
@@ -14,6 +15,11 @@ namespace FinanceOS.App
 
         public Category Create(string name, CategoryType type, int? parentId = null, string? color = null)
         {
+            if (parentId is int newCategoryParentId)
+            {
+                RequireTopLevelParent(newCategoryParentId);
+            }
+
             var category = new Category(name, type, parentId, color);
             return _categories.Insert(category);
         }
@@ -31,11 +37,48 @@ namespace FinanceOS.App
             _categories.Update(category);
         }
 
+        /// <summary>Enforces "deux niveaux maximum" (docs/01-Perimetre.md §2.3) from both
+        /// directions: the target parent must itself be top-level (else this category would become
+        /// a grandchild), and this category must not already have subcategories of its own (else
+        /// they would become grandchildren). Neither check exists on the domain type itself —
+        /// `Category.MoveUnder` just reassigns `ParentId` — because checking "does this category
+        /// have children" needs the repository, which the domain layer never touches.</summary>
         public void MoveUnder(int categoryId, int? parentId)
         {
             var category = RequireCategory(categoryId);
+
+            if (parentId is int newParentId)
+            {
+                if (newParentId == categoryId)
+                {
+                    throw new ArgumentException("Une catégorie ne peut pas être sa propre catégorie parente.", nameof(parentId));
+                }
+
+                RequireTopLevelParent(newParentId);
+
+                if (_categories.ListAll().Any(c => c.ParentId == categoryId))
+                {
+                    throw new ArgumentException(
+                        "Cette catégorie a déjà des sous-catégories : elle ne peut pas devenir elle-même une sous-catégorie (deux niveaux maximum).",
+                        nameof(parentId));
+                }
+            }
+
             category.MoveUnder(parentId);
             _categories.Update(category);
+        }
+
+        private void RequireTopLevelParent(int parentId)
+        {
+            var parent = _categories.FindById(parentId)
+                ?? throw new ArgumentException($"Catégorie parente introuvable (#{parentId}).", nameof(parentId));
+
+            if (parent.ParentId is not null)
+            {
+                throw new ArgumentException(
+                    "Une sous-catégorie ne peut pas elle-même avoir une sous-catégorie (deux niveaux maximum).",
+                    nameof(parentId));
+            }
         }
 
         public void Archive(int categoryId)

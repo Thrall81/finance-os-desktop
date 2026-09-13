@@ -43,8 +43,21 @@ Transactions (liste, création, modification, import CSV)
 Opérations récurrentes (liste, création, modification)
 Prévisions (synthèse, timeline, liste des occurrences, file de vérification, simulation)
 Budget mensuel
+Catégories (liste, création, modification, archivage — ajouté après coup, cf. §3bis)
 Paramètres (devise, horizon, seuil, emplacement des données, export)
 ```
+
+---
+
+# 3bis. Catégories
+
+Absent de la liste d'écrans d'origine de ce document — `01-Perimetre.md` §2.3 exigeait pourtant des catégories « modifiables et complétables », et `CategoryService` (Create/Rename/MoveUnder/Archive/Restore) existait déjà depuis le tout début du projet, mais sans aucun écran pour l'atteindre : les catégories n'étaient accessibles qu'en lecture, via les menus déroulants d'autres écrans (Transactions, Opérations récurrentes, Budget). Repéré lors d'un audit du périmètre V1 (ADR-129) plutôt que planifié dès l'origine.
+
+**État d'implémentation** : `Categories.uxml` + `CategoriesController` couvrent la liste (`MultiColumnListView`, colonnes Nom/Type/Catégorie parente/Statut), la création — nom, type (Dépense/Revenu/Épargne/Virement interne), catégorie parente facultative — et, en modification, le renommage et le changement de catégorie parente (les deux autorisés même pour une catégorie système) ainsi que l'archivage/la restauration (refusé pour une catégorie système, même garde que `Category.Archive`). Le type n'est pas modifiable après création — même principe que partout ailleurs dans l'app (compte, montant, etc.).
+
+Le menu « Catégorie parente » ne propose jamais autre chose qu'une catégorie de premier niveau du même type — reflet, côté interface, de la même règle « deux niveaux maximum » que `CategoryService.MoveUnder`/`Create` appliquent désormais aussi côté serveur (nouveau : ni l'un ni l'autre ne validait quoi que ce soit sur le parent avant cette carte). Une catégorie qui a déjà des sous-catégories ne peut, à son tour, devenir une sous-catégorie — l'interface ne le bloque pas par avance (pas de champ désactivé), le formulaire échoue simplement avec un message explicite au moment de la validation, cohérent avec la façon dont les autres écrans traitent leurs propres contraintes de données (ex. compte source ≠ compte destination sur un virement).
+
+Alimenté par `CategoriesViewModelBuilder` (`CategoryService` seul, même choix de dépendance étroite qu'`AccountsViewModelBuilder`). Le tri place les catégories actives avant les archivées, puis chaque sous-catégorie juste après sa catégorie parente — un tableau plat plutôt qu'un arbre visuel, simplification assumée pour une première version : deux niveaux maximum rend un arbre repliable disproportionné.
 
 ---
 

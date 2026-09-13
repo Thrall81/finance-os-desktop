@@ -42,6 +42,7 @@ Journal des décisions structurantes, dans le même format que l'ancien projet (
 | ADR-126 | Prochaines opérations sur le Tableau de bord ; badge Attendue/Estimée | ACCEPTED |
 | ADR-127 | Synthèse budgétaire sur le Tableau de bord ; barres de progression compactes | ACCEPTED |
 | ADR-128 | Alertes sur le Tableau de bord ; solde faible + dépassement de budget, jamais persistées | ACCEPTED |
+| ADR-129 | Écran Catégories ajouté après audit du périmètre V1 ; validation « deux niveaux » côté service | ACCEPTED |
 
 ---
 
@@ -489,3 +490,21 @@ Chaque alerte porte `IsSevere` : dépassement de budget (danger/rust, cohérent 
 **Conséquences négatives** : pas de seuil réglable séparé pour « dépassement de budget » (toute catégorie en négatif déclenche, pas de marge de tolérance) — cohérent avec l'absence de tolérance déjà dans `BudgetCategorySummary.RemainingAmountMinor`, pas une lacune propre à cette carte. Pas de regroupement si plusieurs catégories dépassent en même temps (une alerte par catégorie, pas de résumé « 3 catégories en dépassement ») — jugé suffisamment lisible pour le nombre de catégories qu'un budget personnel alloue typiquement.
 
 **Documents concernés** : `07-Interface.md` §5.
+
+---
+
+# 31. ADR-129 — Écran Catégories
+
+**Contexte** : après avoir terminé les sept cartes du Tableau de bord (ADR-125 à ADR-128), l'utilisateur a demandé si la V1 était terminée sans l'import CSV. Plutôt que de répondre de mémoire, un audit du code (pas seulement des docs) contre `01-Perimetre.md` §2 a été fait — il a trouvé plusieurs écarts réels, dont l'absence totale d'un écran Catégories : `CategoryService` (Create/Rename/MoveUnder/Archive/Restore) existe et fonctionne depuis le tout début du projet, mais aucun écran ne l'exposait, seulement des menus déroulants en lecture seule ailleurs. `07-Interface.md` §3 (liste des écrans, écrite avant le code) ne mentionnait d'ailleurs jamais de Catégories — l'écart existait aussi bien côté doc que côté code, pas seulement une implémentation en retard sur une spec déjà écrite.
+
+**Décision** : `Categories.uxml` + `CategoriesController`, même patron que `AccountsController` (le plus proche structurellement : liste + création + modification limitée + archivage/restauration, pas de suppression). Huitième écran, ajouté à `ShellScreen`, `Shell.uxml`, `AppBootstrap` et `SceneWiringTools` — même câblage mécanique répété sept fois déjà pour les écrans précédents.
+
+**Validation « deux niveaux maximum » ajoutée à `CategoryService`, pas seulement à l'écran** : `Category.MoveUnder` (le type domaine) se contente de réassigner `ParentId`, sans aucune vérification — cohérent avec le principe du domaine qui ne touche jamais un repository. Mais « une catégorie ne peut pas avoir de sous-sous-catégorie » a besoin de savoir si une catégorie a des enfants, ce qui suppose une requête. Ajouté à `CategoryService.MoveUnder`/`Create` (nouveau `RequireTopLevelParent`, plus une vérification « n'a pas déjà d'enfants » et « n'est pas son propre parent ») — la première fois que ce service valide quoi que ce soit sur le paramètre `parentId`, jusque-là accepté tel quel. Le formulaire filtre déjà le menu déroulant à des catégories de premier niveau du même type, donc ce garde-fou ne se déclenche normalement jamais depuis l'écran lui-même — mais protège l'invariant documenté même si `CategoryService` est un jour appelé autrement (test, futur écran, futur import).
+
+**Un vrai bug d'ordre de mutation trouvé et corrigé en écrivant le contrôleur** : la première version de `SubmitForm` appelait `Rename` puis `MoveUnder` en modification. Si `MoveUnder` refusait (violation deux-niveaux), le renommage avait déjà été appliqué et persisté — le formulaire affiche une erreur et reste ouvert, donnant l'impression que rien ne s'est passé, alors qu'un renommage silencieux a bien eu lieu. Ordre inversé : `MoveUnder` (la mutation qui peut réellement échouer) avant `Rename` (qui ne peut plus échouer à ce stade, le nom étant déjà validé côté formulaire) — aucune mutation partielle possible.
+
+**Simplification assumée** : liste plate avec une colonne « Catégorie parente », pas un arbre visuel repliable — deux niveaux maximum rend un arbre disproportionné pour une première version. Le tri place chaque sous-catégorie juste après sa catégorie parente pour rester lisible malgré l'absence d'indentation visuelle.
+
+**Vérifié en batchmode** : mapping du view model (sous-catégorie créée, tri parent/enfant, catégorie déjà sous-catégorisée exclue des choix de parent possibles), les trois refus de validation (troisième niveau, catégorie avec enfants devenant elle-même enfant, catégorie devenant son propre parent), le refus d'archivage d'une catégorie système (comportement déjà existant sur `Category.Archive`, jamais testé jusqu'ici), présence/rendu du contrôleur (peuplé et vide — ce dernier cas différent de partout ailleurs : c'est l'absence de catégories elles-mêmes qui est testée, pas l'absence de comptes), navigation du shell. Vert du premier coup, y compris le correctif d'ordre de mutation ci-dessus (trouvé et corrigé avant le premier passage batchmode, pas après un échec).
+
+**Documents concernés** : `07-Interface.md` §3/§3bis.
