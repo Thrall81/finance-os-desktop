@@ -149,6 +149,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7c0295982bccc754fa30a826811c044b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: FinanceOS.UI::FinanceOS.UI.AppBootstrap
+  DashboardAsset: {fileID: 9197481963319205126, guid: c69b20f0d949cfe40ab0449a48962903, type: 3}
+  AccountsAsset: {fileID: 9197481963319205126, guid: 37e53818830658145966c1516fa3669b, type: 3}
 --- !u!114 &130698396
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -163,7 +165,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: UnityEngine.dll::UnityEngine.UIElements.UIDocument
   m_PanelSettings: {fileID: 11400000, guid: b5f932dc9e007404ca27f8338121fc07, type: 2}
   m_ParentUI: {fileID: 0}
-  sourceAsset: {fileID: 9197481963319205126, guid: c69b20f0d949cfe40ab0449a48962903, type: 3}
+  sourceAsset: {fileID: 9197481963319205126, guid: 31c180f727a2b924f9da37d19e539877, type: 3}
   m_SortingOrder: 0
   m_Position: 0
   m_WorldSpaceSizeMode: 1

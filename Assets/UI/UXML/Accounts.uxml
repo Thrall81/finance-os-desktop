@@ -1,0 +1,57 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="False">
+  <Style src="../USS/theme.uss" />
+  <ui:VisualElement name="accounts-root" class="page">
+    <ui:VisualElement class="page-header accounts-header">
+      <ui:VisualElement>
+        <ui:Label text="Comptes" class="page-title" />
+        <ui:Label text="Créez, renommez ou archivez vos comptes." class="page-subtitle" />
+      </ui:VisualElement>
+      <ui:Button name="new-account-button" text="+ Nouveau compte" class="primary-button" />
+    </ui:VisualElement>
+
+    <ui:VisualElement name="account-form-card" class="card form-card" style="display: none;">
+      <ui:Label name="form-title" text="Nouveau compte" class="card-title" />
+
+      <ui:VisualElement class="form-row">
+        <ui:Label text="Nom" class="form-label" />
+        <ui:TextField name="form-name" class="form-field" />
+      </ui:VisualElement>
+
+      <ui:VisualElement name="form-type-row" class="form-row">
+        <ui:Label text="Type" class="form-label" />
+        <ui:DropdownField name="form-type" class="form-field" />
+      </ui:VisualElement>
+
+      <ui:VisualElement name="form-balance-row" class="form-row">
+        <ui:Label text="Solde initial (€)" class="form-label" />
+        <ui:TextField name="form-balance" class="form-field" />
+      </ui:VisualElement>
+
+      <ui:VisualElement name="form-institution-row" class="form-row">
+        <ui:Label text="Établissement (facultatif)" class="form-label" />
+        <ui:TextField name="form-institution" class="form-field" />
+      </ui:VisualElement>
+
+      <ui:VisualElement class="form-row">
+        <ui:Label text="Politique de liquidité" class="form-label" />
+        <ui:DropdownField name="form-liquidity" class="form-field" />
+      </ui:VisualElement>
+
+      <ui:Label name="form-error" text="" class="form-error" style="display: none;" />
+
+      <ui:VisualElement class="form-actions">
+        <ui:Button name="form-archive-button" text="Archiver" class="danger-button" style="display: none;" />
+        <ui:Button name="form-cancel-button" text="Annuler" class="secondary-button" />
+        <ui:Button name="form-submit-button" text="Créer" class="primary-button" />
+      </ui:VisualElement>
+    </ui:VisualElement>
+
+    <ui:VisualElement name="accounts-card" class="card">
+      <ui:VisualElement class="card-header">
+        <ui:Label text="Tous les comptes" class="card-title" />
+      </ui:VisualElement>
+      <ui:Label name="accounts-empty" text="Aucun compte pour l'instant." class="empty-state" />
+      <ui:VisualElement name="accounts-list" class="list" />
+    </ui:VisualElement>
+  </ui:VisualElement>
+</ui:UXML>

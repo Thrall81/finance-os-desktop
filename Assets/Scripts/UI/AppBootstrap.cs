@@ -6,17 +6,22 @@ using UnityEngine.UIElements;
 namespace FinanceOS.UI
 {
     /// <summary>
-    /// The scene's entry point: builds the AppContainer and renders the first screen. Thin by
-    /// design — everything it does is one call into App or UI, per docs/02-Architecture.md §4.
-    /// Only shows the dashboard for now; the no-account/onboarding state
-    /// (docs/07-Interface.md §4) is not wired up yet.
+    /// The scene's entry point: builds the AppContainer and the shell, then renders the first
+    /// screen. Thin by design — everything it does is one call into App or UI, per
+    /// docs/02-Architecture.md §4. Dashboard/Accounts UXML assets are wired in by
+    /// SceneWiringTools, not hardcoded here, so this class stays Editor-tooling-free.
     /// </summary>
     [RequireComponent(typeof(UIDocument))]
     public sealed class AppBootstrap : MonoBehaviour
     {
+        public VisualTreeAsset? DashboardAsset;
+        public VisualTreeAsset? AccountsAsset;
+
         public static AppContainer? Container { get; private set; }
 
+        private ShellController? _shell;
         private DashboardController? _dashboardController;
+        private AccountsController? _accountsController;
 
         private void Awake()
         {
@@ -24,8 +29,38 @@ namespace FinanceOS.UI
             Container.Categories.SeedDefaultCategoriesIfEmpty();
 
             var root = GetComponent<UIDocument>().rootVisualElement;
-            _dashboardController = new DashboardController(root);
+            _shell = new ShellController(root, ShowDashboard, ShowAccounts);
+            ShowDashboard();
+        }
+
+        private void ShowDashboard()
+        {
+            if (Container is null || _shell is null || DashboardAsset is null)
+            {
+                return;
+            }
+
+            var content = DashboardAsset.Instantiate();
+            _shell.SetContent(content);
+            _dashboardController = new DashboardController(content);
+            _accountsController = null;
+            _shell.SetActive(ShellScreen.Dashboard);
+
             RefreshDashboard();
+        }
+
+        private void ShowAccounts()
+        {
+            if (Container is null || _shell is null || AccountsAsset is null)
+            {
+                return;
+            }
+
+            var content = AccountsAsset.Instantiate();
+            _shell.SetContent(content);
+            _accountsController = new AccountsController(content, Container.Accounts);
+            _dashboardController = null;
+            _shell.SetActive(ShellScreen.Accounts);
         }
 
         private void RefreshDashboard()

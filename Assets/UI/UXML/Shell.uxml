@@ -1,0 +1,13 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="False">
+  <Style src="../USS/theme.uss" />
+  <ui:VisualElement name="shell-root" class="shell-root">
+    <ui:VisualElement name="sidebar" class="sidebar">
+      <ui:Label text="Finance OS" class="sidebar-title" />
+      <ui:VisualElement name="nav-list" class="nav-list">
+        <ui:Button name="nav-dashboard" text="Tableau de bord" class="nav-item" />
+        <ui:Button name="nav-accounts" text="Comptes" class="nav-item" />
+      </ui:VisualElement>
+    </ui:VisualElement>
+    <ui:VisualElement name="content-area" class="content-area" />
+  </ui:VisualElement>
+</ui:UXML>

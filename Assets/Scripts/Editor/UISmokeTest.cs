@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Linq;
 using FinanceOS.App;
@@ -19,16 +19,21 @@ namespace FinanceOS.EditorTools
     internal static class UISmokeTest
     {
         private const string DashboardUxmlPath = "Assets/UI/UXML/Dashboard.uxml";
+        private const string AccountsUxmlPath = "Assets/UI/UXML/Accounts.uxml";
+        private const string ShellUxmlPath = "Assets/UI/UXML/Shell.uxml";
 
         [MenuItem("Finance OS/Run UI Smoke Test")]
         public static void Run()
         {
             CheckMoneyFormat();
+            CheckMoneyParse();
             CheckDateFormat();
 
             var tempPath = Path.Combine(Path.GetTempPath(), $"financeos-ui-smoke-{Guid.NewGuid():N}.db");
             RunAgainstDatabase(tempPath);
             TryDeleteQuietly(tempPath);
+
+            CheckShell();
 
             Debug.Log("[UISmokeTest] OK — formatting, view model and UXML data-binding all correct.");
         }
@@ -47,6 +52,16 @@ namespace FinanceOS.EditorTools
         }
 
         private static string Normalize(string value) => value.Replace(" ", " ");
+
+        private static void CheckMoneyParse()
+        {
+            Check(MoneyFormat.TryParseEurosToMinor("1234,56", out var a) && a == 123_456, "comma decimal parses");
+            Check(MoneyFormat.TryParseEurosToMinor("1234.56", out var b) && b == 123_456, "dot decimal parses");
+            Check(MoneyFormat.TryParseEurosToMinor("-12", out var d) && d == -1_200, "negative amount parses");
+            Check(MoneyFormat.TryParseEurosToMinor("0", out var e) && e == 0, "zero parses");
+            Check(!MoneyFormat.TryParseEurosToMinor("", out _), "empty text is rejected");
+            Check(!MoneyFormat.TryParseEurosToMinor("abc", out _), "non-numeric text is rejected");
+        }
 
         private static void CheckDateFormat()
         {
@@ -94,13 +109,86 @@ namespace FinanceOS.EditorTools
             var verificationList = root.Q<VisualElement>("verification-list");
             Check(verificationList.childCount == 1, "one verification row rendered");
 
+            var savings = app.Accounts.CreateAccount("Ancien Livret", AccountType.Savings, "EUR", 20_000);
+            app.Accounts.Archive(savings.Id);
+
+            var accountsViewModel = AccountsViewModelBuilder.Build(app.Accounts);
+            Check(accountsViewModel.Accounts.Count == 2, "both accounts appear in the accounts view model");
+            Check(accountsViewModel.Accounts[0].Name == "Compte courant", "active account sorts before archived ones");
+            Check(accountsViewModel.Accounts[0].TypeText == "Courant", "account type text mapped");
+            Check(accountsViewModel.Accounts[0].LiquidityPolicyText == "Immédiat", "liquidity policy text mapped");
+            Check(accountsViewModel.Accounts[1].Name == "Ancien Livret", "archived account sorts last");
+            Check(accountsViewModel.Accounts[1].IsArchived, "archived flag carried through");
+
+            var accountsTree = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(AccountsUxmlPath);
+            if (accountsTree == null)
+            {
+                throw new FileNotFoundException($"Accounts UXML not found at {AccountsUxmlPath}");
+            }
+
+            var accountsRoot = accountsTree.Instantiate();
+            var accountsController = new AccountsController(accountsRoot, app.Accounts);
+
+            var accountsList = accountsRoot.Q<VisualElement>("accounts-list");
+            Check(accountsList.childCount == 2, "accounts controller renders one row per account on construction");
+            Check(accountsRoot.Q<Label>("accounts-empty").style.display == DisplayStyle.None, "empty-state hidden when accounts exist");
+
+            var firstRow = accountsList.Children().ElementAt(0);
+            Check(firstRow.Q<Label>(className: "account-row-name").text == "Compte courant", "first row shows the active account name");
+            Check(Normalize(firstRow.Q<Label>(className: "account-row-balance").text) == "1 748,60 €", "first row shows the formatted balance");
+
+            var secondRow = accountsList.Children().ElementAt(1);
+            Check(secondRow.ClassListContains("account-row-archived"), "archived account row carries the archived style class");
+
+            accountsController.Refresh();
+            Check(accountsList.childCount == 2, "refresh re-renders the same two rows without duplication");
+
             var noAccountPath = Path.Combine(Path.GetTempPath(), $"financeos-ui-smoke-empty-{Guid.NewGuid():N}.db");
             using (var noAccountApp = new AppContainer(noAccountPath))
             {
                 Check(DashboardViewModelBuilder.Build(noAccountApp, today) is null, "no account yields a null view model, not a crash");
+
+                var emptyAccountsRoot = accountsTree.Instantiate();
+                _ = new AccountsController(emptyAccountsRoot, noAccountApp.Accounts);
+                Check(emptyAccountsRoot.Q<VisualElement>("accounts-list").childCount == 0, "no accounts renders an empty list");
+                Check(emptyAccountsRoot.Q<Label>("accounts-empty").style.display == DisplayStyle.Flex, "empty-state shown when no accounts exist");
             }
 
             TryDeleteQuietly(noAccountPath);
+        }
+
+        private static void CheckShell()
+        {
+            var shellTree = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(ShellUxmlPath);
+            if (shellTree == null)
+            {
+                throw new FileNotFoundException($"Shell UXML not found at {ShellUxmlPath}");
+            }
+
+            var root = shellTree.Instantiate();
+            var dashboardCalls = 0;
+            var accountsCalls = 0;
+            var shell = new ShellController(root, () => dashboardCalls++, () => accountsCalls++);
+
+            var content = new VisualElement();
+            shell.SetContent(content);
+            Check(root.Q<VisualElement>("content-area").childCount == 1, "shell content area receives the screen's content");
+
+            shell.SetActive(ShellScreen.Accounts);
+            Check(root.Q<Button>("nav-accounts").ClassListContains("nav-item-active"), "accounts nav item marked active");
+            Check(!root.Q<Button>("nav-dashboard").ClassListContains("nav-item-active"), "dashboard nav item not active");
+
+            shell.SetActive(ShellScreen.Dashboard);
+            Check(root.Q<Button>("nav-dashboard").ClassListContains("nav-item-active"), "dashboard nav item marked active");
+            Check(!root.Q<Button>("nav-accounts").ClassListContains("nav-item-active"), "accounts nav item not active");
+
+            using (var clickEvent = ClickEvent.GetPooled())
+            {
+                clickEvent.target = root.Q<Button>("nav-accounts");
+                root.Q<Button>("nav-accounts").SendEvent(clickEvent);
+            }
+
+            Debug.Log($"[UISmokeTest] Shell nav click delivery: dashboard={dashboardCalls}, accounts={accountsCalls} (best-effort without an attached panel).");
         }
 
         private static void TryDeleteQuietly(string path)

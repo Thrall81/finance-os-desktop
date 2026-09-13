@@ -55,5 +55,36 @@ namespace FinanceOS.UI
             "EUR" => "€",
             _ => currency,
         };
+
+        /// <summary>Parses a user-typed euro amount ("1 234,56", "1234.56", "-12") into minor
+        /// units. Accepts both ',' and '.' as the decimal separator since French keyboards type
+        /// a comma but users may paste a dot. Uses InvariantCulture, not CurrentCulture — unlike
+        /// full "fr-FR" culture data, the invariant culture ships everywhere, so this doesn't risk
+        /// the kind of runtime gap ADR-110/111 already found twice.</summary>
+        public static bool TryParseEurosToMinor(string text, out long minor)
+        {
+            minor = 0;
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                return false;
+            }
+
+            var cleaned = text.Trim()
+                .Replace(ThousandsSeparator.ToString(), string.Empty)
+                .Replace(" ", string.Empty)
+                .Replace(',', '.');
+
+            if (!double.TryParse(
+                    cleaned,
+                    System.Globalization.NumberStyles.Float,
+                    System.Globalization.CultureInfo.InvariantCulture,
+                    out var euros))
+            {
+                return false;
+            }
+
+            minor = (long)Math.Round(euros * 100, MidpointRounding.AwayFromZero);
+            return true;
+        }
     }
 }

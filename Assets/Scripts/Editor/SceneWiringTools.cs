@@ -4,22 +4,26 @@ using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.UIElements;
+using Object = UnityEngine.Object;
 
 namespace FinanceOS.EditorTools
 {
     /// <summary>
-    /// Wires the dashboard UI into Main.unity — a GameObject with a UIDocument (PanelSettings +
-    /// Dashboard.uxml) and the AppBootstrap component. Idempotent: re-running it updates the
+    /// Wires the shell UI into Main.unity — a GameObject with a UIDocument (PanelSettings +
+    /// Shell.uxml) and the AppBootstrap component, which is handed the Dashboard/Accounts UXML
+    /// assets it swaps into the shell's content area. Idempotent: re-running it updates the
     /// existing setup rather than duplicating it.
     /// </summary>
     internal static class SceneWiringTools
     {
         private const string ScenePath = "Assets/Scenes/Main.unity";
         private const string PanelSettingsPath = "Assets/UI/PanelSettings.asset";
+        private const string ShellUxmlPath = "Assets/UI/UXML/Shell.uxml";
         private const string DashboardUxmlPath = "Assets/UI/UXML/Dashboard.uxml";
+        private const string AccountsUxmlPath = "Assets/UI/UXML/Accounts.uxml";
 
-        [MenuItem("Finance OS/Wire Dashboard Into Main Scene")]
-        public static void WireDashboardIntoMainScene()
+        [MenuItem("Finance OS/Wire Shell Into Main Scene")]
+        public static void WireShellIntoMainScene()
         {
             var scene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
 
@@ -30,11 +34,9 @@ namespace FinanceOS.EditorTools
                 AssetDatabase.CreateAsset(panelSettings, PanelSettingsPath);
             }
 
-            var visualTree = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(DashboardUxmlPath);
-            if (visualTree == null)
-            {
-                throw new FileNotFoundException($"Dashboard UXML not found at {DashboardUxmlPath}");
-            }
+            var shellTree = LoadRequired<VisualTreeAsset>(ShellUxmlPath);
+            var dashboardTree = LoadRequired<VisualTreeAsset>(DashboardUxmlPath);
+            var accountsTree = LoadRequired<VisualTreeAsset>(AccountsUxmlPath);
 
             var bootstrap = Object.FindFirstObjectByType<AppBootstrap>(FindObjectsInactive.Include);
             var uiObject = bootstrap != null ? bootstrap.gameObject : new GameObject("UI");
@@ -46,18 +48,33 @@ namespace FinanceOS.EditorTools
             }
 
             uiDocument.panelSettings = panelSettings;
-            uiDocument.visualTreeAsset = visualTree;
+            uiDocument.visualTreeAsset = shellTree;
 
-            if (uiObject.GetComponent<AppBootstrap>() == null)
+            var appBootstrap = uiObject.GetComponent<AppBootstrap>();
+            if (appBootstrap == null)
             {
-                uiObject.AddComponent<AppBootstrap>();
+                appBootstrap = uiObject.AddComponent<AppBootstrap>();
             }
+
+            appBootstrap.DashboardAsset = dashboardTree;
+            appBootstrap.AccountsAsset = accountsTree;
 
             EditorSceneManager.MarkSceneDirty(scene);
             EditorSceneManager.SaveScene(scene);
             AssetDatabase.SaveAssets();
 
-            Debug.Log("[SceneWiringTools] Dashboard wired into Main.unity.");
+            Debug.Log("[SceneWiringTools] Shell wired into Main.unity.");
+        }
+
+        private static T LoadRequired<T>(string path) where T : Object
+        {
+            var asset = AssetDatabase.LoadAssetAtPath<T>(path);
+            if (asset == null)
+            {
+                throw new FileNotFoundException($"{typeof(T).Name} not found at {path}");
+            }
+
+            return asset;
         }
     }
 }

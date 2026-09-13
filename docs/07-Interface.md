@@ -75,6 +75,10 @@ Cartes reprises de l'ancien projet : Solde disponible, Solde prévu en fin de mo
 
 **État d'implémentation** : `Dashboard.uxml` + `DashboardController` affichent Solde disponible, Solde prévu en fin de mois, Point bas prévisionnel et la file de vérification, alimentés par `DashboardViewModelBuilder` (`Assets/Scripts/UI/`). Reste à vivre, prochaines opérations, synthèse budgétaire, alertes et le graphique de trésorerie ne sont pas encore construits — le graphique en particulier est différé volontairement : son rendu `Painter2D` ne peut être vérifié qu'à l'exécution réelle (un rendu), impossible à contrôler en mode batch dans cet environnement de développement (cf. `09-Decisions_techniques.md`, ADR-112). Aucune police personnalisée n'est encore intégrée : l'interface utilise la police par défaut d'Unity en attendant une passe de style dédiée.
 
+**Navigation** : une barre latérale (`Shell.uxml` + `ShellController`) donne accès au Tableau de bord et à Comptes ; chaque écran est un `VisualTreeAsset` instancié dans la zone de contenu du shell plutôt qu'une scène séparée (cf. `09-Decisions_techniques.md`, ADR-113). Les autres entrées listées en §3 (Transactions, Opérations récurrentes, Prévisions, Budget, Paramètres) n'ont pas encore d'entrée dans la barre latérale.
+
+**Comptes — état d'implémentation** : `Accounts.uxml` + `AccountsController` couvrent la liste (actifs puis archivés), la création et — en modification — le renommage, la politique de liquidité et l'archivage/restauration ; alimentés par `AccountsViewModelBuilder`, qui ne dépend que d'`AccountService` (pas de tout l'`AppContainer`). Le type et le solde initial d'un compte existant ne sont pas modifiables depuis cet écran — cohérent avec `AccountService`, qui n'expose pas ces mutations une fois le compte créé ; ajuster un solde passe par `RecordOfficialBalance` (pas encore relié à une action d'écran). La vue détail dédiée (au-delà du formulaire d'édition inline) n'existe pas encore.
+
 ---
 
 # 6. File de vérification et confirmation rapide

@@ -1,7 +1,7 @@
 /* Design tokens. Light theme only for this first pass — see docs/07-Interface.md.
    No custom font yet: Unity's default runtime font until a real typeface is vendored in. */
 
-.page {
+.shell-root {
     --color-bg: #F5F4EE;
     --color-surface: #FFFFFF;
     --color-border: #E1DFD3;
@@ -11,9 +11,61 @@
     --color-accent: #2E3A59;
     --color-gold: #A9762F;
     --color-gold-soft: #F3E7D3;
+    --color-danger: #A3402F;
 
     flex-grow: 1;
+    flex-direction: row;
     background-color: var(--color-bg);
+}
+
+.sidebar {
+    width: 220px;
+    flex-shrink: 0;
+    background-color: var(--color-surface);
+    border-right-width: 1px;
+    border-right-color: var(--color-border);
+    padding: 20px 14px;
+}
+
+.sidebar-title {
+    font-size: 16px;
+    -unity-font-style: bold;
+    color: var(--color-ink-900);
+    margin-bottom: 18px;
+    margin-left: 6px;
+}
+
+.nav-list {
+    flex-direction: column;
+}
+
+.nav-item {
+    -unity-text-align: middle-left;
+    background-color: rgba(0, 0, 0, 0);
+    border-width: 0;
+    border-radius: 8px;
+    padding: 9px 10px;
+    margin: 0 0 4px 0;
+    font-size: 13px;
+    color: var(--color-ink-600);
+}
+
+.nav-item:hover {
+    background-color: var(--color-bg);
+}
+
+.nav-item-active {
+    background-color: var(--color-gold-soft);
+    color: var(--color-gold);
+    -unity-font-style: bold;
+}
+
+.content-area {
+    flex-grow: 1;
+}
+
+.page {
+    flex-grow: 1;
     padding: 24px 28px;
 }
 
@@ -133,4 +185,107 @@
     font-size: 13px;
     color: var(--color-ink-900);
     -unity-text-align: middle-right;
+}
+
+.accounts-header {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+.primary-button {
+    background-color: var(--color-accent);
+    color: #FFFFFF;
+    border-width: 0;
+    border-radius: 8px;
+    padding: 8px 16px;
+    font-size: 13px;
+}
+
+.secondary-button {
+    background-color: rgba(0, 0, 0, 0);
+    color: var(--color-ink-600);
+    border-width: 1px;
+    border-color: var(--color-border);
+    border-radius: 8px;
+    padding: 8px 16px;
+    font-size: 13px;
+}
+
+.danger-button {
+    background-color: rgba(0, 0, 0, 0);
+    color: var(--color-danger);
+    border-width: 1px;
+    border-color: var(--color-danger);
+    border-radius: 8px;
+    padding: 8px 16px;
+    font-size: 13px;
+}
+
+.form-card {
+    margin-bottom: 16px;
+}
+
+.form-row {
+    margin-bottom: 10px;
+}
+
+.form-label {
+    font-size: 12px;
+    color: var(--color-ink-600);
+    margin-bottom: 4px;
+}
+
+.form-field {
+    max-width: 360px;
+}
+
+.form-error {
+    font-size: 12px;
+    color: var(--color-danger);
+    margin-bottom: 8px;
+}
+
+.form-actions {
+    flex-direction: row;
+    justify-content: flex-end;
+    margin-top: 8px;
+}
+
+.form-actions > Button {
+    margin-left: 8px;
+}
+
+.account-row {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 4px;
+    border-bottom-width: 1px;
+    border-bottom-color: var(--color-border);
+}
+
+.account-row:hover {
+    background-color: var(--color-bg);
+}
+
+.account-row-name {
+    font-size: 13px;
+    color: var(--color-ink-900);
+}
+
+.account-row-meta {
+    font-size: 11px;
+    color: var(--color-ink-400);
+    margin-top: 2px;
+}
+
+.account-row-balance {
+    font-size: 13px;
+    color: var(--color-ink-900);
+    -unity-text-align: middle-right;
+}
+
+.account-row-archived {
+    opacity: 0.55;
 }
