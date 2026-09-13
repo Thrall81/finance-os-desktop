@@ -53,9 +53,9 @@ namespace FinanceOS.UI
                 .ToList();
 
             return new TransactionsViewModel(
-                accountList.Select(a => new TransactionDropdownOption(a.Id, a.Name)).ToList(),
-                accountList.Where(a => !a.IsArchived).Select(a => new TransactionDropdownOption(a.Id, a.Name)).ToList(),
-                categoryList.Select(c => new TransactionDropdownOption(c.Id, c.Name)).ToList(),
+                accountList.Select(a => new DropdownOption(a.Id, a.Name)).ToList(),
+                accountList.Where(a => !a.IsArchived).Select(a => new DropdownOption(a.Id, a.Name)).ToList(),
+                categoryList.Select(c => new DropdownOption(c.Id, c.Name)).ToList(),
                 rows);
         }
     }

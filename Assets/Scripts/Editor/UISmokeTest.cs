@@ -21,6 +21,7 @@ namespace FinanceOS.EditorTools
         private const string DashboardUxmlPath = "Assets/UI/UXML/Dashboard.uxml";
         private const string AccountsUxmlPath = "Assets/UI/UXML/Accounts.uxml";
         private const string TransactionsUxmlPath = "Assets/UI/UXML/Transactions.uxml";
+        private const string RecurringOperationsUxmlPath = "Assets/UI/UXML/RecurringOperations.uxml";
         private const string ShellUxmlPath = "Assets/UI/UXML/Shell.uxml";
 
         [MenuItem("Finance OS/Run UI Smoke Test")]
@@ -186,6 +187,60 @@ namespace FinanceOS.EditorTools
             transactionsController.Refresh();
             Check(listView.itemsSource.Count == 1, "refresh re-renders without duplication");
 
+            var salary = app.RecurringOperations.Create(
+                "Salaire", RecurringOperationType.Income, 210_000, RecurringFrequency.Monthly,
+                new DateTime(2026, 1, 1), destinationAccountId: account.Id);
+
+            var newSavings = app.Accounts.CreateAccount("Livret Perso", AccountType.Savings, "EUR", 0);
+            app.RecurringOperations.Create(
+                "Épargne mensuelle", RecurringOperationType.SavingsTransfer, 20_000, RecurringFrequency.Monthly,
+                new DateTime(2026, 1, 1), sourceAccountId: account.Id, destinationAccountId: newSavings.Id);
+
+            var recurringViewModel = RecurringOperationsViewModelBuilder.Build(
+                app.Accounts, app.Categories, app.Counterparties, app.RecurringOperations);
+            Check(recurringViewModel.Operations.Count == 3, "three recurring operations appear in the view model");
+
+            var rentRow = recurringViewModel.Operations.First(o => o.Name == "Loyer");
+            Check(rentRow.TypeText == "Dépense", "expense type text mapped");
+            Check(rentRow.AccountText == "Compte courant", "expense shows its source account");
+            Check(rentRow.FrequencyText == "Mensuelle", "frequency text mapped");
+            Check(rentRow.CategoryText == "Logement", "category resolved by name");
+            Check(rentRow.IsActive, "newly created operation is active");
+
+            var salaryRow = recurringViewModel.Operations.First(o => o.Name == "Salaire");
+            Check(salaryRow.AccountText == "Compte courant", "income shows its destination account");
+
+            var transferRow = recurringViewModel.Operations.First(o => o.Name == "Épargne mensuelle");
+            Check(transferRow.AccountText == "Compte courant → Livret Perso", "transfer shows source then destination");
+
+            app.RecurringOperations.GenerateUpcomingOccurrences(today, 90);
+            var followUp = app.RecurringOperations.GenerateOccurrences(rent.Id, rent.StartDate, today.AddDays(90));
+            Check(followUp.Count == 0, "GenerateUpcomingOccurrences already covered the horizon for an active operation — idempotent");
+
+            app.RecurringOperations.Suspend(salary.Id);
+            var afterSuspend = RecurringOperationsViewModelBuilder.Build(
+                app.Accounts, app.Categories, app.Counterparties, app.RecurringOperations);
+            Check(!afterSuspend.Operations.First(o => o.Name == "Salaire").IsActive, "suspended operation reflects inactive state");
+            Check(afterSuspend.Operations.Last().Name == "Salaire", "suspended operations sort after active ones");
+
+            var recurringOperationsTree = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(RecurringOperationsUxmlPath);
+            if (recurringOperationsTree == null)
+            {
+                throw new FileNotFoundException($"RecurringOperations UXML not found at {RecurringOperationsUxmlPath}");
+            }
+
+            var recurringOperationsRoot = recurringOperationsTree.Instantiate();
+            var recurringOperationsController = new RecurringOperationsController(
+                recurringOperationsRoot, app.Accounts, app.Categories, app.Counterparties, app.RecurringOperations, app.Settings);
+
+            var operationsListView = recurringOperationsRoot.Q<MultiColumnListView>("operations-list-view");
+            Check(operationsListView.itemsSource.Count == 3, "controller renders all three recurring operations");
+            Check(operationsListView.columns.Count == 6, "six table columns configured");
+            Check(recurringOperationsRoot.Q<Label>("operations-empty").style.display == DisplayStyle.None, "empty-state hidden when operations exist");
+
+            recurringOperationsController.Refresh();
+            Check(operationsListView.itemsSource.Count == 3, "refresh re-renders without duplication");
+
             var noAccountPath = Path.Combine(Path.GetTempPath(), $"financeos-ui-smoke-empty-{Guid.NewGuid():N}.db");
             using (var noAccountApp = new AppContainer(noAccountPath))
             {
@@ -202,6 +257,13 @@ namespace FinanceOS.EditorTools
                     noAccountApp.Transactions, noAccountApp.InternalTransfers);
                 Check(emptyTransactionsRoot.Q<Label>("transactions-empty").style.display == DisplayStyle.Flex, "empty-state shown when no transactions exist");
                 Check(!emptyTransactionsRoot.Q<Button>("new-transaction-button").enabledSelf, "new-transaction button disabled with no account to post against");
+
+                var emptyRecurringOperationsRoot = recurringOperationsTree.Instantiate();
+                _ = new RecurringOperationsController(
+                    emptyRecurringOperationsRoot, noAccountApp.Accounts, noAccountApp.Categories, noAccountApp.Counterparties,
+                    noAccountApp.RecurringOperations, noAccountApp.Settings);
+                Check(emptyRecurringOperationsRoot.Q<Label>("operations-empty").style.display == DisplayStyle.Flex, "empty-state shown when no operations exist");
+                Check(!emptyRecurringOperationsRoot.Q<Button>("new-operation-button").enabledSelf, "new-operation button disabled with no account to post against");
             }
 
             TryDeleteQuietly(noAccountPath);
@@ -219,7 +281,9 @@ namespace FinanceOS.EditorTools
             var dashboardCalls = 0;
             var accountsCalls = 0;
             var transactionsCalls = 0;
-            var shell = new ShellController(root, () => dashboardCalls++, () => accountsCalls++, () => transactionsCalls++);
+            var recurringOperationsCalls = 0;
+            var shell = new ShellController(
+                root, () => dashboardCalls++, () => accountsCalls++, () => transactionsCalls++, () => recurringOperationsCalls++);
 
             var content = new VisualElement();
             shell.SetContent(content);
@@ -229,15 +293,21 @@ namespace FinanceOS.EditorTools
             Check(root.Q<Button>("nav-accounts").ClassListContains("nav-item-active"), "accounts nav item marked active");
             Check(!root.Q<Button>("nav-dashboard").ClassListContains("nav-item-active"), "dashboard nav item not active");
             Check(!root.Q<Button>("nav-transactions").ClassListContains("nav-item-active"), "transactions nav item not active");
+            Check(!root.Q<Button>("nav-recurring-operations").ClassListContains("nav-item-active"), "recurring operations nav item not active");
 
             shell.SetActive(ShellScreen.Transactions);
             Check(root.Q<Button>("nav-transactions").ClassListContains("nav-item-active"), "transactions nav item marked active");
             Check(!root.Q<Button>("nav-accounts").ClassListContains("nav-item-active"), "accounts nav item not active");
 
+            shell.SetActive(ShellScreen.RecurringOperations);
+            Check(root.Q<Button>("nav-recurring-operations").ClassListContains("nav-item-active"), "recurring operations nav item marked active");
+            Check(!root.Q<Button>("nav-transactions").ClassListContains("nav-item-active"), "transactions nav item not active");
+
             shell.SetActive(ShellScreen.Dashboard);
             Check(root.Q<Button>("nav-dashboard").ClassListContains("nav-item-active"), "dashboard nav item marked active");
             Check(!root.Q<Button>("nav-accounts").ClassListContains("nav-item-active"), "accounts nav item not active");
             Check(!root.Q<Button>("nav-transactions").ClassListContains("nav-item-active"), "transactions nav item not active");
+            Check(!root.Q<Button>("nav-recurring-operations").ClassListContains("nav-item-active"), "recurring operations nav item not active");
 
             using (var clickEvent = ClickEvent.GetPooled())
             {
@@ -245,7 +315,7 @@ namespace FinanceOS.EditorTools
                 root.Q<Button>("nav-accounts").SendEvent(clickEvent);
             }
 
-            Debug.Log($"[UISmokeTest] Shell nav click delivery: dashboard={dashboardCalls}, accounts={accountsCalls}, transactions={transactionsCalls} (best-effort without an attached panel).");
+            Debug.Log($"[UISmokeTest] Shell nav click delivery: dashboard={dashboardCalls}, accounts={accountsCalls}, transactions={transactionsCalls}, recurringOperations={recurringOperationsCalls} (best-effort without an attached panel).");
         }
 
         private static void TryDeleteQuietly(string path)

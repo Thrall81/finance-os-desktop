@@ -1,0 +1,107 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="False">
+  <Style src="../USS/theme.uss" />
+  <ui:VisualElement name="recurring-operations-root" class="page">
+    <ui:VisualElement class="page-header accounts-header">
+      <ui:VisualElement>
+        <ui:Label text="Opérations récurrentes" class="page-title" />
+        <ui:Label text="Loyer, salaire, abonnements — tout ce qui revient à intervalle régulier." class="page-subtitle" />
+      </ui:VisualElement>
+      <ui:Button name="new-operation-button" text="+ Nouvelle opération" class="primary-button" />
+    </ui:VisualElement>
+
+    <ui:VisualElement name="operation-form-card" class="card form-card" style="display: none;">
+      <ui:Label name="form-title" text="Nouvelle opération" class="card-title" />
+
+      <ui:VisualElement name="form-name-row" class="form-row">
+        <ui:Label text="Nom" class="form-label" />
+        <ui:TextField name="form-name" class="form-field" />
+      </ui:VisualElement>
+
+      <ui:VisualElement name="form-type-row" class="form-row">
+        <ui:Label text="Type" class="form-label" />
+        <ui:DropdownField name="form-type" class="form-field" />
+      </ui:VisualElement>
+      <ui:VisualElement name="form-type-readonly-row" class="form-row" style="display: none;">
+        <ui:Label text="Type" class="form-label" />
+        <ui:Label name="form-type-readonly" text="—" class="form-readonly-value" />
+      </ui:VisualElement>
+
+      <ui:VisualElement name="form-source-account-row" class="form-row">
+        <ui:Label name="form-source-account-label" text="Compte" class="form-label" />
+        <ui:DropdownField name="form-source-account" class="form-field" />
+      </ui:VisualElement>
+
+      <ui:VisualElement name="form-destination-account-row" class="form-row" style="display: none;">
+        <ui:Label name="form-destination-account-label" text="Compte" class="form-label" />
+        <ui:DropdownField name="form-destination-account" class="form-field" />
+      </ui:VisualElement>
+
+      <ui:VisualElement name="form-account-readonly-row" class="form-row" style="display: none;">
+        <ui:Label text="Compte" class="form-label" />
+        <ui:Label name="form-account-readonly" text="—" class="form-readonly-value" />
+      </ui:VisualElement>
+
+      <ui:VisualElement name="form-amount-row" class="form-row">
+        <ui:Label text="Montant attendu (€)" class="form-label" />
+        <ui:TextField name="form-amount" class="form-field" />
+      </ui:VisualElement>
+
+      <ui:VisualElement name="form-frequency-row" class="form-row">
+        <ui:Label text="Fréquence" class="form-label" />
+        <ui:DropdownField name="form-frequency" class="form-field" />
+      </ui:VisualElement>
+      <ui:VisualElement name="form-frequency-readonly-row" class="form-row" style="display: none;">
+        <ui:Label text="Fréquence" class="form-label" />
+        <ui:Label name="form-frequency-readonly" text="—" class="form-readonly-value" />
+      </ui:VisualElement>
+
+      <ui:VisualElement name="form-start-date-row" class="form-row">
+        <ui:Label text="Date de début" class="form-label" />
+        <ui:TextField name="form-start-date" class="form-field" />
+      </ui:VisualElement>
+      <ui:VisualElement name="form-start-date-readonly-row" class="form-row" style="display: none;">
+        <ui:Label text="Date de début" class="form-label" />
+        <ui:Label name="form-start-date-readonly" text="—" class="form-readonly-value" />
+      </ui:VisualElement>
+
+      <ui:VisualElement name="form-day-of-month-row" class="form-row">
+        <ui:Label text="Jour du mois attendu (facultatif)" class="form-label" />
+        <ui:TextField name="form-day-of-month" class="form-field" />
+      </ui:VisualElement>
+
+      <ui:VisualElement name="form-category-row" class="form-row">
+        <ui:Label text="Catégorie" class="form-label" />
+        <ui:DropdownField name="form-category" class="form-field" />
+      </ui:VisualElement>
+      <ui:VisualElement name="form-category-readonly-row" class="form-row" style="display: none;">
+        <ui:Label text="Catégorie" class="form-label" />
+        <ui:Label name="form-category-readonly" text="—" class="form-readonly-value" />
+      </ui:VisualElement>
+
+      <ui:VisualElement name="form-counterparty-row" class="form-row">
+        <ui:Label text="Tiers (facultatif)" class="form-label" />
+        <ui:TextField name="form-counterparty" class="form-field" />
+      </ui:VisualElement>
+      <ui:VisualElement name="form-counterparty-readonly-row" class="form-row" style="display: none;">
+        <ui:Label text="Tiers" class="form-label" />
+        <ui:Label name="form-counterparty-readonly" text="—" class="form-readonly-value" />
+      </ui:VisualElement>
+
+      <ui:Label name="form-error" text="" class="form-error" style="display: none;" />
+
+      <ui:VisualElement class="form-actions">
+        <ui:Button name="form-toggle-active-button" text="Suspendre" class="danger-button" style="display: none;" />
+        <ui:Button name="form-cancel-button" text="Annuler" class="secondary-button" />
+        <ui:Button name="form-submit-button" text="Créer" class="primary-button" />
+      </ui:VisualElement>
+    </ui:VisualElement>
+
+    <ui:VisualElement name="operations-card" class="card">
+      <ui:VisualElement class="card-header">
+        <ui:Label text="Opérations" class="card-title" />
+      </ui:VisualElement>
+      <ui:Label name="operations-empty" text="Aucune opération récurrente pour l'instant." class="empty-state" />
+      <ui:MultiColumnListView name="operations-list-view" class="transactions-table" style="display: none;" />
+    </ui:VisualElement>
+  </ui:VisualElement>
+</ui:UXML>

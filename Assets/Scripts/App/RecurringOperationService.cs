@@ -91,6 +91,20 @@ namespace FinanceOS.App
             return missing;
         }
 
+        /// <summary>Keeps every active operation's occurrences generated up to today + horizon —
+        /// the plumbing that makes "génération idempotente" actually happen, called on app
+        /// startup and after creating/resuming an operation. Always backfills from each
+        /// operation's own start date: a past-due unconfirmed occurrence is a deliberate state
+        /// ("Manquée", see docs/07-Interface.md §6), not a bug to avoid generating.</summary>
+        public void GenerateUpcomingOccurrences(DateTime today, int horizonDays)
+        {
+            var horizonEnd = today.AddDays(horizonDays);
+            foreach (var operation in _operations.ListActive())
+            {
+                GenerateOccurrences(operation.Id, operation.StartDate, horizonEnd);
+            }
+        }
+
         private RecurringOperation RequireOperation(int operationId) =>
             _operations.FindById(operationId) ?? throw new InvalidOperationException($"Recurring operation #{operationId} not found.");
     }

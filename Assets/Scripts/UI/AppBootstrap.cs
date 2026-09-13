@@ -17,6 +17,7 @@ namespace FinanceOS.UI
         public VisualTreeAsset? DashboardAsset;
         public VisualTreeAsset? AccountsAsset;
         public VisualTreeAsset? TransactionsAsset;
+        public VisualTreeAsset? RecurringOperationsAsset;
 
         public static AppContainer? Container { get; private set; }
 
@@ -24,14 +25,20 @@ namespace FinanceOS.UI
         private DashboardController? _dashboardController;
         private AccountsController? _accountsController;
         private TransactionsController? _transactionsController;
+        private RecurringOperationsController? _recurringOperationsController;
 
         private void Awake()
         {
             Container = new AppContainer();
             Container.Categories.SeedDefaultCategoriesIfEmpty();
 
+            // Idempotent: keeps every active recurring operation's occurrences generated up to
+            // today + horizon on every launch, so the forecast/verification queue is never stale
+            // just because the app was closed for a while. See RecurringOperationService.
+            Container.RecurringOperations.GenerateUpcomingOccurrences(DateTime.Now, Container.Settings.Get().ForecastHorizonDays);
+
             var root = GetComponent<UIDocument>().rootVisualElement;
-            _shell = new ShellController(root, ShowDashboard, ShowAccounts, ShowTransactions);
+            _shell = new ShellController(root, ShowDashboard, ShowAccounts, ShowTransactions, ShowRecurringOperations);
             ShowDashboard();
         }
 
@@ -47,6 +54,7 @@ namespace FinanceOS.UI
             _dashboardController = new DashboardController(content);
             _accountsController = null;
             _transactionsController = null;
+            _recurringOperationsController = null;
             _shell.SetActive(ShellScreen.Dashboard);
 
             RefreshDashboard();
@@ -64,6 +72,7 @@ namespace FinanceOS.UI
             _accountsController = new AccountsController(content, Container.Accounts);
             _dashboardController = null;
             _transactionsController = null;
+            _recurringOperationsController = null;
             _shell.SetActive(ShellScreen.Accounts);
         }
 
@@ -81,7 +90,26 @@ namespace FinanceOS.UI
                 Container.Transactions, Container.InternalTransfers);
             _dashboardController = null;
             _accountsController = null;
+            _recurringOperationsController = null;
             _shell.SetActive(ShellScreen.Transactions);
+        }
+
+        private void ShowRecurringOperations()
+        {
+            if (Container is null || _shell is null || RecurringOperationsAsset is null)
+            {
+                return;
+            }
+
+            var content = RecurringOperationsAsset.Instantiate();
+            _shell.SetContent(content);
+            _recurringOperationsController = new RecurringOperationsController(
+                content, Container.Accounts, Container.Categories, Container.Counterparties,
+                Container.RecurringOperations, Container.Settings);
+            _dashboardController = null;
+            _accountsController = null;
+            _transactionsController = null;
+            _shell.SetActive(ShellScreen.RecurringOperations);
         }
 
         private void RefreshDashboard()

@@ -63,9 +63,9 @@ namespace FinanceOS.UI
         private readonly Label _emptyLabel;
         private readonly MultiColumnListView _listView;
 
-        private IReadOnlyList<TransactionDropdownOption> _filterAccountOptions = Array.Empty<TransactionDropdownOption>();
-        private IReadOnlyList<TransactionDropdownOption> _creatableAccounts = Array.Empty<TransactionDropdownOption>();
-        private IReadOnlyList<TransactionDropdownOption> _categoryOptions = Array.Empty<TransactionDropdownOption>();
+        private IReadOnlyList<DropdownOption> _filterAccountOptions = Array.Empty<DropdownOption>();
+        private IReadOnlyList<DropdownOption> _creatableAccounts = Array.Empty<DropdownOption>();
+        private IReadOnlyList<DropdownOption> _categoryOptions = Array.Empty<DropdownOption>();
         private List<TransactionRowViewModel> _rows = new();
 
         private int? _accountFilter;
@@ -196,7 +196,7 @@ namespace FinanceOS.UI
             _listView.RefreshItems();
         }
 
-        private void RebuildFilterChoices(IReadOnlyList<TransactionDropdownOption> options)
+        private void RebuildFilterChoices(IReadOnlyList<DropdownOption> options)
         {
             _filterAccountOptions = options;
             var choices = new List<string> { "Tous les comptes" };
@@ -486,7 +486,7 @@ namespace FinanceOS.UI
             return string.IsNullOrEmpty(trimmed) ? null : _counterparties.FindOrCreateByName(trimmed).Id;
         }
 
-        private static void SetChoices(DropdownField field, IReadOnlyList<TransactionDropdownOption> options)
+        private static void SetChoices(DropdownField field, IReadOnlyList<DropdownOption> options)
         {
             var choices = options.Select(o => o.Name).ToList();
             field.choices = choices;
