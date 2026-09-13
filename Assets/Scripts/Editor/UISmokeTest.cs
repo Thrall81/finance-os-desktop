@@ -274,6 +274,7 @@ namespace FinanceOS.EditorTools
             var cashFlowChart = forecastsRoot.Q<LineChartElement>();
             Check(cashFlowChart is not null, "cash-flow chart element added to the timeline card");
             Check(cashFlowChart!.Points.Count == forecastsViewModel.ChartSeries.Count, "chart element receives the full chart series");
+            Check(cashFlowChart.style.flexGrow.value == 1f, "chart element grows to fill its fixed-height container — without this it renders nothing (blank contentRect), confirmed by screenshot");
 
             var forecastTimelineListView = forecastsRoot.Q<MultiColumnListView>("timeline-list-view");
             Check(forecastTimelineListView.columns.Count == 3, "three timeline columns configured");

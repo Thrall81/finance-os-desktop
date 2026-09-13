@@ -103,6 +103,12 @@ namespace FinanceOS.UI
             _occurrencesListView = root.Q<MultiColumnListView>("occurrences-list-view");
 
             _cashFlowChart = new LineChartElement();
+            // The container has a fixed height (.chart in theme.uss) but a plain VisualElement's
+            // own height is content-driven, i.e. zero for one with no children — without growing
+            // to fill its parent, contentRect stays empty and OnGenerateVisualContent's own
+            // guard silently draws nothing. Confirmed: this was exactly why the first screenshot
+            // showed a blank chart area, not a rendering-math bug.
+            _cashFlowChart.style.flexGrow = 1;
             root.Q<VisualElement>("cashflow-chart-container").Add(_cashFlowChart);
 
             _timelineEmptyLabel = root.Q<Label>("timeline-empty");
