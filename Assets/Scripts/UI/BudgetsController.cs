@@ -122,14 +122,16 @@ namespace FinanceOS.UI
 
         private void SetupColumns()
         {
-            _allocationsListView.columns.Add(BuildColumn("category", "Catégorie", r => r.CategoryName));
-            _allocationsListView.columns.Add(BuildColumn("planned", "Prévu", r => r.PlannedText, alignRight: true));
-            _allocationsListView.columns.Add(BuildColumn("actual", "Réel", r => r.ActualText, alignRight: true));
-            _allocationsListView.columns.Add(BuildColumn("committed", "Engagé", r => r.CommittedText, alignRight: true));
+            _allocationsListView.columns.Add(BuildColumn("category", "Catégorie", r => r.CategoryName, width: 160, minWidth: 100, stretchable: true));
+            _allocationsListView.columns.Add(BuildColumn("planned", "Prévu", r => r.PlannedText, width: 100, minWidth: 85, alignRight: true));
+            _allocationsListView.columns.Add(BuildColumn("actual", "Réel", r => r.ActualText, width: 100, minWidth: 85, alignRight: true));
+            _allocationsListView.columns.Add(BuildColumn("committed", "Engagé", r => r.CommittedText, width: 100, minWidth: 85, alignRight: true));
             _allocationsListView.columns.Add(new Column
             {
                 name = "remaining",
                 title = "Restant",
+                width = 100,
+                minWidth = 85,
                 makeCell = () =>
                 {
                     var label = new Label();
@@ -145,14 +147,20 @@ namespace FinanceOS.UI
                 },
             });
             _allocationsListView.selectionType = SelectionType.Single;
+            _allocationsListView.fixedItemHeight = 28;
         }
 
-        private Column BuildColumn(string name, string title, Func<BudgetAllocationRowViewModel, string> textSelector, bool alignRight = false)
+        private Column BuildColumn(
+            string name, string title, Func<BudgetAllocationRowViewModel, string> textSelector,
+            float width, float minWidth, bool alignRight = false, bool stretchable = false)
         {
             return new Column
             {
                 name = name,
                 title = title,
+                width = width,
+                minWidth = minWidth,
+                stretchable = stretchable,
                 makeCell = () =>
                 {
                     var label = new Label();

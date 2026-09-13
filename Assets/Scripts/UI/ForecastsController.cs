@@ -132,18 +132,24 @@ namespace FinanceOS.UI
 
         private void SetupOccurrenceColumns()
         {
-            _occurrencesListView.columns.Add(BuildOccurrenceColumn("date", "Date", r => r.DateText));
-            _occurrencesListView.columns.Add(BuildOccurrenceColumn("label", "Libellé", r => r.Label));
-            _occurrencesListView.columns.Add(BuildOccurrenceColumn("amount", "Montant", r => r.AmountText, alignRight: true));
-            _occurrencesListView.columns.Add(BuildOccurrenceColumn("status", "Statut", r => r.StatusText));
+            _occurrencesListView.columns.Add(BuildOccurrenceColumn("date", "Date", r => r.DateText, width: 90, minWidth: 80));
+            _occurrencesListView.columns.Add(BuildOccurrenceColumn("label", "Libellé", r => r.Label, width: 220, minWidth: 120, stretchable: true));
+            _occurrencesListView.columns.Add(BuildOccurrenceColumn("amount", "Montant", r => r.AmountText, width: 110, minWidth: 90, alignRight: true));
+            _occurrencesListView.columns.Add(BuildOccurrenceColumn("status", "Statut", r => r.StatusText, width: 100, minWidth: 80));
+            _occurrencesListView.fixedItemHeight = 28;
         }
 
-        private Column BuildOccurrenceColumn(string name, string title, Func<ForecastOccurrenceRowViewModel, string> textSelector, bool alignRight = false)
+        private Column BuildOccurrenceColumn(
+            string name, string title, Func<ForecastOccurrenceRowViewModel, string> textSelector,
+            float width, float minWidth, bool alignRight = false, bool stretchable = false)
         {
             return new Column
             {
                 name = name,
                 title = title,
+                width = width,
+                minWidth = minWidth,
+                stretchable = stretchable,
                 makeCell = () =>
                 {
                     var label = new Label();
@@ -164,6 +170,8 @@ namespace FinanceOS.UI
             {
                 name = "date",
                 title = "Date",
+                width = 90,
+                minWidth = 80,
                 makeCell = () => new Label(),
                 bindCell = (element, index) => ((Label)element).text = _timelineRows[index].DateText,
             });
@@ -171,6 +179,8 @@ namespace FinanceOS.UI
             {
                 name = "balance",
                 title = "Solde",
+                width = 110,
+                minWidth = 90,
                 makeCell = () =>
                 {
                     var label = new Label();
@@ -183,9 +193,13 @@ namespace FinanceOS.UI
             {
                 name = "events",
                 title = "Mouvements",
+                width = 260,
+                minWidth = 150,
+                stretchable = true,
                 makeCell = () => new Label(),
                 bindCell = (element, index) => ((Label)element).text = _timelineRows[index].EventsText,
             });
+            _timelineListView.fixedItemHeight = 28;
         }
 
         public void Refresh()

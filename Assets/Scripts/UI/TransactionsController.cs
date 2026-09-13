@@ -150,20 +150,26 @@ namespace FinanceOS.UI
 
         private void SetupColumns()
         {
-            _listView.columns.Add(BuildColumn("date", "Date", r => r.DateText));
-            _listView.columns.Add(BuildColumn("account", "Compte", r => r.AccountName));
-            _listView.columns.Add(BuildColumn("label", "Libellé", r => r.Label));
-            _listView.columns.Add(BuildColumn("category", "Catégorie", r => r.CategoryText));
-            _listView.columns.Add(BuildColumn("amount", "Montant", r => r.AmountText, alignRight: true));
+            _listView.columns.Add(BuildColumn("date", "Date", r => r.DateText, width: 90, minWidth: 80));
+            _listView.columns.Add(BuildColumn("account", "Compte", r => r.AccountName, width: 130, minWidth: 100));
+            _listView.columns.Add(BuildColumn("label", "Libellé", r => r.Label, width: 220, minWidth: 120, stretchable: true));
+            _listView.columns.Add(BuildColumn("category", "Catégorie", r => r.CategoryText, width: 130, minWidth: 100));
+            _listView.columns.Add(BuildColumn("amount", "Montant", r => r.AmountText, width: 110, minWidth: 90, alignRight: true));
             _listView.selectionType = SelectionType.Single;
+            _listView.fixedItemHeight = 28;
         }
 
-        private Column BuildColumn(string name, string title, Func<TransactionRowViewModel, string> textSelector, bool alignRight = false)
+        private Column BuildColumn(
+            string name, string title, Func<TransactionRowViewModel, string> textSelector,
+            float width, float minWidth, bool alignRight = false, bool stretchable = false)
         {
             return new Column
             {
                 name = name,
                 title = title,
+                width = width,
+                minWidth = minWidth,
+                stretchable = stretchable,
                 makeCell = () =>
                 {
                     var label = new Label();

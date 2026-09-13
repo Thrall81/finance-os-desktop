@@ -168,21 +168,27 @@ namespace FinanceOS.UI
 
         private void SetupColumns()
         {
-            _listView.columns.Add(BuildColumn("name", "Nom", r => r.Name));
-            _listView.columns.Add(BuildColumn("type", "Type", r => r.TypeText));
-            _listView.columns.Add(BuildColumn("account", "Compte", r => r.AccountText));
-            _listView.columns.Add(BuildColumn("frequency", "Fréquence", r => r.FrequencyText));
-            _listView.columns.Add(BuildColumn("amount", "Montant", r => r.AmountText, alignRight: true));
-            _listView.columns.Add(BuildColumn("status", "Statut", r => r.IsActive ? "Actif" : "Suspendu"));
+            _listView.columns.Add(BuildColumn("name", "Nom", r => r.Name, width: 160, minWidth: 100, stretchable: true));
+            _listView.columns.Add(BuildColumn("type", "Type", r => r.TypeText, width: 110, minWidth: 90));
+            _listView.columns.Add(BuildColumn("account", "Compte", r => r.AccountText, width: 170, minWidth: 110));
+            _listView.columns.Add(BuildColumn("frequency", "Fréquence", r => r.FrequencyText, width: 110, minWidth: 90));
+            _listView.columns.Add(BuildColumn("amount", "Montant", r => r.AmountText, width: 110, minWidth: 90, alignRight: true));
+            _listView.columns.Add(BuildColumn("status", "Statut", r => r.IsActive ? "Actif" : "Suspendu", width: 90, minWidth: 80));
             _listView.selectionType = SelectionType.Single;
+            _listView.fixedItemHeight = 28;
         }
 
-        private Column BuildColumn(string name, string title, Func<RecurringOperationRowViewModel, string> textSelector, bool alignRight = false)
+        private Column BuildColumn(
+            string name, string title, Func<RecurringOperationRowViewModel, string> textSelector,
+            float width, float minWidth, bool alignRight = false, bool stretchable = false)
         {
             return new Column
             {
                 name = name,
                 title = title,
+                width = width,
+                minWidth = minWidth,
+                stretchable = stretchable,
                 makeCell = () =>
                 {
                     var label = new Label();
