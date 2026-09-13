@@ -35,5 +35,39 @@ namespace FinanceOS.UI
                 _ => $"dans {-days} jours",
             };
         }
+
+        /// <summary>"13/09/2026" — the editable form representation, since French users expect
+        /// slash-separated numeric dates in a text field rather than a spelled-out month.</summary>
+        public static string ForInput(DateTime date) => $"{date.Day:00}/{date.Month:00}/{date.Year:0000}";
+
+        /// <summary>Parses <see cref="ForInput"/>'s format back. No CultureInfo involved — same
+        /// reasoning as MoneyFormat.TryParseEurosToMinor.</summary>
+        public static bool TryParseInput(string text, out DateTime date)
+        {
+            date = default;
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                return false;
+            }
+
+            var parts = text.Trim().Split('/');
+            if (parts.Length != 3
+                || !int.TryParse(parts[0], out var day)
+                || !int.TryParse(parts[1], out var month)
+                || !int.TryParse(parts[2], out var year))
+            {
+                return false;
+            }
+
+            try
+            {
+                date = new DateTime(year, month, day);
+                return true;
+            }
+            catch (ArgumentOutOfRangeException)
+            {
+                return false;
+            }
+        }
     }
 }

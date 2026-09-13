@@ -1,0 +1,516 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using FinanceOS.App;
+using UnityEngine.UIElements;
+
+namespace FinanceOS.UI
+{
+    /// <summary>
+    /// Binds Transactions.uxml: filterable list, manual creation (expense/income/internal
+    /// transfer) and — in edit mode — category, counterparty, notes and budget exclusion.
+    /// Holds only the App services this screen touches, same pattern as AccountsController.
+    /// See docs/07-Interface.md §3/§7/§9/§10.
+    /// </summary>
+    public sealed class TransactionsController
+    {
+        private static readonly string[] TypeOptions = { "Dépense", "Revenu", "Virement interne" };
+
+        private readonly AccountService _accounts;
+        private readonly CategoryService _categories;
+        private readonly CounterpartyService _counterparties;
+        private readonly TransactionService _transactions;
+        private readonly InternalTransferService _internalTransfers;
+
+        private readonly DropdownField _filterAccountField;
+        private readonly Button _newTransactionButton;
+
+        private readonly VisualElement _formCard;
+        private readonly Label _formTitle;
+        private readonly VisualElement _typeRow;
+        private readonly DropdownField _typeField;
+        private readonly VisualElement _accountRow;
+        private readonly Label _accountLabel;
+        private readonly DropdownField _accountField;
+        private readonly VisualElement _accountReadonlyRow;
+        private readonly Label _accountReadonlyLabel;
+        private readonly VisualElement _destinationAccountRow;
+        private readonly DropdownField _destinationAccountField;
+        private readonly VisualElement _dateRow;
+        private readonly TextField _dateField;
+        private readonly VisualElement _dateReadonlyRow;
+        private readonly Label _dateReadonlyLabel;
+        private readonly VisualElement _amountRow;
+        private readonly TextField _amountField;
+        private readonly VisualElement _amountReadonlyRow;
+        private readonly Label _amountReadonlyLabel;
+        private readonly VisualElement _labelRow;
+        private readonly TextField _labelField;
+        private readonly VisualElement _labelReadonlyRow;
+        private readonly Label _labelReadonlyLabel;
+        private readonly VisualElement _categoryRow;
+        private readonly DropdownField _categoryField;
+        private readonly VisualElement _counterpartyRow;
+        private readonly TextField _counterpartyField;
+        private readonly TextField _notesField;
+        private readonly VisualElement _excludedRow;
+        private readonly Toggle _excludedToggle;
+        private readonly Label _errorLabel;
+        private readonly Button _deleteButton;
+        private readonly Button _cancelButton;
+        private readonly Button _submitButton;
+
+        private readonly Label _emptyLabel;
+        private readonly MultiColumnListView _listView;
+
+        private IReadOnlyList<TransactionDropdownOption> _filterAccountOptions = Array.Empty<TransactionDropdownOption>();
+        private IReadOnlyList<TransactionDropdownOption> _creatableAccounts = Array.Empty<TransactionDropdownOption>();
+        private IReadOnlyList<TransactionDropdownOption> _categoryOptions = Array.Empty<TransactionDropdownOption>();
+        private List<TransactionRowViewModel> _rows = new();
+
+        private int? _accountFilter;
+        private int? _editingTransactionId;
+        private bool _categoryManuallySet;
+
+        public TransactionsController(
+            VisualElement root,
+            AccountService accounts,
+            CategoryService categories,
+            CounterpartyService counterparties,
+            TransactionService transactions,
+            InternalTransferService internalTransfers)
+        {
+            _accounts = accounts;
+            _categories = categories;
+            _counterparties = counterparties;
+            _transactions = transactions;
+            _internalTransfers = internalTransfers;
+
+            _filterAccountField = root.Q<DropdownField>("filter-account");
+            _newTransactionButton = root.Q<Button>("new-transaction-button");
+
+            _formCard = root.Q<VisualElement>("transaction-form-card");
+            _formTitle = root.Q<Label>("form-title");
+            _typeRow = root.Q<VisualElement>("form-type-row");
+            _typeField = root.Q<DropdownField>("form-type");
+            _accountRow = root.Q<VisualElement>("form-account-row");
+            _accountLabel = root.Q<Label>("form-account-label");
+            _accountField = root.Q<DropdownField>("form-account");
+            _accountReadonlyRow = root.Q<VisualElement>("form-account-readonly-row");
+            _accountReadonlyLabel = root.Q<Label>("form-account-readonly");
+            _destinationAccountRow = root.Q<VisualElement>("form-destination-account-row");
+            _destinationAccountField = root.Q<DropdownField>("form-destination-account");
+            _dateRow = root.Q<VisualElement>("form-date-row");
+            _dateField = root.Q<TextField>("form-date");
+            _dateReadonlyRow = root.Q<VisualElement>("form-date-readonly-row");
+            _dateReadonlyLabel = root.Q<Label>("form-date-readonly");
+            _amountRow = root.Q<VisualElement>("form-amount-row");
+            _amountField = root.Q<TextField>("form-amount");
+            _amountReadonlyRow = root.Q<VisualElement>("form-amount-readonly-row");
+            _amountReadonlyLabel = root.Q<Label>("form-amount-readonly");
+            _labelRow = root.Q<VisualElement>("form-label-row");
+            _labelField = root.Q<TextField>("form-label-field");
+            _labelReadonlyRow = root.Q<VisualElement>("form-label-readonly-row");
+            _labelReadonlyLabel = root.Q<Label>("form-label-readonly");
+            _categoryRow = root.Q<VisualElement>("form-category-row");
+            _categoryField = root.Q<DropdownField>("form-category");
+            _counterpartyRow = root.Q<VisualElement>("form-counterparty-row");
+            _counterpartyField = root.Q<TextField>("form-counterparty");
+            _notesField = root.Q<TextField>("form-notes");
+            _excludedRow = root.Q<VisualElement>("form-excluded-row");
+            _excludedToggle = root.Q<Toggle>("form-excluded-toggle");
+            _errorLabel = root.Q<Label>("form-error");
+            _deleteButton = root.Q<Button>("form-delete-button");
+            _cancelButton = root.Q<Button>("form-cancel-button");
+            _submitButton = root.Q<Button>("form-submit-button");
+
+            _emptyLabel = root.Q<Label>("transactions-empty");
+            _listView = root.Q<MultiColumnListView>("transactions-list-view");
+
+            _typeField.choices = TypeOptions.ToList();
+
+            SetupColumns();
+
+            _filterAccountField.RegisterValueChangedCallback(_ => OnFilterChanged());
+            _newTransactionButton.clicked += OpenCreateForm;
+            _cancelButton.clicked += CloseForm;
+            _submitButton.clicked += SubmitForm;
+            _deleteButton.clicked += DeleteTransaction;
+            _typeField.RegisterValueChangedCallback(evt => ApplyTypeVisibility(evt.newValue));
+            _labelField.RegisterValueChangedCallback(OnLabelChanged);
+            _categoryField.RegisterValueChangedCallback(_ =>
+            {
+                _categoryManuallySet = true;
+                _categoryField.RemoveFromClassList("field-suggested");
+            });
+            _listView.selectionChanged += _ => OnRowSelected();
+
+            Refresh();
+        }
+
+        private void SetupColumns()
+        {
+            _listView.columns.Add(BuildColumn("date", "Date", r => r.DateText));
+            _listView.columns.Add(BuildColumn("account", "Compte", r => r.AccountName));
+            _listView.columns.Add(BuildColumn("label", "Libellé", r => r.Label));
+            _listView.columns.Add(BuildColumn("category", "Catégorie", r => r.CategoryText));
+            _listView.columns.Add(BuildColumn("amount", "Montant", r => r.AmountText, alignRight: true));
+            _listView.selectionType = SelectionType.Single;
+        }
+
+        private Column BuildColumn(string name, string title, Func<TransactionRowViewModel, string> textSelector, bool alignRight = false)
+        {
+            return new Column
+            {
+                name = name,
+                title = title,
+                makeCell = () =>
+                {
+                    var label = new Label();
+                    if (alignRight)
+                    {
+                        label.AddToClassList("account-row-balance");
+                    }
+
+                    return label;
+                },
+                bindCell = (element, index) => ((Label)element).text = textSelector(_rows[index]),
+            };
+        }
+
+        public void Refresh()
+        {
+            var viewModel = TransactionsViewModelBuilder.Build(_accounts, _categories, _counterparties, _transactions, _accountFilter);
+
+            _creatableAccounts = viewModel.CreatableAccounts;
+            _categoryOptions = viewModel.Categories;
+            _rows = viewModel.Transactions.ToList();
+
+            RebuildFilterChoices(viewModel.AccountFilterOptions);
+            _newTransactionButton.SetEnabled(_creatableAccounts.Count > 0);
+
+            var hasRows = _rows.Count > 0;
+            _emptyLabel.style.display = hasRows ? DisplayStyle.None : DisplayStyle.Flex;
+            _listView.style.display = hasRows ? DisplayStyle.Flex : DisplayStyle.None;
+            _listView.itemsSource = _rows;
+            _listView.RefreshItems();
+        }
+
+        private void RebuildFilterChoices(IReadOnlyList<TransactionDropdownOption> options)
+        {
+            _filterAccountOptions = options;
+            var choices = new List<string> { "Tous les comptes" };
+            choices.AddRange(options.Select(o => o.Name));
+            _filterAccountField.choices = choices;
+
+            var selectedIndex = _accountFilter is int currentId
+                ? options.ToList().FindIndex(o => o.Id == currentId) + 1
+                : 0;
+            _filterAccountField.SetValueWithoutNotify(choices[Math.Max(selectedIndex, 0)]);
+        }
+
+        private void OnFilterChanged()
+        {
+            var index = _filterAccountField.index;
+            _accountFilter = index <= 0 ? null : _filterAccountOptions[index - 1].Id;
+            Refresh();
+        }
+
+        private void OnRowSelected()
+        {
+            var index = _listView.selectedIndex;
+            if (index < 0 || index >= _rows.Count)
+            {
+                return;
+            }
+
+            OpenEditForm(_rows[index]);
+        }
+
+        private void OpenCreateForm()
+        {
+            _editingTransactionId = null;
+            _categoryManuallySet = false;
+
+            _formTitle.text = "Nouvelle transaction";
+
+            _typeRow.style.display = DisplayStyle.Flex;
+            _typeField.SetValueWithoutNotify(TypeOptions[0]);
+
+            _accountRow.style.display = DisplayStyle.Flex;
+            _accountReadonlyRow.style.display = DisplayStyle.None;
+            SetChoices(_accountField, _creatableAccounts);
+            SetChoices(_destinationAccountField, _creatableAccounts);
+
+            _dateRow.style.display = DisplayStyle.Flex;
+            _dateReadonlyRow.style.display = DisplayStyle.None;
+            _dateField.SetValueWithoutNotify(DateFormat.ForInput(DateTime.Now));
+
+            _amountRow.style.display = DisplayStyle.Flex;
+            _amountReadonlyRow.style.display = DisplayStyle.None;
+            _amountField.SetValueWithoutNotify(string.Empty);
+
+            _labelRow.style.display = DisplayStyle.Flex;
+            _labelReadonlyRow.style.display = DisplayStyle.None;
+            _labelField.SetValueWithoutNotify(string.Empty);
+
+            RebuildCategoryChoices();
+            _categoryField.RemoveFromClassList("field-suggested");
+
+            _counterpartyField.SetValueWithoutNotify(string.Empty);
+            _notesField.SetValueWithoutNotify(string.Empty);
+            _excludedRow.style.display = DisplayStyle.None;
+
+            _deleteButton.style.display = DisplayStyle.None;
+            _submitButton.text = "Créer";
+            HideError();
+
+            ApplyTypeVisibility(TypeOptions[0]);
+            _formCard.style.display = DisplayStyle.Flex;
+        }
+
+        private void OpenEditForm(TransactionRowViewModel row)
+        {
+            _editingTransactionId = row.Id;
+            _categoryManuallySet = true;
+
+            _formTitle.text = row.Label;
+
+            _typeRow.style.display = DisplayStyle.None;
+
+            _accountRow.style.display = DisplayStyle.None;
+            _accountReadonlyRow.style.display = DisplayStyle.Flex;
+            _accountReadonlyLabel.text = row.AccountName;
+
+            _destinationAccountRow.style.display = DisplayStyle.None;
+
+            _dateRow.style.display = DisplayStyle.None;
+            _dateReadonlyRow.style.display = DisplayStyle.Flex;
+            _dateReadonlyLabel.text = row.DateText;
+
+            _amountRow.style.display = DisplayStyle.None;
+            _amountReadonlyRow.style.display = DisplayStyle.Flex;
+            _amountReadonlyLabel.text = row.AmountText;
+
+            _labelRow.style.display = DisplayStyle.None;
+            _labelReadonlyRow.style.display = DisplayStyle.Flex;
+            _labelReadonlyLabel.text = row.Label;
+
+            if (row.IsInternalTransfer)
+            {
+                _categoryRow.style.display = DisplayStyle.None;
+                _counterpartyRow.style.display = DisplayStyle.None;
+            }
+            else
+            {
+                _categoryRow.style.display = DisplayStyle.Flex;
+                RebuildCategoryChoices();
+                var categoryIndex = row.CategoryId is int categoryId
+                    ? _categoryOptions.ToList().FindIndex(o => o.Id == categoryId) + 1
+                    : 0;
+                _categoryField.SetValueWithoutNotify(_categoryField.choices[Math.Max(categoryIndex, 0)]);
+                _categoryField.RemoveFromClassList("field-suggested");
+
+                _counterpartyRow.style.display = DisplayStyle.Flex;
+                _counterpartyField.SetValueWithoutNotify(row.CounterpartyText == "—" ? string.Empty : row.CounterpartyText);
+            }
+
+            _notesField.SetValueWithoutNotify(row.Notes);
+            _excludedRow.style.display = DisplayStyle.Flex;
+            _excludedToggle.SetValueWithoutNotify(row.IsExcludedFromBudget);
+
+            _deleteButton.style.display = DisplayStyle.Flex;
+            _submitButton.text = "Enregistrer";
+            HideError();
+
+            _formCard.style.display = DisplayStyle.Flex;
+        }
+
+        private void CloseForm()
+        {
+            _formCard.style.display = DisplayStyle.None;
+            _editingTransactionId = null;
+        }
+
+        private void ApplyTypeVisibility(string typeText)
+        {
+            var isTransfer = typeText == TypeOptions[2];
+            _accountLabel.text = isTransfer ? "Compte source" : "Compte";
+            _destinationAccountRow.style.display = isTransfer ? DisplayStyle.Flex : DisplayStyle.None;
+            _categoryRow.style.display = isTransfer ? DisplayStyle.None : DisplayStyle.Flex;
+            _counterpartyRow.style.display = isTransfer ? DisplayStyle.None : DisplayStyle.Flex;
+        }
+
+        private void SubmitForm()
+        {
+            if (_editingTransactionId is int id)
+            {
+                SubmitEdit(id);
+            }
+            else
+            {
+                SubmitCreate();
+            }
+        }
+
+        private void SubmitEdit(int id)
+        {
+            var categoryId = ResolveSelectedCategoryId();
+            _transactions.AssignCategory(id, categoryId);
+
+            var counterpartyId = ResolveOrCreateCounterpartyId(_counterpartyField.value);
+            _transactions.AssignCounterparty(id, counterpartyId);
+
+            var notes = string.IsNullOrWhiteSpace(_notesField.value) ? null : _notesField.value.Trim();
+            _transactions.UpdateNotes(id, notes);
+
+            _transactions.SetExcludedFromBudget(id, _excludedToggle.value);
+
+            CloseForm();
+            Refresh();
+        }
+
+        private void SubmitCreate()
+        {
+            if (!MoneyFormat.TryParseEurosToMinor(_amountField.value, out var magnitude) || magnitude <= 0)
+            {
+                ShowError("Le montant doit être un nombre positif, ex. 45,90.");
+                return;
+            }
+
+            if (!DateFormat.TryParseInput(_dateField.value, out var date))
+            {
+                ShowError("La date doit être au format jj/mm/aaaa.");
+                return;
+            }
+
+            var label = _labelField.value?.Trim() ?? string.Empty;
+            if (string.IsNullOrEmpty(label))
+            {
+                ShowError("Le libellé est requis.");
+                return;
+            }
+
+            if (_accountField.index < 0 || _accountField.index >= _creatableAccounts.Count)
+            {
+                ShowError("Choisissez un compte.");
+                return;
+            }
+
+            var accountId = _creatableAccounts[_accountField.index].Id;
+            var isTransfer = _typeField.value == TypeOptions[2];
+
+            try
+            {
+                if (isTransfer)
+                {
+                    if (_destinationAccountField.index < 0 || _destinationAccountField.index >= _creatableAccounts.Count)
+                    {
+                        ShowError("Choisissez un compte destination.");
+                        return;
+                    }
+
+                    var destinationAccountId = _creatableAccounts[_destinationAccountField.index].Id;
+                    if (destinationAccountId == accountId)
+                    {
+                        ShowError("Le compte destination doit être différent du compte source.");
+                        return;
+                    }
+
+                    _internalTransfers.CreateTransfer(accountId, destinationAccountId, magnitude, "EUR", date, label);
+                }
+                else
+                {
+                    var amount = _typeField.value == TypeOptions[0] ? -magnitude : magnitude;
+                    var categoryId = ResolveSelectedCategoryId();
+                    var counterpartyId = ResolveOrCreateCounterpartyId(_counterpartyField.value);
+                    var notes = string.IsNullOrWhiteSpace(_notesField.value) ? null : _notesField.value.Trim();
+
+                    _transactions.CreateManual(accountId, amount, "EUR", date, label, categoryId, counterpartyId, notes);
+                }
+            }
+            catch (ArgumentException ex)
+            {
+                ShowError(ex.Message);
+                return;
+            }
+
+            CloseForm();
+            Refresh();
+        }
+
+        private void DeleteTransaction()
+        {
+            if (_editingTransactionId is not int id)
+            {
+                return;
+            }
+
+            _transactions.DeleteManual(id);
+            CloseForm();
+            Refresh();
+        }
+
+        private void OnLabelChanged(ChangeEvent<string> evt)
+        {
+            if (_categoryManuallySet || string.IsNullOrWhiteSpace(evt.newValue))
+            {
+                return;
+            }
+
+            var suggestedCategoryId = _transactions.SuggestCategoryForLabel(evt.newValue);
+            if (suggestedCategoryId is not int categoryId)
+            {
+                return;
+            }
+
+            var index = _categoryOptions.ToList().FindIndex(o => o.Id == categoryId);
+            if (index < 0)
+            {
+                return;
+            }
+
+            _categoryField.SetValueWithoutNotify(_categoryField.choices[index + 1]);
+            _categoryField.AddToClassList("field-suggested");
+        }
+
+        private int? ResolveSelectedCategoryId()
+        {
+            var index = _categoryField.index;
+            return index <= 0 ? null : _categoryOptions[index - 1].Id;
+        }
+
+        private int? ResolveOrCreateCounterpartyId(string? name)
+        {
+            var trimmed = name?.Trim();
+            return string.IsNullOrEmpty(trimmed) ? null : _counterparties.FindOrCreateByName(trimmed).Id;
+        }
+
+        private static void SetChoices(DropdownField field, IReadOnlyList<TransactionDropdownOption> options)
+        {
+            var choices = options.Select(o => o.Name).ToList();
+            field.choices = choices;
+            field.SetValueWithoutNotify(choices.Count > 0 ? choices[0] : string.Empty);
+        }
+
+        private void RebuildCategoryChoices()
+        {
+            var choices = new List<string> { "Aucune" };
+            choices.AddRange(_categoryOptions.Select(c => c.Name));
+            _categoryField.choices = choices;
+            _categoryField.SetValueWithoutNotify(choices[0]);
+        }
+
+        private void ShowError(string message)
+        {
+            _errorLabel.text = message;
+            _errorLabel.style.display = DisplayStyle.Flex;
+        }
+
+        private void HideError()
+        {
+            _errorLabel.text = string.Empty;
+            _errorLabel.style.display = DisplayStyle.None;
+        }
+    }
+}

@@ -13,10 +13,11 @@ namespace FinanceOS.App
 
         public TransactionService(TransactionRepository transactions) => _transactions = transactions;
 
-        /// <summary>The category last used for this normalized label, if any — the UI pre-fills
-        /// it as a suggestion, never silently. See docs/07-Interface.md §7.</summary>
-        public int? SuggestCategoryForLabel(string normalizedLabel) =>
-            _transactions.FindLastCategoryForLabel(normalizedLabel);
+        /// <summary>The category last used for a matching label, if any — the UI pre-fills it as
+        /// a suggestion, never silently. Normalizes internally, so callers pass the label as
+        /// typed. See docs/07-Interface.md §7.</summary>
+        public int? SuggestCategoryForLabel(string label) =>
+            _transactions.FindLastCategoryForLabel(LabelNormalization.Normalize(label));
 
         public Transaction CreateManual(
             int accountId,
@@ -32,6 +33,10 @@ namespace FinanceOS.App
                 accountId, amountMinor, currency, operationDate, originalLabel, TransactionSource.Manual,
                 categoryId, counterpartyId);
 
+            // Every manual entry gets a matchable label by default, so "catégorisation assistée"
+            // works out of the box without requiring an explicit correction step first.
+            transaction.Relabel(LabelNormalization.Normalize(originalLabel));
+
             if (notes is not null)
             {
                 transaction.UpdateNotes(notes);
@@ -44,6 +49,13 @@ namespace FinanceOS.App
 
         public IReadOnlyList<Transaction> ListForAccount(int accountId) => _transactions.ListForAccount(accountId);
 
+        /// <summary>Every transaction across every account, most recent first — the Transactions
+        /// screen's unfiltered view. See docs/07-Interface.md §3.</summary>
+        public IReadOnlyList<Transaction> ListAll() => _transactions.ListAll();
+
+        /// <summary>Optionally also corrects the label this transaction is remembered under
+        /// (normalized internally) — an explicit escape hatch for when the typed label shouldn't
+        /// be the matching key, separate from the usual automatic one set by <see cref="CreateManual"/>.</summary>
         public void AssignCategory(int transactionId, int? categoryId, string? normalizedLabel = null)
         {
             var transaction = RequireTransaction(transactionId);
@@ -51,7 +63,7 @@ namespace FinanceOS.App
 
             if (normalizedLabel is not null)
             {
-                transaction.Relabel(normalizedLabel);
+                transaction.Relabel(LabelNormalization.Normalize(normalizedLabel));
             }
 
             _transactions.Update(transaction);

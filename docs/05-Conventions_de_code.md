@@ -147,3 +147,9 @@ ORM complexe au-dessus de SQLite
 Traitement asynchrone façon Messenger pour un volume qui ne le justifie pas
 Toute forme d'appel réseau
 ```
+
+---
+
+# 12. Compatibilité .NET
+
+Ne jamais supposer qu'un membre BCL récent (.NET Standard 2.1+, ex. `Dictionary.GetValueOrDefault`) est disponible sans l'avoir vu compiler dans l'assembly concerné — vérifié empiriquement que `FinanceOS.UI` résout un ensemble de références plus restreint que `FinanceOS.App` au sein du même projet (`09-Decisions_techniques.md`, ADR-114 ; même famille de constat qu'ADR-110/ADR-111). Utiliser le motif portable `dict.TryGetValue(key, out var value) ? value : fallback` plutôt que `GetValueOrDefault`.

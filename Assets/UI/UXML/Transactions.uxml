@@ -1,0 +1,103 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="False">
+  <Style src="../USS/theme.uss" />
+  <ui:VisualElement name="transactions-root" class="page">
+    <ui:VisualElement class="page-header accounts-header">
+      <ui:VisualElement>
+        <ui:Label text="Transactions" class="page-title" />
+        <ui:Label text="Saisissez, catégorisez et retrouvez vos mouvements." class="page-subtitle" />
+      </ui:VisualElement>
+      <ui:Button name="new-transaction-button" text="+ Nouvelle transaction" class="primary-button" />
+    </ui:VisualElement>
+
+    <ui:VisualElement name="filter-row" class="filter-row">
+      <ui:Label text="Compte" class="form-label" />
+      <ui:DropdownField name="filter-account" class="form-field" />
+    </ui:VisualElement>
+
+    <ui:VisualElement name="transaction-form-card" class="card form-card" style="display: none;">
+      <ui:Label name="form-title" text="Nouvelle transaction" class="card-title" />
+
+      <ui:VisualElement name="form-type-row" class="form-row">
+        <ui:Label text="Type" class="form-label" />
+        <ui:DropdownField name="form-type" class="form-field" />
+      </ui:VisualElement>
+
+      <ui:VisualElement name="form-account-row" class="form-row">
+        <ui:Label name="form-account-label" text="Compte" class="form-label" />
+        <ui:DropdownField name="form-account" class="form-field" />
+      </ui:VisualElement>
+
+      <ui:VisualElement name="form-account-readonly-row" class="form-row" style="display: none;">
+        <ui:Label text="Compte" class="form-label" />
+        <ui:Label name="form-account-readonly" text="—" class="form-readonly-value" />
+      </ui:VisualElement>
+
+      <ui:VisualElement name="form-destination-account-row" class="form-row" style="display: none;">
+        <ui:Label text="Compte destination" class="form-label" />
+        <ui:DropdownField name="form-destination-account" class="form-field" />
+      </ui:VisualElement>
+
+      <ui:VisualElement name="form-date-row" class="form-row">
+        <ui:Label text="Date" class="form-label" />
+        <ui:TextField name="form-date" class="form-field" />
+      </ui:VisualElement>
+      <ui:VisualElement name="form-date-readonly-row" class="form-row" style="display: none;">
+        <ui:Label text="Date" class="form-label" />
+        <ui:Label name="form-date-readonly" text="—" class="form-readonly-value" />
+      </ui:VisualElement>
+
+      <ui:VisualElement name="form-amount-row" class="form-row">
+        <ui:Label text="Montant (€)" class="form-label" />
+        <ui:TextField name="form-amount" class="form-field" />
+      </ui:VisualElement>
+      <ui:VisualElement name="form-amount-readonly-row" class="form-row" style="display: none;">
+        <ui:Label text="Montant" class="form-label" />
+        <ui:Label name="form-amount-readonly" text="—" class="form-readonly-value" />
+      </ui:VisualElement>
+
+      <ui:VisualElement name="form-label-row" class="form-row">
+        <ui:Label text="Libellé" class="form-label" />
+        <ui:TextField name="form-label-field" class="form-field" />
+      </ui:VisualElement>
+      <ui:VisualElement name="form-label-readonly-row" class="form-row" style="display: none;">
+        <ui:Label text="Libellé" class="form-label" />
+        <ui:Label name="form-label-readonly" text="—" class="form-readonly-value" />
+      </ui:VisualElement>
+
+      <ui:VisualElement name="form-category-row" class="form-row">
+        <ui:Label text="Catégorie" class="form-label" />
+        <ui:DropdownField name="form-category" class="form-field" />
+      </ui:VisualElement>
+
+      <ui:VisualElement name="form-counterparty-row" class="form-row">
+        <ui:Label text="Tiers (facultatif)" class="form-label" />
+        <ui:TextField name="form-counterparty" class="form-field" />
+      </ui:VisualElement>
+
+      <ui:VisualElement name="form-notes-row" class="form-row">
+        <ui:Label text="Notes (facultatif)" class="form-label" />
+        <ui:TextField name="form-notes" class="form-field" />
+      </ui:VisualElement>
+
+      <ui:VisualElement name="form-excluded-row" class="form-row form-row-inline" style="display: none;">
+        <ui:Toggle name="form-excluded-toggle" label="Exclure du budget" />
+      </ui:VisualElement>
+
+      <ui:Label name="form-error" text="" class="form-error" style="display: none;" />
+
+      <ui:VisualElement class="form-actions">
+        <ui:Button name="form-delete-button" text="Supprimer" class="danger-button" style="display: none;" />
+        <ui:Button name="form-cancel-button" text="Annuler" class="secondary-button" />
+        <ui:Button name="form-submit-button" text="Créer" class="primary-button" />
+      </ui:VisualElement>
+    </ui:VisualElement>
+
+    <ui:VisualElement name="transactions-card" class="card">
+      <ui:VisualElement class="card-header">
+        <ui:Label text="Mouvements" class="card-title" />
+      </ui:VisualElement>
+      <ui:Label name="transactions-empty" text="Aucune transaction pour l'instant." class="empty-state" />
+      <ui:MultiColumnListView name="transactions-list-view" class="transactions-table" style="display: none;" />
+    </ui:VisualElement>
+  </ui:VisualElement>
+</ui:UXML>

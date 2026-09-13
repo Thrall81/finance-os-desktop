@@ -7,6 +7,7 @@ namespace FinanceOS.UI
     {
         Dashboard,
         Accounts,
+        Transactions,
     }
 
     /// <summary>
@@ -19,15 +20,22 @@ namespace FinanceOS.UI
         private readonly VisualElement _contentArea;
         private readonly Button _navDashboard;
         private readonly Button _navAccounts;
+        private readonly Button _navTransactions;
 
-        public ShellController(VisualElement root, Action onNavigateToDashboard, Action onNavigateToAccounts)
+        public ShellController(
+            VisualElement root,
+            Action onNavigateToDashboard,
+            Action onNavigateToAccounts,
+            Action onNavigateToTransactions)
         {
             _contentArea = root.Q<VisualElement>("content-area");
             _navDashboard = root.Q<Button>("nav-dashboard");
             _navAccounts = root.Q<Button>("nav-accounts");
+            _navTransactions = root.Q<Button>("nav-transactions");
 
             _navDashboard.clicked += onNavigateToDashboard;
             _navAccounts.clicked += onNavigateToAccounts;
+            _navTransactions.clicked += onNavigateToTransactions;
         }
 
         public void SetContent(VisualElement content)
@@ -40,6 +48,7 @@ namespace FinanceOS.UI
         {
             _navDashboard.EnableInClassList("nav-item-active", screen == ShellScreen.Dashboard);
             _navAccounts.EnableInClassList("nav-item-active", screen == ShellScreen.Accounts);
+            _navTransactions.EnableInClassList("nav-item-active", screen == ShellScreen.Transactions);
         }
     }
 }

@@ -20,6 +20,7 @@ namespace FinanceOS.EditorTools
     {
         private const string DashboardUxmlPath = "Assets/UI/UXML/Dashboard.uxml";
         private const string AccountsUxmlPath = "Assets/UI/UXML/Accounts.uxml";
+        private const string TransactionsUxmlPath = "Assets/UI/UXML/Transactions.uxml";
         private const string ShellUxmlPath = "Assets/UI/UXML/Shell.uxml";
 
         [MenuItem("Finance OS/Run UI Smoke Test")]
@@ -143,6 +144,48 @@ namespace FinanceOS.EditorTools
             accountsController.Refresh();
             Check(accountsList.childCount == 2, "refresh re-renders the same two rows without duplication");
 
+            var groceries = app.Categories.ListActive().First(c => c.Name == "Alimentation");
+            var firstGroceries = app.Transactions.CreateManual(
+                account.Id, -4_250, "EUR", new DateTime(2026, 8, 10), "  Carrefour  ", categoryId: groceries.Id);
+            Check(firstGroceries.NormalizedLabel == "carrefour", "CreateManual auto-normalizes the label for future suggestion matching");
+
+            var suggestedCategory = app.Transactions.SuggestCategoryForLabel("CARREFOUR");
+            Check(suggestedCategory == groceries.Id, "suggestion matches regardless of case and surrounding whitespace");
+
+            Check(DateFormat.ForInput(new DateTime(2026, 9, 13)) == "13/09/2026", "date formatted for input fields");
+            Check(DateFormat.TryParseInput("13/09/2026", out var parsedDate) && parsedDate == new DateTime(2026, 9, 13), "input date parses back");
+            Check(!DateFormat.TryParseInput("31/02/2026", out _), "invalid calendar date is rejected");
+            Check(!DateFormat.TryParseInput("not a date", out _), "garbage text is rejected");
+
+            var transactionsViewModel = TransactionsViewModelBuilder.Build(
+                app.Accounts, app.Categories, app.Counterparties, app.Transactions, accountFilter: null);
+            Check(transactionsViewModel.Transactions.Count == 1, "one transaction appears in the unfiltered view model");
+            Check(transactionsViewModel.Transactions[0].CategoryText == "Alimentation", "category resolved by name");
+            Check(transactionsViewModel.Transactions[0].AccountName == "Compte courant", "account resolved by name");
+            Check(Normalize(transactionsViewModel.Transactions[0].AmountText) == "−42,50 €", "amount formatted with its sign");
+
+            var filteredOnOtherAccount = TransactionsViewModelBuilder.Build(
+                app.Accounts, app.Categories, app.Counterparties, app.Transactions, accountFilter: savings.Id);
+            Check(filteredOnOtherAccount.Transactions.Count == 0, "filtering by an unrelated account yields an empty list");
+
+            var transactionsTree = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(TransactionsUxmlPath);
+            if (transactionsTree == null)
+            {
+                throw new FileNotFoundException($"Transactions UXML not found at {TransactionsUxmlPath}");
+            }
+
+            var transactionsRoot = transactionsTree.Instantiate();
+            var transactionsController = new TransactionsController(
+                transactionsRoot, app.Accounts, app.Categories, app.Counterparties, app.Transactions, app.InternalTransfers);
+
+            var listView = transactionsRoot.Q<MultiColumnListView>("transactions-list-view");
+            Check(listView.itemsSource.Count == 1, "transactions controller renders the one seeded transaction");
+            Check(listView.columns.Count == 5, "five table columns configured");
+            Check(transactionsRoot.Q<Label>("transactions-empty").style.display == DisplayStyle.None, "empty-state hidden when transactions exist");
+
+            transactionsController.Refresh();
+            Check(listView.itemsSource.Count == 1, "refresh re-renders without duplication");
+
             var noAccountPath = Path.Combine(Path.GetTempPath(), $"financeos-ui-smoke-empty-{Guid.NewGuid():N}.db");
             using (var noAccountApp = new AppContainer(noAccountPath))
             {
@@ -152,6 +195,13 @@ namespace FinanceOS.EditorTools
                 _ = new AccountsController(emptyAccountsRoot, noAccountApp.Accounts);
                 Check(emptyAccountsRoot.Q<VisualElement>("accounts-list").childCount == 0, "no accounts renders an empty list");
                 Check(emptyAccountsRoot.Q<Label>("accounts-empty").style.display == DisplayStyle.Flex, "empty-state shown when no accounts exist");
+
+                var emptyTransactionsRoot = transactionsTree.Instantiate();
+                _ = new TransactionsController(
+                    emptyTransactionsRoot, noAccountApp.Accounts, noAccountApp.Categories, noAccountApp.Counterparties,
+                    noAccountApp.Transactions, noAccountApp.InternalTransfers);
+                Check(emptyTransactionsRoot.Q<Label>("transactions-empty").style.display == DisplayStyle.Flex, "empty-state shown when no transactions exist");
+                Check(!emptyTransactionsRoot.Q<Button>("new-transaction-button").enabledSelf, "new-transaction button disabled with no account to post against");
             }
 
             TryDeleteQuietly(noAccountPath);
@@ -168,7 +218,8 @@ namespace FinanceOS.EditorTools
             var root = shellTree.Instantiate();
             var dashboardCalls = 0;
             var accountsCalls = 0;
-            var shell = new ShellController(root, () => dashboardCalls++, () => accountsCalls++);
+            var transactionsCalls = 0;
+            var shell = new ShellController(root, () => dashboardCalls++, () => accountsCalls++, () => transactionsCalls++);
 
             var content = new VisualElement();
             shell.SetContent(content);
@@ -177,10 +228,16 @@ namespace FinanceOS.EditorTools
             shell.SetActive(ShellScreen.Accounts);
             Check(root.Q<Button>("nav-accounts").ClassListContains("nav-item-active"), "accounts nav item marked active");
             Check(!root.Q<Button>("nav-dashboard").ClassListContains("nav-item-active"), "dashboard nav item not active");
+            Check(!root.Q<Button>("nav-transactions").ClassListContains("nav-item-active"), "transactions nav item not active");
+
+            shell.SetActive(ShellScreen.Transactions);
+            Check(root.Q<Button>("nav-transactions").ClassListContains("nav-item-active"), "transactions nav item marked active");
+            Check(!root.Q<Button>("nav-accounts").ClassListContains("nav-item-active"), "accounts nav item not active");
 
             shell.SetActive(ShellScreen.Dashboard);
             Check(root.Q<Button>("nav-dashboard").ClassListContains("nav-item-active"), "dashboard nav item marked active");
             Check(!root.Q<Button>("nav-accounts").ClassListContains("nav-item-active"), "accounts nav item not active");
+            Check(!root.Q<Button>("nav-transactions").ClassListContains("nav-item-active"), "transactions nav item not active");
 
             using (var clickEvent = ClickEvent.GetPooled())
             {
@@ -188,7 +245,7 @@ namespace FinanceOS.EditorTools
                 root.Q<Button>("nav-accounts").SendEvent(clickEvent);
             }
 
-            Debug.Log($"[UISmokeTest] Shell nav click delivery: dashboard={dashboardCalls}, accounts={accountsCalls} (best-effort without an attached panel).");
+            Debug.Log($"[UISmokeTest] Shell nav click delivery: dashboard={dashboardCalls}, accounts={accountsCalls}, transactions={transactionsCalls} (best-effort without an attached panel).");
         }
 
         private static void TryDeleteQuietly(string path)

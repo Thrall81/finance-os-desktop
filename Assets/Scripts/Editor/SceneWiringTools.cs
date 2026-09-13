@@ -10,9 +10,9 @@ namespace FinanceOS.EditorTools
 {
     /// <summary>
     /// Wires the shell UI into Main.unity — a GameObject with a UIDocument (PanelSettings +
-    /// Shell.uxml) and the AppBootstrap component, which is handed the Dashboard/Accounts UXML
-    /// assets it swaps into the shell's content area. Idempotent: re-running it updates the
-    /// existing setup rather than duplicating it.
+    /// Shell.uxml) and the AppBootstrap component, which is handed the per-screen UXML assets it
+    /// swaps into the shell's content area. Idempotent: re-running it updates the existing setup
+    /// rather than duplicating it.
     /// </summary>
     internal static class SceneWiringTools
     {
@@ -21,6 +21,7 @@ namespace FinanceOS.EditorTools
         private const string ShellUxmlPath = "Assets/UI/UXML/Shell.uxml";
         private const string DashboardUxmlPath = "Assets/UI/UXML/Dashboard.uxml";
         private const string AccountsUxmlPath = "Assets/UI/UXML/Accounts.uxml";
+        private const string TransactionsUxmlPath = "Assets/UI/UXML/Transactions.uxml";
 
         [MenuItem("Finance OS/Wire Shell Into Main Scene")]
         public static void WireShellIntoMainScene()
@@ -37,6 +38,7 @@ namespace FinanceOS.EditorTools
             var shellTree = LoadRequired<VisualTreeAsset>(ShellUxmlPath);
             var dashboardTree = LoadRequired<VisualTreeAsset>(DashboardUxmlPath);
             var accountsTree = LoadRequired<VisualTreeAsset>(AccountsUxmlPath);
+            var transactionsTree = LoadRequired<VisualTreeAsset>(TransactionsUxmlPath);
 
             var bootstrap = Object.FindFirstObjectByType<AppBootstrap>(FindObjectsInactive.Include);
             var uiObject = bootstrap != null ? bootstrap.gameObject : new GameObject("UI");
@@ -58,6 +60,7 @@ namespace FinanceOS.EditorTools
 
             appBootstrap.DashboardAsset = dashboardTree;
             appBootstrap.AccountsAsset = accountsTree;
+            appBootstrap.TransactionsAsset = transactionsTree;
 
             EditorSceneManager.MarkSceneDirty(scene);
             EditorSceneManager.SaveScene(scene);

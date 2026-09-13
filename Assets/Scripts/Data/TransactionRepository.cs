@@ -97,6 +97,9 @@ namespace FinanceOS.Data
             return row is null ? null : Map(row);
         }
 
+        public IReadOnlyList<Transaction> ListAll() =>
+            _connection.Query<TransactionRow>($"{SelectColumns} ORDER BY operation_date DESC, id DESC").Select(Map).ToList();
+
         public IReadOnlyList<Transaction> ListForAccount(int accountId) =>
             _connection.Query<TransactionRow>(
                     $"{SelectColumns} WHERE account_id = ? ORDER BY operation_date DESC", accountId)

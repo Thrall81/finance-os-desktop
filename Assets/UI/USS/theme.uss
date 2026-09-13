@@ -289,3 +289,37 @@
 .account-row-archived {
     opacity: 0.55;
 }
+
+.filter-row {
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.filter-row > .form-label {
+    margin-bottom: 0;
+    margin-right: 8px;
+}
+
+.filter-row > .form-field {
+    width: 220px;
+}
+
+.form-readonly-value {
+    font-size: 13px;
+    color: var(--color-ink-600);
+}
+
+.form-row-inline {
+    flex-direction: row;
+    align-items: center;
+}
+
+.field-suggested > .unity-base-field__input {
+    background-color: var(--color-gold-soft);
+}
+
+.transactions-table {
+    flex-grow: 1;
+    min-height: 240px;
+}

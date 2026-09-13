@@ -6,6 +6,7 @@
       <ui:VisualElement name="nav-list" class="nav-list">
         <ui:Button name="nav-dashboard" text="Tableau de bord" class="nav-item" />
         <ui:Button name="nav-accounts" text="Comptes" class="nav-item" />
+        <ui:Button name="nav-transactions" text="Transactions" class="nav-item" />
       </ui:VisualElement>
     </ui:VisualElement>
     <ui:VisualElement name="content-area" class="content-area" />
