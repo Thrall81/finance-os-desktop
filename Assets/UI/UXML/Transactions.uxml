@@ -83,13 +83,13 @@
         <ui:Toggle name="form-excluded-toggle" label="Exclure du budget" />
       </ui:VisualElement>
 
-      <ui:Label name="form-error" text="" class="form-error" style="display: none;" />
-
       <ui:VisualElement class="form-actions">
         <ui:Button name="form-delete-button" text="Supprimer" class="danger-button" style="display: none;" />
         <ui:Button name="form-cancel-button" text="Annuler" class="secondary-button" />
         <ui:Button name="form-submit-button" text="Créer" class="primary-button" />
       </ui:VisualElement>
+
+      <ui:Label name="form-error" text="" class="form-error" style="display: none;" />
     </ui:VisualElement>
 
     <ui:VisualElement name="transactions-card" class="card">

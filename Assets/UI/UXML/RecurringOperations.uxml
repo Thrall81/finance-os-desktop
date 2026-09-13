@@ -68,6 +68,7 @@
         <ui:Label text="Jour du mois attendu (facultatif)" class="form-label" />
         <ui:TextField name="form-day-of-month" class="form-field" />
       </ui:VisualElement>
+      <ui:Label name="form-skip-warning" text="" class="form-warning" style="display: none;" />
 
       <ui:VisualElement name="form-category-row" class="form-row">
         <ui:Label text="Catégorie" class="form-label" />
@@ -87,13 +88,14 @@
         <ui:Label name="form-counterparty-readonly" text="—" class="form-readonly-value" />
       </ui:VisualElement>
 
-      <ui:Label name="form-error" text="" class="form-error" style="display: none;" />
-
       <ui:VisualElement class="form-actions">
+        <ui:Button name="form-delete-button" text="Supprimer" class="danger-button" style="display: none;" />
         <ui:Button name="form-toggle-active-button" text="Suspendre" class="danger-button" style="display: none;" />
         <ui:Button name="form-cancel-button" text="Annuler" class="secondary-button" />
         <ui:Button name="form-submit-button" text="Créer" class="primary-button" />
       </ui:VisualElement>
+
+      <ui:Label name="form-error" text="" class="form-error" style="display: none;" />
     </ui:VisualElement>
 
     <ui:VisualElement name="operations-card" class="card">

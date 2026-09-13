@@ -153,6 +153,14 @@ namespace FinanceOS.Data
                 .Select(Map)
                 .ToList();
 
+        /// <summary>Whether any occurrence of this recurring operation, at any date, was ever
+        /// confirmed as a real transaction — the guard before allowing the operation itself to be
+        /// deleted. See docs/07-Interface.md §3.</summary>
+        public bool HasMatchedOccurrence(int recurringOperationId) =>
+            _connection.ExecuteScalar<int>(
+                "SELECT COUNT(*) FROM forecast_occurrence WHERE recurring_operation_id = ? AND status = ?",
+                recurringOperationId, ForecastOccurrenceStatus.Matched.ToStorageString()) > 0;
+
         private static ForecastOccurrence Map(ForecastOccurrenceRow row) => ForecastOccurrence.FromStorage(
             row.Id,
             row.RecurringOperationId,

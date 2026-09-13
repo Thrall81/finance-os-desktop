@@ -77,7 +77,9 @@ namespace FinanceOS.UI
         private readonly TextField _counterpartyField;
         private readonly VisualElement _counterpartyReadonlyRow;
         private readonly Label _counterpartyReadonlyLabel;
+        private readonly Label _skipWarningLabel;
         private readonly Label _errorLabel;
+        private readonly Button _deleteButton;
         private readonly Button _toggleActiveButton;
         private readonly Button _cancelButton;
         private readonly Button _submitButton;
@@ -143,7 +145,9 @@ namespace FinanceOS.UI
             _counterpartyField = root.Q<TextField>("form-counterparty");
             _counterpartyReadonlyRow = root.Q<VisualElement>("form-counterparty-readonly-row");
             _counterpartyReadonlyLabel = root.Q<Label>("form-counterparty-readonly");
+            _skipWarningLabel = root.Q<Label>("form-skip-warning");
             _errorLabel = root.Q<Label>("form-error");
+            _deleteButton = root.Q<Button>("form-delete-button");
             _toggleActiveButton = root.Q<Button>("form-toggle-active-button");
             _cancelButton = root.Q<Button>("form-cancel-button");
             _submitButton = root.Q<Button>("form-submit-button");
@@ -159,8 +163,12 @@ namespace FinanceOS.UI
             _newOperationButton.clicked += OpenCreateForm;
             _cancelButton.clicked += CloseForm;
             _submitButton.clicked += SubmitForm;
+            _deleteButton.clicked += DeleteOperation;
             _toggleActiveButton.clicked += ToggleActive;
             _typeField.RegisterValueChangedCallback(evt => ApplyTypeVisibility(evt.newValue));
+            _startDateField.RegisterValueChangedCallback(_ => UpdateSkipWarning());
+            _dayOfMonthField.RegisterValueChangedCallback(_ => UpdateSkipWarning());
+            _frequencyField.RegisterValueChangedCallback(_ => UpdateSkipWarning());
             _listView.selectionChanged += _ => OnRowSelected();
 
             Refresh();
@@ -270,9 +278,11 @@ namespace FinanceOS.UI
             _counterpartyReadonlyRow.style.display = DisplayStyle.None;
             _counterpartyField.SetValueWithoutNotify(string.Empty);
 
+            _deleteButton.style.display = DisplayStyle.None;
             _toggleActiveButton.style.display = DisplayStyle.None;
             _submitButton.text = "Créer";
             HideError();
+            HideSkipWarning();
 
             ApplyTypeVisibility(TypeOptions[0].Text);
             _formCard.style.display = DisplayStyle.Flex;
@@ -316,10 +326,12 @@ namespace FinanceOS.UI
             _counterpartyReadonlyRow.style.display = DisplayStyle.Flex;
             _counterpartyReadonlyLabel.text = row.CounterpartyText;
 
+            _deleteButton.style.display = DisplayStyle.Flex;
             _toggleActiveButton.style.display = DisplayStyle.Flex;
             _toggleActiveButton.text = row.IsActive ? "Suspendre" : "Reprendre";
             _submitButton.text = "Enregistrer";
             HideError();
+            HideSkipWarning();
 
             _formCard.style.display = DisplayStyle.Flex;
         }
@@ -465,6 +477,79 @@ namespace FinanceOS.UI
 
             CloseForm();
             Refresh();
+        }
+
+        private void DeleteOperation()
+        {
+            if (_editingOperationId is not int id)
+            {
+                return;
+            }
+
+            try
+            {
+                _operations.Delete(id);
+            }
+            catch (InvalidOperationException ex)
+            {
+                ShowError(ex.Message);
+                return;
+            }
+
+            CloseForm();
+            Refresh();
+        }
+
+        /// <summary>Live preview, recomputed on every relevant field change while creating — warns
+        /// before submission if the chosen start date/day-of-month combination would silently skip
+        /// the first cycle (the exact trap that produced a real, hard-to-diagnose missing occurrence
+        /// — see the "Real user data revealed two bugs" note in project memory). Never blocks
+        /// submission: the combination is still valid, just possibly not what the user meant.</summary>
+        private void UpdateSkipWarning()
+        {
+            if (_editingOperationId is not null)
+            {
+                return;
+            }
+
+            if (!DateFormat.TryParseInput(_startDateField.value, out var startDate))
+            {
+                HideSkipWarning();
+                return;
+            }
+
+            int? dayOfMonth = null;
+            if (!string.IsNullOrWhiteSpace(_dayOfMonthField.value))
+            {
+                if (!int.TryParse(_dayOfMonthField.value, out var parsedDay) || parsedDay is < 1 or > 31)
+                {
+                    HideSkipWarning();
+                    return;
+                }
+
+                dayOfMonth = parsedDay;
+            }
+
+            var frequencyIndex = FrequencyOptions.ToList().FindIndex(o => o.Text == _frequencyField.value);
+            var frequency = FrequencyOptions[frequencyIndex < 0 ? 0 : frequencyIndex].Frequency;
+
+            var firstDate = _operations.PreviewFirstOccurrenceDate(frequency, startDate, dayOfMonth);
+            if (firstDate is { } date && (date.Year != startDate.Year || date.Month != startDate.Month))
+            {
+                _skipWarningLabel.text =
+                    $"Avec ces réglages, le premier versement prévu sera le {DateFormat.Short(date)}, pas avant — le jour du mois choisi est déjà passé par rapport à la date de début. Ajuste l'un des deux si ce n'est pas voulu.";
+                _skipWarningLabel.style.display = DisplayStyle.Flex;
+            }
+            else
+            {
+                HideSkipWarning();
+            }
+        }
+
+        private void HideSkipWarning()
+        {
+            _skipWarningLabel.text = string.Empty;
+            _skipWarningLabel.style.display = DisplayStyle.None;
         }
 
         private void ToggleActive()

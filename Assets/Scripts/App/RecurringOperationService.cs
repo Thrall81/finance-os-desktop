@@ -55,6 +55,38 @@ namespace FinanceOS.App
             _operations.Update(operation);
         }
 
+        /// <summary>Previews the first date this schedule would actually produce, without
+        /// persisting anything — lets the UI warn before creation if a start date/day-of-month
+        /// mismatch would silently skip the first cycle (e.g. day-of-month 28 with a start date of
+        /// the 29th jumps straight to next month). Null means the schedule never produces an
+        /// occurrence (e.g. an end date before the start date). See docs/07-Interface.md §3.</summary>
+        public DateTime? PreviewFirstOccurrenceDate(
+            RecurringFrequency frequency, DateTime startDate, int? expectedDayOfMonth,
+            int intervalValue = 1, DateTime? endDate = null) =>
+            ForecastOccurrenceGenerator
+                .EnumerateScheduledDates(frequency, intervalValue, startDate, endDate, expectedDayOfMonth, startDate, startDate.AddYears(2))
+                .Cast<DateTime?>()
+                .FirstOrDefault();
+
+        /// <summary>Deletes a recurring operation and every occurrence it generated, refusing if
+        /// any of them was ever confirmed as a real transaction — deleting those would silently
+        /// erase the record of something that actually happened. The only way today to undo a
+        /// mistake at creation (wrong start date, wrong day-of-month, ...): editing is deliberately
+        /// limited to the expected amount and active/suspended state (see the UI README). Relies on
+        /// `forecast_occurrence.recurring_operation_id ON DELETE CASCADE` to remove the (never
+        /// reconciled) occurrences themselves. See docs/07-Interface.md §3.</summary>
+        public void Delete(int operationId)
+        {
+            RequireOperation(operationId);
+            if (_occurrences.HasMatchedOccurrence(operationId))
+            {
+                throw new InvalidOperationException(
+                    "Impossible de supprimer : au moins une occurrence de cette opération a déjà été confirmée comme réelle.");
+            }
+
+            _operations.Delete(operationId);
+        }
+
         public void Suspend(int operationId)
         {
             var operation = RequireOperation(operationId);

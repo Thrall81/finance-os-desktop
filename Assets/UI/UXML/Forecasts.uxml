@@ -62,11 +62,11 @@
           <ui:Label text="Montant (€)" class="form-label" />
           <ui:TextField name="confirm-amount" class="form-field" />
         </ui:VisualElement>
-        <ui:Label name="confirm-error" text="" class="form-error" style="display: none;" />
         <ui:VisualElement class="form-actions">
           <ui:Button name="confirm-cancel-button" text="Annuler" class="secondary-button" />
           <ui:Button name="confirm-submit-button" text="C'est arrivé" class="primary-button" />
         </ui:VisualElement>
+        <ui:Label name="confirm-error" text="" class="form-error" style="display: none;" />
       </ui:VisualElement>
     </ui:VisualElement>
 
@@ -117,11 +117,10 @@
           <ui:DropdownField name="simulation-category" class="form-field" />
         </ui:VisualElement>
 
-        <ui:Label name="simulation-error" text="" class="form-error" style="display: none;" />
-
         <ui:VisualElement class="form-actions">
           <ui:Button name="simulation-run-button" text="Simuler" class="primary-button" />
         </ui:VisualElement>
+        <ui:Label name="simulation-error" text="" class="form-error" style="display: none;" />
 
         <ui:VisualElement name="simulation-result-card" class="card form-card" style="display: none;">
           <ui:Label text="Résultat de la simulation" class="card-title" />

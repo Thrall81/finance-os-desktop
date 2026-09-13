@@ -231,6 +231,51 @@ namespace FinanceOS.EditorTools
             Check(!afterSuspend.Operations.First(o => o.Name == "Salaire").IsActive, "suspended operation reflects inactive state");
             Check(afterSuspend.Operations.Last().Name == "Salaire", "suspended operations sort after active ones");
 
+            // Real bug found via a real account (see project memory, 2026-09-13): a start date one
+            // day after the chosen day-of-month silently skips the whole first month.
+            var skippedFirstDate = app.RecurringOperations.PreviewFirstOccurrenceDate(
+                RecurringFrequency.Monthly, new DateTime(2026, 9, 29), expectedDayOfMonth: 28);
+            Check(skippedFirstDate == new DateTime(2026, 10, 28), "mismatched start date/day-of-month previews a skipped first month, not September");
+
+            var alignedFirstDate = app.RecurringOperations.PreviewFirstOccurrenceDate(
+                RecurringFrequency.Monthly, new DateTime(2026, 9, 28), expectedDayOfMonth: 28);
+            Check(alignedFirstDate == new DateTime(2026, 9, 28), "matching start date/day-of-month previews the same month, no skip");
+
+            var weeklyFirstDate = app.RecurringOperations.PreviewFirstOccurrenceDate(
+                RecurringFrequency.Weekly, new DateTime(2026, 9, 29), expectedDayOfMonth: null);
+            Check(weeklyFirstDate == new DateTime(2026, 9, 29), "a weekly schedule always starts on its own start date — no day-of-month mismatch possible");
+
+            var deletableOperation = app.RecurringOperations.Create(
+                "Abonnement test", RecurringOperationType.Expense, 999, RecurringFrequency.Monthly,
+                new DateTime(2026, 1, 1), sourceAccountId: account.Id, expectedDayOfMonth: 1);
+            app.RecurringOperations.GenerateOccurrences(deletableOperation.Id, deletableOperation.StartDate, today.AddDays(30));
+            app.RecurringOperations.Delete(deletableOperation.Id);
+            Check(app.RecurringOperations.FindById(deletableOperation.Id) is null, "deleting an operation with no matched occurrence removes it");
+            Check(app.ForecastOccurrences.ListForRecurringOperation(deletableOperation.Id, deletableOperation.StartDate, today.AddYears(1)).Count == 0,
+                "deleting an operation cascades to its occurrences (ON DELETE CASCADE)");
+
+            // A separate operation for this case (rather than reusing "rent"/"salary"): confirming
+            // an occurrence removes it from the verification queue other assertions further down
+            // still rely on.
+            var historyOperation = app.RecurringOperations.Create(
+                "Abonnement avec historique", RecurringOperationType.Expense, 500, RecurringFrequency.Monthly,
+                new DateTime(2026, 1, 1), sourceAccountId: account.Id, expectedDayOfMonth: 1);
+            var historyOccurrences = app.RecurringOperations.GenerateOccurrences(historyOperation.Id, historyOperation.StartDate, today.AddDays(30));
+            var matchedOccurrence = historyOccurrences.First();
+            app.ForecastOccurrences.ConfirmAsTransaction(matchedOccurrence.Id, matchedOccurrence.ExpectedDate, matchedOccurrence.ExpectedAmountMinor);
+            var deleteBlocked = false;
+            try
+            {
+                app.RecurringOperations.Delete(historyOperation.Id);
+            }
+            catch (InvalidOperationException)
+            {
+                deleteBlocked = true;
+            }
+
+            Check(deleteBlocked, "deleting an operation with a matched (confirmed) occurrence is refused");
+            Check(app.RecurringOperations.FindById(historyOperation.Id) is not null, "the refused operation is still there afterward");
+
             var recurringOperationsTree = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(RecurringOperationsUxmlPath);
             if (recurringOperationsTree == null)
             {
@@ -242,12 +287,15 @@ namespace FinanceOS.EditorTools
                 recurringOperationsRoot, app.Accounts, app.Categories, app.Counterparties, app.RecurringOperations, app.Settings);
 
             var operationsListView = recurringOperationsRoot.Q<MultiColumnListView>("operations-list-view");
-            Check(operationsListView.itemsSource.Count == 3, "controller renders all three recurring operations");
+            Check(operationsListView.itemsSource.Count == 4, "controller renders every recurring operation, including the undeletable one with history");
             Check(operationsListView.columns.Count == 6, "six table columns configured");
             Check(recurringOperationsRoot.Q<Label>("operations-empty").style.display == DisplayStyle.None, "empty-state hidden when operations exist");
 
             recurringOperationsController.Refresh();
-            Check(operationsListView.itemsSource.Count == 3, "refresh re-renders without duplication");
+            Check(operationsListView.itemsSource.Count == 4, "refresh re-renders without duplication");
+
+            Check(recurringOperationsRoot.Q<Label>("form-skip-warning") is not null, "skip-warning label is bound");
+            Check(recurringOperationsRoot.Q<Button>("form-delete-button") is not null, "delete button is bound");
 
             var forecastsViewModel = ForecastsViewModelBuilder.Build(app, null, today);
             Check(forecastsViewModel.SelectedAccountId == account.Id, "primary account resolved to the Current-type account");

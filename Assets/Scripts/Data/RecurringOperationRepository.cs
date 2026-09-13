@@ -102,6 +102,11 @@ namespace FinanceOS.Data
                 operation.Id);
         }
 
+        /// <summary>Cascades to `forecast_occurrence` via `ON DELETE CASCADE` — see
+        /// `SchemaMigrations.cs`. Callers must confirm nothing irreplaceable is lost first (see
+        /// `RecurringOperationService.Delete`).</summary>
+        public void Delete(int id) => _connection.Execute("DELETE FROM recurring_operation WHERE id = ?", id);
+
         public RecurringOperation? FindById(int id)
         {
             var row = _connection.Query<RecurringOperationRow>($"{SelectColumns} WHERE id = ?", id).FirstOrDefault();

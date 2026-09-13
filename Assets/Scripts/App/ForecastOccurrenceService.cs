@@ -53,6 +53,9 @@ namespace FinanceOS.App
         public IReadOnlyList<ForecastOccurrence> ListForAccount(int accountId, DateTime from, DateTime to) =>
             _occurrences.ListForAccountAndPeriod(accountId, from, to);
 
+        public IReadOnlyList<ForecastOccurrence> ListForRecurringOperation(int recurringOperationId, DateTime from, DateTime to) =>
+            _occurrences.ListForRecurringOperation(recurringOperationId, from, to);
+
         /// <summary>Transitions every still-planned occurrence older than the threshold to
         /// "Manquée" — idempotent (only ever touches 'planned' rows, see
         /// ForecastOccurrenceRepository.ListPlannedOlderThan), called on app startup so this

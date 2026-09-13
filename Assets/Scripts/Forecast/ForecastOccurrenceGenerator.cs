@@ -62,18 +62,29 @@ namespace FinanceOS.Forecast
                 _ => throw new ArgumentOutOfRangeException(nameof(operation), operation.Type, "Unhandled recurring operation type."),
             };
 
-        private static IEnumerable<DateTime> EnumerateScheduledDates(RecurringOperation operation, DateTime horizonStart, DateTime horizonEnd)
+        private static IEnumerable<DateTime> EnumerateScheduledDates(RecurringOperation operation, DateTime horizonStart, DateTime horizonEnd) =>
+            EnumerateScheduledDates(
+                operation.Frequency, operation.IntervalValue, operation.StartDate, operation.EndDate,
+                operation.ExpectedDayOfMonth, horizonStart, horizonEnd);
+
+        /// <summary>The pure date-scheduling rule, independent of any particular
+        /// <see cref="RecurringOperation"/> instance — lets callers preview a schedule (e.g. to warn
+        /// that a start date/day-of-month combination skips the first cycle) without needing a
+        /// fully-constructed, account-bound operation. See docs/06-Moteur_de_prevision.md §5.</summary>
+        public static IEnumerable<DateTime> EnumerateScheduledDates(
+            RecurringFrequency frequency, int intervalValue, DateTime startDate, DateTime? endDate,
+            int? expectedDayOfMonth, DateTime horizonStart, DateTime horizonEnd)
         {
-            var effectiveEnd = operation.EndDate is { } end && end < horizonEnd ? end : horizonEnd;
-            if (effectiveEnd < operation.StartDate)
+            var effectiveEnd = endDate is { } end && end < horizonEnd ? end : horizonEnd;
+            if (effectiveEnd < startDate)
             {
                 yield break;
             }
 
-            if (operation.Frequency == RecurringFrequency.Weekly)
+            if (frequency == RecurringFrequency.Weekly)
             {
-                var stepDays = 7 * Math.Max(1, operation.IntervalValue);
-                for (var date = operation.StartDate; date <= effectiveEnd; date = date.AddDays(stepDays))
+                var stepDays = 7 * Math.Max(1, intervalValue);
+                for (var date = startDate; date <= effectiveEnd; date = date.AddDays(stepDays))
                 {
                     if (date >= horizonStart)
                     {
@@ -84,10 +95,10 @@ namespace FinanceOS.Forecast
                 yield break;
             }
 
-            var stepMonths = MonthsFor(operation.Frequency) * Math.Max(1, operation.IntervalValue);
-            var dayOfMonth = operation.ExpectedDayOfMonth ?? operation.StartDate.Day;
+            var stepMonths = MonthsFor(frequency) * Math.Max(1, intervalValue);
+            var dayOfMonth = expectedDayOfMonth ?? startDate.Day;
 
-            var monthCursor = new DateTime(operation.StartDate.Year, operation.StartDate.Month, 1);
+            var monthCursor = new DateTime(startDate.Year, startDate.Month, 1);
             var endMonthCursor = new DateTime(effectiveEnd.Year, effectiveEnd.Month, 1);
 
             while (monthCursor <= endMonthCursor)
@@ -97,7 +108,7 @@ namespace FinanceOS.Forecast
                 var daysInMonth = DateTime.DaysInMonth(monthCursor.Year, monthCursor.Month);
                 var occurrenceDate = new DateTime(monthCursor.Year, monthCursor.Month, Math.Min(dayOfMonth, daysInMonth));
 
-                if (occurrenceDate >= operation.StartDate && occurrenceDate >= horizonStart && occurrenceDate <= effectiveEnd)
+                if (occurrenceDate >= startDate && occurrenceDate >= horizonStart && occurrenceDate <= effectiveEnd)
                 {
                     yield return occurrenceDate;
                 }
