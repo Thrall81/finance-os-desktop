@@ -277,6 +277,33 @@
     color: var(--color-danger);
 }
 
+.alert-row {
+    flex-direction: row;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom-width: 1px;
+    border-bottom-color: var(--color-border);
+}
+
+.alert-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 4px;
+    margin-right: 10px;
+    flex-shrink: 0;
+    background-color: var(--color-gold);
+}
+
+.alert-dot-severe {
+    background-color: var(--color-danger);
+}
+
+.alert-message {
+    font-size: 13px;
+    color: var(--color-ink-900);
+    flex-grow: 1;
+}
+
 .accounts-header {
     flex-direction: row;
     justify-content: space-between;

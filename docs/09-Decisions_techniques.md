@@ -41,6 +41,7 @@ Journal des décisions structurantes, dans le même format que l'ancien projet (
 | ADR-125 | Reste à vivre sur le Tableau de bord ; placeholder « — » sans budget plutôt qu'un calcul erroné | ACCEPTED |
 | ADR-126 | Prochaines opérations sur le Tableau de bord ; badge Attendue/Estimée | ACCEPTED |
 | ADR-127 | Synthèse budgétaire sur le Tableau de bord ; barres de progression compactes | ACCEPTED |
+| ADR-128 | Alertes sur le Tableau de bord ; solde faible + dépassement de budget, jamais persistées | ACCEPTED |
 
 ---
 
@@ -464,5 +465,27 @@ Journal des décisions structurantes, dans le même format que l'ancien projet (
 **Simplification assumée par rapport à la maquette** : la barre ne représente que le réel rapporté au prévu, pas réel+engagé — la maquette elle-même est ambiguë sur ce point pour sa ligne « Logement » (barre à 100 % avec puce « Engagé » alors que la ligne juste au-dessus n'a que du réel). Plutôt que de deviner une sémantique visuelle mixte non documentée, le réel seul reste cohérent avec ce que la barre représente pour toutes les autres lignes, et l'écran Budget affiche déjà le détail complet (prévu/réel/engagé/restant, plus les barres groupées `BudgetBarChartElement`) pour qui veut la vue complète — cette carte est une synthèse, pas un doublon.
 
 **Vérifié en batchmode** : les deux branches (avec et sans budget pour le mois affiché), plus un cas concret réel dépassant son enveloppe (réutilise l'allocation Logement déjà présente dans le scénario de test partagé — prévu 700,00 €, réel 90,00 €, engagé 650,00 €, restant −40,00 € — donc pas besoin d'un jeu de données isolé ici, une seule catégorie suffit à ne laisser aucune ambiguïté d'ordre) : ratio de la barre, classe CSS de dépassement, texte de note composé — vert du premier coup.
+
+**Documents concernés** : `07-Interface.md` §5.
+
+---
+
+# 30. ADR-128 — Alertes sur le Tableau de bord
+
+**Contexte** : dernière carte de la liste originale du Tableau de bord (`01-Perimetre.md` §2.10 : « prochaines opérations, file de vérification en attente, synthèse budgétaire, alertes calculées à l'affichage »). `03-Modele_de_donnees.md` écarte explicitement l'entité `Alert` de l'ancien modèle : « alertes calculées à l'affichage, non persistées, en V1 » — rien à stocker, tout à recalculer à chaque rendu.
+
+**Décision** : `DashboardViewModelBuilder.BuildAlerts` calcule deux types, chacun réutilisant une donnée déjà calculée ailleurs sur le même écran plutôt qu'un second calcul :
+- **Solde faible** — se déclenche si le point bas prévisionnel du mois (`forecast.LowestBalanceMinor`, la même valeur déjà affichée par la carte KPI « Point bas prévisionnel ») passe sous `AppSettings.LowBalanceThresholdMinor` (Paramètres, 200,00 € par défaut). Comme « aujourd'hui » fait partie de la fenêtre sur laquelle ce point bas est calculé, un solde déjà bas maintenant et un creux encore à venir sont couverts par la même vérification — un seul seuil, pas deux alertes séparées « solde actuel bas » / « creux à venir ».
+- **Dépassement de budget** — une alerte par ligne déjà marquée `IsOverBudget` dans `DashboardBudgetRowViewModel` (Synthèse budgétaire, ADR-127), message composé à partir du nom de catégorie et du `NoteText` déjà phrasé (« Dépassement de X € ») — aucune nouvelle requête, aucun nouveau calcul.
+
+Chaque alerte porte `IsSevere` : dépassement de budget (danger/rust, cohérent avec `.amount-negative`/`.budget-summary-note-over` déjà utilisés ailleurs pour signaler un problème déjà arrivé) contre solde faible (or/avertissement, cohérent avec `.form-warning` d'ADR-120 pour un signal préventif, pas encore un problème). Nouvelle classe `.alert-dot`/`.alert-dot-severe` (pastille colorée) plutôt qu'un badge textuel — l'écran a déjà plusieurs pastilles de légende (donut) et badges (Attendue/Estimée), une pastille simple suffit ici et reste visuellement distincte.
+
+**Premier vrai usage du seuil de solde faible** : `AppSettings.LowBalanceThresholdMinor` existe et est réglable depuis l'écran Paramètres depuis le tout début du projet (`SettingsController`), mais rien ne le consommait jusqu'ici — cette carte est le premier code qui lit réellement ce réglage pour produire un effet visible, pas seulement pour le stocker.
+
+**Vérifié en batchmode** : aucune alerte tant qu'aucun budget n'existe et que le solde reste confortable (scénario partagé) ; exactement une alerte de dépassement une fois le budget Logement créé (réutilise le même cas qu'ADR-127, prévu 700 € / réel 90 € / engagé 650 €) ; l'alerte de solde faible, elle, vérifiée sur un `AppContainer` isolé (compte à 50,00 €, sous le seuil par défaut de 200,00 €) — le scénario partagé ne fait jamais chuter le solde du compte principal près de ce seuil, même stratégie d'isolation qu'ADR-126. Vert du premier coup.
+
+**Avec cette carte, les sept cartes originales du Tableau de bord (`01-Perimetre.md` §2.10) sont toutes construites** — dernière pièce du Tableau de bord tel que spécifié avant le pivot vers les graphiques puis les captures d'écran réelles.
+
+**Conséquences négatives** : pas de seuil réglable séparé pour « dépassement de budget » (toute catégorie en négatif déclenche, pas de marge de tolérance) — cohérent avec l'absence de tolérance déjà dans `BudgetCategorySummary.RemainingAmountMinor`, pas une lacune propre à cette carte. Pas de regroupement si plusieurs catégories dépassent en même temps (une alerte par catégorie, pas de résumé « 3 catégories en dépassement ») — jugé suffisamment lisible pour le nombre de catégories qu'un budget personnel alloue typiquement.
 
 **Documents concernés** : `07-Interface.md` §5.

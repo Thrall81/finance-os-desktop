@@ -23,6 +23,15 @@ namespace FinanceOS.UI
     public sealed record DashboardBudgetRowViewModel(
         string CategoryName, string ActualText, string PlannedText, string NoteText, bool IsOverBudget, float SpentRatio);
 
+    /// <summary>One computed-at-display-time alert — the `Alert` entity from the old model was
+    /// deliberately dropped (`03-Modele_de_donnees.md`: "alertes calculées à l'affichage, non
+    /// persistées, en V1"), so this exists only as long as the screen is rendered, never a
+    /// database row. IsSevere picks the visual treatment: a budget
+    /// overrun is already happening (danger/rust, matching `.amount-negative` elsewhere), a low
+    /// projected balance is a heads-up, not yet a problem (gold/warning, matching `.form-warning`
+    /// from ADR-120).</summary>
+    public sealed record DashboardAlertViewModel(string Message, bool IsSevere);
+
     /// <summary>One category's slice of this month's expenses — raw amount for the donut's angle
     /// math plus already-formatted text for the legend row next to it. See docs/07-Interface.md §8.</summary>
     public sealed record ExpenseCategorySliceViewModel(
@@ -42,5 +51,6 @@ namespace FinanceOS.UI
         IReadOnlyList<ExpenseCategorySliceViewModel> ExpenseBreakdown,
         IReadOnlyList<DashboardVerificationItem> VerificationQueue,
         IReadOnlyList<DashboardUpcomingItem> UpcomingOperations,
-        IReadOnlyList<DashboardBudgetRowViewModel> BudgetSummary);
+        IReadOnlyList<DashboardBudgetRowViewModel> BudgetSummary,
+        IReadOnlyList<DashboardAlertViewModel> Alerts);
 }

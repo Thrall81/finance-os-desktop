@@ -98,6 +98,7 @@ namespace FinanceOS.EditorTools
             Check(viewModel.ChartSeries.Count > 0, "chart series is populated when an account exists");
             Check(viewModel.RemainingToLiveText == "—", "reste à vivre falls back to a placeholder with no budget created yet for this month");
             Check(viewModel.BudgetSummary.Count == 0, "budget summary is empty with no budget created yet for this month");
+            Check(viewModel.Alerts.Count == 0, "no alerts yet — no budget to be over, and the balance is well above the low-balance threshold");
             Check(viewModel.UpcomingOperations.Count == 0, "no upcoming operations yet — the only occurrence so far (September's rent) is already overdue, not upcoming");
 
             var visualTree = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(DashboardUxmlPath);
@@ -140,6 +141,9 @@ namespace FinanceOS.EditorTools
 
             Check(root.Q<Label>("budget-summary-empty").style.display == DisplayStyle.Flex, "budget-summary empty-state shown with no budget created yet");
             Check(root.Q<VisualElement>("budget-summary-list").childCount == 0, "no budget-summary rows rendered yet");
+
+            Check(root.Q<Label>("alerts-empty").style.display == DisplayStyle.Flex, "alerts empty-state shown with nothing to alert on yet");
+            Check(root.Q<VisualElement>("alerts-list").childCount == 0, "no alert rows rendered yet");
 
             // Isolated fixture (own temp database) rather than reusing `app`/`account`: by the time
             // enough recurring operations exist later in this scenario to have real upcoming
@@ -471,6 +475,32 @@ namespace FinanceOS.EditorTools
             var budgetSummaryFill = root.Q<VisualElement>(className: "budget-summary-bar-fill");
             Check(budgetSummaryFill is not null, "budget-summary bar fill element bound");
             Check(budgetSummaryFill!.ClassListContains("budget-summary-bar-fill-over"), "over-budget row's bar fill carries the over-budget class");
+
+            Check(dashboardViewModelWithBudget.Alerts.Count == 1, "the over-budget Logement category raises exactly one alert — the balance is still well above the low-balance threshold");
+            Check(dashboardViewModelWithBudget.Alerts[0].IsSevere, "a budget overrun is a severe alert");
+            Check(dashboardViewModelWithBudget.Alerts[0].Message == "Dépassement de budget : Logement — Dépassement de 40,00 €.", "alert message composed from the category name and the already-computed note text");
+
+            Check(root.Q<Label>("alerts-empty").style.display == DisplayStyle.None, "alerts empty-state hidden once an alert exists");
+            var alertRow = root.Q<VisualElement>("alerts-list").Children().First();
+            Check(alertRow.Q<VisualElement>(className: "alert-dot")!.ClassListContains("alert-dot-severe"), "severe alert's dot carries the severe class");
+
+            // Isolated fixture for "solde faible": the shared scenario's account balance never
+            // dips anywhere near the 200,00 € default threshold, so exercising this alert needs
+            // its own small account rather than trying to engineer the shared one into a dip.
+            var lowBalancePath = Path.Combine(Path.GetTempPath(), $"financeos-ui-smoke-lowbalance-{Guid.NewGuid():N}.db");
+            using (var lowBalanceApp = new AppContainer(lowBalancePath))
+            {
+                lowBalanceApp.Categories.SeedDefaultCategoriesIfEmpty();
+                var lowBalanceAccount = lowBalanceApp.Accounts.CreateAccount("Compte fragile", AccountType.Current, "EUR", 5_000);
+                lowBalanceApp.Accounts.RecordOfficialBalance(lowBalanceAccount.Id, 5_000, today);
+
+                var lowBalanceViewModel = DashboardViewModelBuilder.Build(lowBalanceApp, today);
+                Check(lowBalanceViewModel!.Alerts.Count == 1, "a 50,00 € balance is below the 200,00 € default low-balance threshold");
+                Check(!lowBalanceViewModel.Alerts[0].IsSevere, "a low projected balance is a heads-up, not yet a problem");
+                Check(lowBalanceViewModel.Alerts[0].Message.StartsWith("Solde faible : 50,00 €"), "alert message states the actual projected low balance");
+            }
+
+            TryDeleteQuietly(lowBalancePath);
 
             var octoberViewModel = BudgetsViewModelBuilder.Build(app.Budget, app.Categories, 2026, 10);
             Check(!octoberViewModel.BudgetExists, "no budget exists yet for a month never created");

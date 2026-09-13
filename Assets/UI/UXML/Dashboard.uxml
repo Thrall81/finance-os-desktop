@@ -72,5 +72,13 @@
       <ui:Label name="budget-summary-empty" text="Aucun budget créé pour ce mois." class="empty-state" />
       <ui:VisualElement name="budget-summary-list" class="list" />
     </ui:VisualElement>
+
+    <ui:VisualElement name="alerts-card" class="card">
+      <ui:VisualElement class="card-header">
+        <ui:Label text="Alertes" class="card-title" />
+      </ui:VisualElement>
+      <ui:Label name="alerts-empty" text="Aucune alerte pour l'instant." class="empty-state" />
+      <ui:VisualElement name="alerts-list" class="list" />
+    </ui:VisualElement>
   </ui:ScrollView>
 </ui:UXML>

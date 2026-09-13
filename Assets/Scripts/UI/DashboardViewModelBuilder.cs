@@ -44,6 +44,7 @@ namespace FinanceOS.UI
             var remainingToLiveText = BuildRemainingToLiveText(app, today);
             var upcomingOperations = BuildUpcomingOperations(app, account, today);
             var budgetSummary = BuildBudgetSummary(app, today);
+            var alerts = BuildAlerts(app, account, forecast.LowestBalanceMinor, forecast.LowestBalanceDate, budgetSummary);
 
             return new DashboardViewModel(
                 account.Name,
@@ -56,7 +57,37 @@ namespace FinanceOS.UI
                 expenseBreakdown,
                 verificationQueue,
                 upcomingOperations,
-                budgetSummary);
+                budgetSummary,
+                alerts);
+        }
+
+        /// <summary>"Solde faible" fires once per screen if the lowest projected balance within
+        /// this month's horizon (the same figure the "Point bas prévisionnel" KPI already shows —
+        /// today itself is inside that window, so an already-low current balance is caught the
+        /// same way as a dip still ahead, no separate check needed) drops under the user's
+        /// configured threshold (Paramètres). "Dépassement de budget" fires once per over-budget
+        /// category already flagged in <paramref name="budgetSummary"/> — reused, not
+        /// recalculated. See docs/03-Modele_de_donnees.md ("Alert... non persistées").</summary>
+        private static IReadOnlyList<DashboardAlertViewModel> BuildAlerts(
+            AppContainer app, Account account, long lowestBalanceMinor, DateTime lowestBalanceDate,
+            IReadOnlyList<DashboardBudgetRowViewModel> budgetSummary)
+        {
+            var alerts = new List<DashboardAlertViewModel>();
+
+            var lowBalanceThreshold = app.Settings.Get().LowBalanceThresholdMinor;
+            if (lowestBalanceMinor < lowBalanceThreshold)
+            {
+                alerts.Add(new DashboardAlertViewModel(
+                    $"Solde faible : {MoneyFormat.Format(lowestBalanceMinor, account.Currency)} prévu le {DateFormat.Short(lowestBalanceDate)}.",
+                    false));
+            }
+
+            foreach (var row in budgetSummary.Where(r => r.IsOverBudget))
+            {
+                alerts.Add(new DashboardAlertViewModel($"Dépassement de budget : {row.CategoryName} — {row.NoteText}.", true));
+            }
+
+            return alerts;
         }
 
         /// <summary>Empty when no budget exists for the current month — same reasoning as

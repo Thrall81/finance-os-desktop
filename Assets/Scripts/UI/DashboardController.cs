@@ -28,6 +28,8 @@ namespace FinanceOS.UI
         private readonly VisualElement _upcomingList;
         private readonly Label _budgetSummaryEmptyLabel;
         private readonly VisualElement _budgetSummaryList;
+        private readonly Label _alertsEmptyLabel;
+        private readonly VisualElement _alertsList;
 
         public DashboardController(VisualElement root)
         {
@@ -57,6 +59,9 @@ namespace FinanceOS.UI
 
             _budgetSummaryEmptyLabel = root.Q<Label>("budget-summary-empty");
             _budgetSummaryList = root.Q<VisualElement>("budget-summary-list");
+
+            _alertsEmptyLabel = root.Q<Label>("alerts-empty");
+            _alertsList = root.Q<VisualElement>("alerts-list");
         }
 
         public void Render(DashboardViewModel viewModel)
@@ -110,6 +115,16 @@ namespace FinanceOS.UI
             foreach (var row in viewModel.BudgetSummary)
             {
                 _budgetSummaryList.Add(BuildBudgetSummaryRow(row));
+            }
+
+            _alertsEmptyLabel.style.display = viewModel.Alerts.Count == 0
+                ? DisplayStyle.Flex
+                : DisplayStyle.None;
+
+            _alertsList.Clear();
+            foreach (var alert in viewModel.Alerts)
+            {
+                _alertsList.Add(BuildAlertRow(alert));
             }
         }
 
@@ -192,6 +207,23 @@ namespace FinanceOS.UI
             container.Add(track);
             container.Add(noteLabel);
             return container;
+        }
+
+        private static VisualElement BuildAlertRow(DashboardAlertViewModel alert)
+        {
+            var row = new VisualElement();
+            row.AddToClassList("alert-row");
+
+            var dot = new VisualElement();
+            dot.AddToClassList("alert-dot");
+            dot.EnableInClassList("alert-dot-severe", alert.IsSevere);
+
+            var messageLabel = new Label(alert.Message);
+            messageLabel.AddToClassList("alert-message");
+
+            row.Add(dot);
+            row.Add(messageLabel);
+            return row;
         }
 
         private static VisualElement BuildDonutLegendRow(ExpenseCategorySliceViewModel slice, Color color)
