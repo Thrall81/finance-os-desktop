@@ -33,5 +33,12 @@ namespace FinanceOS.App
             settings.SetDefaultCurrentAccount(accountId);
             _settings.Save(settings);
         }
+
+        public void UpdateMissedThreshold(int days)
+        {
+            var settings = _settings.Load();
+            settings.UpdateMissedThreshold(days);
+            _settings.Save(settings);
+        }
     }
 }

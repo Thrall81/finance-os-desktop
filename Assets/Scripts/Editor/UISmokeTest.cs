@@ -22,6 +22,7 @@ namespace FinanceOS.EditorTools
         private const string AccountsUxmlPath = "Assets/UI/UXML/Accounts.uxml";
         private const string TransactionsUxmlPath = "Assets/UI/UXML/Transactions.uxml";
         private const string RecurringOperationsUxmlPath = "Assets/UI/UXML/RecurringOperations.uxml";
+        private const string ForecastsUxmlPath = "Assets/UI/UXML/Forecasts.uxml";
         private const string ShellUxmlPath = "Assets/UI/UXML/Shell.uxml";
 
         [MenuItem("Finance OS/Run UI Smoke Test")]
@@ -241,6 +242,40 @@ namespace FinanceOS.EditorTools
             recurringOperationsController.Refresh();
             Check(operationsListView.itemsSource.Count == 3, "refresh re-renders without duplication");
 
+            var forecastsViewModel = ForecastsViewModelBuilder.Build(app, null, today);
+            Check(forecastsViewModel.SelectedAccountId == account.Id, "primary account resolved to the Current-type account");
+            Check(forecastsViewModel.Synthesis is not null, "synthesis built for the resolved account");
+            Check(forecastsViewModel.VerificationQueue.Any(v => v.Label == "Loyer"), "rent occurrence appears in the verification queue");
+            Check(forecastsViewModel.Occurrences.Count > 0, "occurrences list is non-empty for an account with recurring operations");
+            Check(forecastsViewModel.Timeline.All(t => !string.IsNullOrEmpty(t.EventsText)), "every timeline row carries at least one event");
+
+            var livretPersoViewModel = ForecastsViewModelBuilder.Build(app, newSavings.Id, today);
+            Check(livretPersoViewModel.SelectedAccountId == newSavings.Id, "explicit account selection is honored");
+            Check(Normalize(livretPersoViewModel.Synthesis!.CurrentBalanceText) == "0,00 €", "Livret Perso starts at zero");
+
+            var forecastsTree = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(ForecastsUxmlPath);
+            if (forecastsTree == null)
+            {
+                throw new FileNotFoundException($"Forecasts UXML not found at {ForecastsUxmlPath}");
+            }
+
+            var forecastsRoot = forecastsTree.Instantiate();
+            var forecastsController = new ForecastsController(forecastsRoot, app);
+
+            var forecastOccurrencesListView = forecastsRoot.Q<MultiColumnListView>("occurrences-list-view");
+            Check(forecastOccurrencesListView.itemsSource.Count == forecastsViewModel.Occurrences.Count, "forecasts controller renders the same occurrence count as the view model");
+            Check(forecastOccurrencesListView.columns.Count == 4, "four occurrence columns configured");
+
+            var forecastTimelineListView = forecastsRoot.Q<MultiColumnListView>("timeline-list-view");
+            Check(forecastTimelineListView.columns.Count == 3, "three timeline columns configured");
+
+            var forecastVerificationList = forecastsRoot.Q<VisualElement>("verification-list");
+            Check(forecastVerificationList.childCount == forecastsViewModel.VerificationQueue.Count, "verification queue rows rendered");
+            Check(forecastsRoot.Q<Label>("verification-count").text == forecastsViewModel.VerificationQueue.Count.ToString(), "verification badge count bound");
+
+            forecastsController.Refresh();
+            Check(forecastOccurrencesListView.itemsSource.Count == forecastsViewModel.Occurrences.Count, "refresh re-renders without duplication");
+
             var noAccountPath = Path.Combine(Path.GetTempPath(), $"financeos-ui-smoke-empty-{Guid.NewGuid():N}.db");
             using (var noAccountApp = new AppContainer(noAccountPath))
             {
@@ -264,6 +299,11 @@ namespace FinanceOS.EditorTools
                     noAccountApp.RecurringOperations, noAccountApp.Settings);
                 Check(emptyRecurringOperationsRoot.Q<Label>("operations-empty").style.display == DisplayStyle.Flex, "empty-state shown when no operations exist");
                 Check(!emptyRecurringOperationsRoot.Q<Button>("new-operation-button").enabledSelf, "new-operation button disabled with no account to post against");
+
+                var emptyForecastsRoot = forecastsTree.Instantiate();
+                _ = new ForecastsController(emptyForecastsRoot, noAccountApp);
+                Check(emptyForecastsRoot.Q<Label>("kpi-current-value").text == "—", "empty synthesis falls back to placeholders");
+                Check(!emptyForecastsRoot.Q<Button>("simulation-run-button").enabledSelf, "simulation disabled with no account");
             }
 
             TryDeleteQuietly(noAccountPath);
@@ -282,8 +322,10 @@ namespace FinanceOS.EditorTools
             var accountsCalls = 0;
             var transactionsCalls = 0;
             var recurringOperationsCalls = 0;
+            var forecastsCalls = 0;
             var shell = new ShellController(
-                root, () => dashboardCalls++, () => accountsCalls++, () => transactionsCalls++, () => recurringOperationsCalls++);
+                root, () => dashboardCalls++, () => accountsCalls++, () => transactionsCalls++,
+                () => recurringOperationsCalls++, () => forecastsCalls++);
 
             var content = new VisualElement();
             shell.SetContent(content);
@@ -294,6 +336,7 @@ namespace FinanceOS.EditorTools
             Check(!root.Q<Button>("nav-dashboard").ClassListContains("nav-item-active"), "dashboard nav item not active");
             Check(!root.Q<Button>("nav-transactions").ClassListContains("nav-item-active"), "transactions nav item not active");
             Check(!root.Q<Button>("nav-recurring-operations").ClassListContains("nav-item-active"), "recurring operations nav item not active");
+            Check(!root.Q<Button>("nav-forecasts").ClassListContains("nav-item-active"), "forecasts nav item not active");
 
             shell.SetActive(ShellScreen.Transactions);
             Check(root.Q<Button>("nav-transactions").ClassListContains("nav-item-active"), "transactions nav item marked active");
@@ -303,11 +346,16 @@ namespace FinanceOS.EditorTools
             Check(root.Q<Button>("nav-recurring-operations").ClassListContains("nav-item-active"), "recurring operations nav item marked active");
             Check(!root.Q<Button>("nav-transactions").ClassListContains("nav-item-active"), "transactions nav item not active");
 
+            shell.SetActive(ShellScreen.Forecasts);
+            Check(root.Q<Button>("nav-forecasts").ClassListContains("nav-item-active"), "forecasts nav item marked active");
+            Check(!root.Q<Button>("nav-recurring-operations").ClassListContains("nav-item-active"), "recurring operations nav item not active");
+
             shell.SetActive(ShellScreen.Dashboard);
             Check(root.Q<Button>("nav-dashboard").ClassListContains("nav-item-active"), "dashboard nav item marked active");
             Check(!root.Q<Button>("nav-accounts").ClassListContains("nav-item-active"), "accounts nav item not active");
             Check(!root.Q<Button>("nav-transactions").ClassListContains("nav-item-active"), "transactions nav item not active");
             Check(!root.Q<Button>("nav-recurring-operations").ClassListContains("nav-item-active"), "recurring operations nav item not active");
+            Check(!root.Q<Button>("nav-forecasts").ClassListContains("nav-item-active"), "forecasts nav item not active");
 
             using (var clickEvent = ClickEvent.GetPooled())
             {
@@ -315,7 +363,7 @@ namespace FinanceOS.EditorTools
                 root.Q<Button>("nav-accounts").SendEvent(clickEvent);
             }
 
-            Debug.Log($"[UISmokeTest] Shell nav click delivery: dashboard={dashboardCalls}, accounts={accountsCalls}, transactions={transactionsCalls}, recurringOperations={recurringOperationsCalls} (best-effort without an attached panel).");
+            Debug.Log($"[UISmokeTest] Shell nav click delivery: dashboard={dashboardCalls}, accounts={accountsCalls}, transactions={transactionsCalls}, recurringOperations={recurringOperationsCalls}, forecasts={forecastsCalls} (best-effort without an attached panel).");
         }
 
         private static void TryDeleteQuietly(string path)

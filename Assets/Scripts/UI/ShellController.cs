@@ -9,6 +9,7 @@ namespace FinanceOS.UI
         Accounts,
         Transactions,
         RecurringOperations,
+        Forecasts,
     }
 
     /// <summary>
@@ -23,24 +24,28 @@ namespace FinanceOS.UI
         private readonly Button _navAccounts;
         private readonly Button _navTransactions;
         private readonly Button _navRecurringOperations;
+        private readonly Button _navForecasts;
 
         public ShellController(
             VisualElement root,
             Action onNavigateToDashboard,
             Action onNavigateToAccounts,
             Action onNavigateToTransactions,
-            Action onNavigateToRecurringOperations)
+            Action onNavigateToRecurringOperations,
+            Action onNavigateToForecasts)
         {
             _contentArea = root.Q<VisualElement>("content-area");
             _navDashboard = root.Q<Button>("nav-dashboard");
             _navAccounts = root.Q<Button>("nav-accounts");
             _navTransactions = root.Q<Button>("nav-transactions");
             _navRecurringOperations = root.Q<Button>("nav-recurring-operations");
+            _navForecasts = root.Q<Button>("nav-forecasts");
 
             _navDashboard.clicked += onNavigateToDashboard;
             _navAccounts.clicked += onNavigateToAccounts;
             _navTransactions.clicked += onNavigateToTransactions;
             _navRecurringOperations.clicked += onNavigateToRecurringOperations;
+            _navForecasts.clicked += onNavigateToForecasts;
         }
 
         public void SetContent(VisualElement content)
@@ -55,6 +60,7 @@ namespace FinanceOS.UI
             _navAccounts.EnableInClassList("nav-item-active", screen == ShellScreen.Accounts);
             _navTransactions.EnableInClassList("nav-item-active", screen == ShellScreen.Transactions);
             _navRecurringOperations.EnableInClassList("nav-item-active", screen == ShellScreen.RecurringOperations);
+            _navForecasts.EnableInClassList("nav-item-active", screen == ShellScreen.Forecasts);
         }
     }
 }

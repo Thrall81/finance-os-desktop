@@ -103,11 +103,34 @@ namespace FinanceOS.Data
                 .ToList();
 
         /// <summary>Occurrences whose date has arrived or passed without being resolved — the
-        /// dashboard's "file de vérification". See docs/07-Interface.md §6.</summary>
+        /// "file de vérification" (dashboard preview and the Prévisions screen's full list).
+        /// Includes 'missed' as well as 'planned': a missed occurrence stays visible and
+        /// actionable (confirm late or cancel), it does not just disappear from the queue once
+        /// past the missed threshold. See docs/07-Interface.md §6.</summary>
         public IReadOnlyList<ForecastOccurrence> ListDueForVerification(DateTime today) =>
             _connection.Query<ForecastOccurrenceRow>(
-                    $"{SelectColumns} WHERE status = 'planned' AND expected_date <= ? ORDER BY expected_date",
+                    $"{SelectColumns} WHERE status IN ('planned', 'missed') AND expected_date <= ? ORDER BY expected_date",
                     today.ToStorageString())
+                .Select(Map)
+                .ToList();
+
+        /// <summary>Still-planned occurrences older than a cutoff date — candidates for the
+        /// automatic transition to "Manquée". Deliberately excludes already-missed rows so the
+        /// transition runs once per occurrence, not every time this is called.
+        /// See docs/07-Interface.md §6.</summary>
+        public IReadOnlyList<ForecastOccurrence> ListPlannedOlderThan(DateTime cutoffDate) =>
+            _connection.Query<ForecastOccurrenceRow>(
+                    $"{SelectColumns} WHERE status = 'planned' AND expected_date < ? ORDER BY expected_date",
+                    cutoffDate.ToStorageString())
+                .Select(Map)
+                .ToList();
+
+        /// <summary>Unresolved occurrences for one account within a period — the Prévisions
+        /// screen's "liste des occurrences". See docs/07-Interface.md §3.</summary>
+        public IReadOnlyList<ForecastOccurrence> ListForAccountAndPeriod(int accountId, DateTime from, DateTime to) =>
+            _connection.Query<ForecastOccurrenceRow>(
+                    $"{SelectColumns} WHERE account_id = ? AND status IN ('planned', 'missed') AND expected_date BETWEEN ? AND ? ORDER BY expected_date",
+                    accountId, from.ToStorageString(), to.ToStorageString())
                 .Select(Map)
                 .ToList();
 

@@ -1,0 +1,142 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="False">
+  <Style src="../USS/theme.uss" />
+  <ui:VisualElement name="forecasts-root" class="page">
+    <ui:VisualElement class="page-header accounts-header">
+      <ui:VisualElement>
+        <ui:Label text="Prévisions" class="page-title" />
+        <ui:Label text="Solde projeté, occurrences à venir et simulation." class="page-subtitle" />
+      </ui:VisualElement>
+    </ui:VisualElement>
+
+    <ui:VisualElement name="filter-row" class="filter-row">
+      <ui:Label text="Compte" class="form-label" />
+      <ui:DropdownField name="forecast-account-select" class="form-field" />
+    </ui:VisualElement>
+
+    <ui:VisualElement name="warnings-list" class="list" />
+
+    <ui:VisualElement name="synthesis-card" class="card">
+      <ui:VisualElement class="card-header">
+        <ui:Label text="Synthèse" class="card-title" />
+      </ui:VisualElement>
+      <ui:VisualElement class="kpi-row">
+        <ui:VisualElement class="kpi-card">
+          <ui:Label text="Solde actuel" class="kpi-label" />
+          <ui:Label name="kpi-current-value" text="—" class="kpi-value" />
+        </ui:VisualElement>
+        <ui:VisualElement class="kpi-card">
+          <ui:Label text="Solde prévu (fin d'horizon)" class="kpi-label" />
+          <ui:Label name="kpi-projected-value" text="—" class="kpi-value" />
+        </ui:VisualElement>
+        <ui:VisualElement class="kpi-card">
+          <ui:Label text="Point bas prévisionnel" class="kpi-label" />
+          <ui:Label name="kpi-lowest-value" text="—" class="kpi-value" />
+          <ui:Label name="kpi-lowest-date" text="—" class="kpi-context" />
+        </ui:VisualElement>
+        <ui:VisualElement class="kpi-card">
+          <ui:Label text="Revenus attendus" class="kpi-label" />
+          <ui:Label name="kpi-income-value" text="—" class="kpi-value" />
+        </ui:VisualElement>
+        <ui:VisualElement class="kpi-card">
+          <ui:Label text="Dépenses attendues" class="kpi-label" />
+          <ui:Label name="kpi-expenses-value" text="—" class="kpi-value" />
+        </ui:VisualElement>
+      </ui:VisualElement>
+    </ui:VisualElement>
+
+    <ui:VisualElement name="verification-card" class="card">
+      <ui:VisualElement class="card-header">
+        <ui:Label text="Opérations à vérifier" class="card-title" />
+        <ui:Label name="verification-count" text="0" class="badge" />
+      </ui:VisualElement>
+      <ui:Label name="verification-empty" text="Rien à vérifier pour l'instant." class="empty-state" />
+      <ui:VisualElement name="verification-list" class="list" />
+
+      <ui:VisualElement name="confirm-form-card" class="form-card" style="display: none;">
+        <ui:Label name="confirm-form-title" text="Confirmer l'opération" class="card-title" />
+        <ui:VisualElement class="form-row">
+          <ui:Label text="Date" class="form-label" />
+          <ui:TextField name="confirm-date" class="form-field" />
+        </ui:VisualElement>
+        <ui:VisualElement class="form-row">
+          <ui:Label text="Montant (€)" class="form-label" />
+          <ui:TextField name="confirm-amount" class="form-field" />
+        </ui:VisualElement>
+        <ui:Label name="confirm-error" text="" class="form-error" style="display: none;" />
+        <ui:VisualElement class="form-actions">
+          <ui:Button name="confirm-cancel-button" text="Annuler" class="secondary-button" />
+          <ui:Button name="confirm-submit-button" text="C'est arrivé" class="primary-button" />
+        </ui:VisualElement>
+      </ui:VisualElement>
+    </ui:VisualElement>
+
+    <ui:VisualElement name="occurrences-card" class="card">
+      <ui:VisualElement class="card-header">
+        <ui:Label text="Occurrences prévues" class="card-title" />
+      </ui:VisualElement>
+      <ui:Label name="occurrences-empty" text="Aucune occurrence prévue sur cet horizon." class="empty-state" />
+      <ui:MultiColumnListView name="occurrences-list-view" class="transactions-table" style="display: none;" />
+    </ui:VisualElement>
+
+    <ui:VisualElement name="timeline-card" class="card">
+      <ui:VisualElement class="card-header">
+        <ui:Label text="Journal des mouvements prévus" class="card-title" />
+      </ui:VisualElement>
+      <ui:Label text="Alternative textuelle au graphique de trésorerie (différé, cf. ADR-112) : un jour par ligne, uniquement les jours avec un mouvement." class="page-subtitle" />
+      <ui:Label name="timeline-empty" text="Aucun mouvement prévu sur cet horizon." class="empty-state" />
+      <ui:MultiColumnListView name="timeline-list-view" class="transactions-table" style="display: none;" />
+    </ui:VisualElement>
+
+    <ui:VisualElement name="simulation-card" class="card">
+      <ui:VisualElement class="card-header">
+        <ui:Label text="Simulation — « Et si ? »" class="card-title" />
+      </ui:VisualElement>
+      <ui:Label text="Jamais enregistré : une projection à titre indicatif, écartée dès que vous quittez cet écran." class="page-subtitle" />
+
+      <ui:VisualElement class="form-row">
+        <ui:Label text="Libellé" class="form-label" />
+        <ui:TextField name="simulation-label" class="form-field" />
+      </ui:VisualElement>
+      <ui:VisualElement class="form-row">
+        <ui:Label text="Type" class="form-label" />
+        <ui:DropdownField name="simulation-type" class="form-field" />
+      </ui:VisualElement>
+      <ui:VisualElement class="form-row">
+        <ui:Label text="Montant (€)" class="form-label" />
+        <ui:TextField name="simulation-amount" class="form-field" />
+      </ui:VisualElement>
+      <ui:VisualElement class="form-row">
+        <ui:Label text="Date" class="form-label" />
+        <ui:TextField name="simulation-date" class="form-field" />
+      </ui:VisualElement>
+      <ui:VisualElement class="form-row">
+        <ui:Label text="Catégorie (facultatif)" class="form-label" />
+        <ui:DropdownField name="simulation-category" class="form-field" />
+      </ui:VisualElement>
+
+      <ui:Label name="simulation-error" text="" class="form-error" style="display: none;" />
+
+      <ui:VisualElement class="form-actions">
+        <ui:Button name="simulation-run-button" text="Simuler" class="primary-button" />
+      </ui:VisualElement>
+
+      <ui:VisualElement name="simulation-result-card" class="card form-card" style="display: none;">
+        <ui:Label text="Résultat de la simulation" class="card-title" />
+        <ui:VisualElement class="kpi-row">
+          <ui:VisualElement class="kpi-card">
+            <ui:Label text="Solde prévu (fin d'horizon)" class="kpi-label" />
+            <ui:Label name="simulation-result-projected" text="—" class="kpi-value" />
+          </ui:VisualElement>
+          <ui:VisualElement class="kpi-card">
+            <ui:Label text="Point bas prévisionnel" class="kpi-label" />
+            <ui:Label name="simulation-result-lowest" text="—" class="kpi-value" />
+            <ui:Label name="simulation-result-lowest-date" text="—" class="kpi-context" />
+          </ui:VisualElement>
+        </ui:VisualElement>
+        <ui:VisualElement class="form-actions">
+          <ui:Button name="simulation-reset-button" text="Réinitialiser" class="secondary-button" />
+        </ui:VisualElement>
+      </ui:VisualElement>
+    </ui:VisualElement>
+  </ui:VisualElement>
+</ui:UXML>

@@ -195,14 +195,17 @@ namespace FinanceOS.EditorTools
             var defaults = settingsRepository.Load();
             Check(defaults.DefaultCurrency == "EUR", "default currency default");
             Check(defaults.ForecastHorizonDays == 90, "forecast horizon default");
+            Check(defaults.MissedThresholdDays == 15, "missed threshold default");
 
             defaults.UpdateForecastHorizon(60);
             defaults.SetDefaultCurrentAccount(1);
+            defaults.UpdateMissedThreshold(21);
             settingsRepository.Save(defaults);
 
             var reloaded = settingsRepository.Load();
             Check(reloaded.ForecastHorizonDays == 60, "forecast horizon persisted");
             Check(reloaded.DefaultCurrentAccountId == 1, "default current account persisted");
+            Check(reloaded.MissedThresholdDays == 21, "missed threshold persisted");
         }
 
         private static void Check(bool condition, string what)

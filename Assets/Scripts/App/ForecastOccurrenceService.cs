@@ -50,6 +50,23 @@ namespace FinanceOS.App
         public IReadOnlyList<ForecastOccurrence> ListDueForVerification(DateTime today) =>
             _occurrences.ListDueForVerification(today);
 
+        public IReadOnlyList<ForecastOccurrence> ListForAccount(int accountId, DateTime from, DateTime to) =>
+            _occurrences.ListForAccountAndPeriod(accountId, from, to);
+
+        /// <summary>Transitions every still-planned occurrence older than the threshold to
+        /// "Manquée" — idempotent (only ever touches 'planned' rows, see
+        /// ForecastOccurrenceRepository.ListPlannedOlderThan), called on app startup so this
+        /// documented state (docs/07-Interface.md §6) is actually reachable instead of dead code.</summary>
+        public void MarkStaleAsMissed(DateTime today, int thresholdDays)
+        {
+            var cutoff = today.AddDays(-thresholdDays);
+            foreach (var occurrence in _occurrences.ListPlannedOlderThan(cutoff))
+            {
+                occurrence.MarkAsMissed();
+                _occurrences.Update(occurrence);
+            }
+        }
+
         /// <summary>Creates the real transaction(s) matching the confirmed date/amount and marks
         /// the occurrence resolved — a transfer-shaped occurrence produces both legs and a
         /// confirmed <see cref="TransferLink"/>, exactly like a manually entered transfer.</summary>

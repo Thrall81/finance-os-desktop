@@ -114,6 +114,30 @@ namespace FinanceOS.EditorTools
             app.Settings.UpdateForecastHorizon(60);
             Check(app.Settings.Get().ForecastHorizonDays == 60, "forecast horizon persisted through the service");
 
+            // October's and November's rent occurrences (generated earlier, never confirmed) are
+            // still "planned" at this point in the test — a good, untouched pair to exercise the
+            // missed-threshold transition without disturbing any assertion above.
+            app.ForecastOccurrences.MarkStaleAsMissed(new DateTime(2026, 11, 1), 15);
+
+            var octoberOccurrence = app.ForecastOccurrences
+                .ListForAccount(current.Id, new DateTime(2026, 1, 1), new DateTime(2026, 12, 31))
+                .First(o => o.ExpectedDate == new DateTime(2026, 10, 5));
+            Check(octoberOccurrence.Status == ForecastOccurrenceStatus.Missed, "October's unconfirmed occurrence transitions to Missed past the threshold");
+
+            var novemberOccurrence = app.ForecastOccurrences
+                .ListForAccount(current.Id, new DateTime(2026, 1, 1), new DateTime(2026, 12, 31))
+                .First(o => o.ExpectedDate == new DateTime(2026, 11, 5));
+            Check(novemberOccurrence.Status == ForecastOccurrenceStatus.Planned, "November's occurrence is not yet past the threshold");
+
+            app.ForecastOccurrences.MarkStaleAsMissed(new DateTime(2026, 11, 1), 15);
+            var afterSecondRun = app.ForecastOccurrences
+                .ListForAccount(current.Id, new DateTime(2026, 1, 1), new DateTime(2026, 12, 31))
+                .First(o => o.ExpectedDate == new DateTime(2026, 10, 5));
+            Check(afterSecondRun.Status == ForecastOccurrenceStatus.Missed, "running MarkStaleAsMissed again is idempotent");
+
+            Check(app.ForecastOccurrences.ListDueForVerification(new DateTime(2026, 11, 1)).Any(o => o.Id == octoberOccurrence.Id),
+                "a missed occurrence still appears in the verification queue rather than disappearing");
+
             Debug.Log($"[AppSmokeTest] OK — every App-layer service round-trips correctly through AppContainer. File: {tempPath}");
         }
 

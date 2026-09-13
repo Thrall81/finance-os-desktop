@@ -11,17 +11,24 @@ namespace FinanceOS.Domain
         public const string DefaultCurrencyCode = "EUR";
         public const int DefaultForecastHorizonDays = 90;
         public const long DefaultLowBalanceThresholdMinor = 20000; // 200,00 EUR
+        public const int DefaultMissedThresholdDays = 15;
 
         public string DefaultCurrency { get; private set; }
         public int ForecastHorizonDays { get; private set; }
         public long LowBalanceThresholdMinor { get; private set; }
         public int? DefaultCurrentAccountId { get; private set; }
 
+        /// <summary>Days an unresolved occurrence may sit past its expected date before it
+        /// transitions to "Manquée" — visible but non-blocking, still confirmable or cancellable.
+        /// See docs/07-Interface.md §6.</summary>
+        public int MissedThresholdDays { get; private set; }
+
         public AppSettings(
             string defaultCurrency = DefaultCurrencyCode,
             int forecastHorizonDays = DefaultForecastHorizonDays,
             long lowBalanceThresholdMinor = DefaultLowBalanceThresholdMinor,
-            int? defaultCurrentAccountId = null)
+            int? defaultCurrentAccountId = null,
+            int missedThresholdDays = DefaultMissedThresholdDays)
         {
             if (string.IsNullOrWhiteSpace(defaultCurrency))
             {
@@ -33,10 +40,16 @@ namespace FinanceOS.Domain
                 throw new ArgumentOutOfRangeException(nameof(forecastHorizonDays), forecastHorizonDays, "Forecast horizon must be positive.");
             }
 
+            if (missedThresholdDays <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(missedThresholdDays), missedThresholdDays, "Missed threshold must be positive.");
+            }
+
             DefaultCurrency = defaultCurrency;
             ForecastHorizonDays = forecastHorizonDays;
             LowBalanceThresholdMinor = lowBalanceThresholdMinor;
             DefaultCurrentAccountId = defaultCurrentAccountId;
+            MissedThresholdDays = missedThresholdDays;
         }
 
         public void UpdateForecastHorizon(int days)
@@ -52,5 +65,15 @@ namespace FinanceOS.Domain
         public void UpdateLowBalanceThreshold(long thresholdMinor) => LowBalanceThresholdMinor = thresholdMinor;
 
         public void SetDefaultCurrentAccount(int? accountId) => DefaultCurrentAccountId = accountId;
+
+        public void UpdateMissedThreshold(int days)
+        {
+            if (days <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(days), days, "Missed threshold must be positive.");
+            }
+
+            MissedThresholdDays = days;
+        }
     }
 }
