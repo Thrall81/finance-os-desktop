@@ -50,6 +50,8 @@ Journal des décisions structurantes, dans le même format que l'ancien projet (
 | ADR-134 | Historique de soldes officiels ; seule l'observation la plus récente déplace le point de départ des prévisions | ACCEPTED |
 | ADR-135 | Thème sombre ; classe CSS basculée sur .shell-root pour l'USS, propriété DarkTheme par instance pour les graphiques Painter2D | ACCEPTED |
 | ADR-136 | Premier installeur Windows (IL2CPP + Inno Setup) ; installation par utilisateur, sans droits admin | ACCEPTED |
+| ADR-137 | Correction du compte d'une opération récurrente après création ; occurrences en attente régénérées | ACCEPTED |
+| ADR-138 | Fenêtre standard (pas plein écran exclusif) + bouton Quitter dans la barre latérale | ACCEPTED |
 
 ---
 
@@ -649,3 +651,35 @@ Chaque alerte porte `IsSevere` : dépassement de budget (danger/rust, cohérent 
 **Simplification assumée** : pas d'icône personnalisée (ni pour l'exécutable ni pour l'installeur — icônes par défaut d'Unity/Inno Setup), pas de page de licence dans l'assistant d'installation. Aucun des deux n'est nécessaire pour un premier partage à des proches ; à revisiter avant une diffusion publique plus large (GitHub Releases, per `04-Stack_technique.md` §9).
 
 **Documents concernés** : `04-Stack_technique.md` §9, `01-Perimetre.md` §3 (Phase 5).
+
+---
+
+# 39. ADR-137 — Correction du compte d'une opération récurrente après création
+
+**Contexte** : premier vrai retour terrain après l'installeur ADR-136 — l'utilisateur s'est trompé de compte en créant une opération récurrente pendant l'onboarding, et n'a jamais pu la corriger, même une fois l'onboarding terminé. `RecurringOperationService.Delete` existait déjà comme réponse documentée à ce type d'erreur (« la seule façon aujourd'hui d'annuler une erreur de saisie »), mais supprimer puis recréer tout un salaire ou un loyer pour corriger un seul champ est une réponse disproportionnée à une simple faute de frappe — et ce n'est pas ce que l'utilisateur a cherché à faire (« je n'ai jamais pu le **modifier** »).
+
+**Décision** : `RecurringOperation.ChangeAccounts` (Domain, nouveau) lève les setters `private` sur `SourceAccountId`/`DestinationAccountId` (jusqu'ici de simples accesseurs `{ get; }`, réellement immuables) et réutilise la même validation que le constructeur (extraite dans `ValidateAccounts`, partagée entre les deux plutôt que dupliquée) — une dépense a toujours besoin d'un compte source, etc. `RecurringOperationService.ChangeAccounts` persiste le changement puis appelle une nouvelle `ForecastOccurrenceRepository.DeletePendingForRecurringOperation` : les occurrences déjà générées avec l'ancien compte (`planned`/`missed` uniquement — jamais `matched`, `cancelled` ni `ignored`, qui représentent une décision déjà prise et ne doivent pas être effacées) sont supprimées plutôt que laissées à traîner avec le mauvais compte à côté des futures occurrences correctement régénérées. Le contrôleur régénère ensuite immédiatement (`GenerateUpcomingOccurrences`), même geste que déjà fait après création ou reprise — le correctif est visible tout de suite, pas seulement pour les occurrences futures.
+
+**Un compte destination corrigé nécessitait un vrai stockage** : `RecurringOperationRepository.Update` n'écrivait jusqu'ici ni `source_account_id` ni `destination_account_id` en base — logique tant que ces champs étaient immuables, mais un piège prêt à mordre silencieusement (une correction qui semble réussir en mémoire mais ne survit pas au prochain chargement) si quelqu'un avait ajouté cette capacité sans y penser. Colonnes déjà présentes dans le schéma depuis le tout début (utilisées par `Insert`) ; seul `UPDATE` manquait ces deux colonnes.
+
+**Écran** : dans le formulaire de modification, le ou les comptes redeviennent des menus déroulants modifiables (au lieu du résumé lecture-seule précédent, désormais entièrement retiré de l'UXML et du contrôleur) — même visibilité conditionnelle selon le type (`AccountRequirementsFor`, extrait en une seule méthode partagée par la création, l'édition et l'affichage du formulaire, là où la même logique « dépense a besoin d'un compte source » était dupliquée trois fois avant ce correctif) que lors de la création, pré-sélectionnés sur le compte actuel. Type, fréquence, date de début, jour du mois restent en lecture seule — seule la portée de l'édition s'élargit, pas le principe de limiter l'édition aux champs où une correction a un sens sans tout redemander.
+
+**Vérifié en batchmode** : côté service (trois occurrences générées sur le mauvais compte, `ChangeAccounts` les supprime et persiste le bon compte, la régénération produit trois occurrences fraîches sur le bon compte, la validation « une dépense a besoin d'un compte source » s'applique toujours après coup) sur la fixture partagée existante — sur une opération dédiée, pas `rent`, pour ne pas perturber les assertions déjà faites sur ses occurrences d'octobre/novembre passées en « Manquée » plus loin dans le même fichier. Côté UI, sur une fixture isolée (même raisonnement) : le champ compte s'ouvre bien modifiable et pré-sélectionné sur le mauvais compte, la soumission via le formulaire persiste la correction et fait disparaître l'ancienne occurrence du mauvais compte. `OpenEditForm`/`SubmitForm` rendus publics pour la testabilité — cet écran n'avait jamais fait de choix explicite dans un sens ou l'autre avant ce jour, donc le patron par défaut du projet s'applique (comme pour `AccountsController`, ADR-134).
+
+**Documents concernés** : `07-Interface.md` §3, `Assets/Scripts/UI/README.md`.
+
+---
+
+# 40. ADR-138 — Fenêtre standard et bouton Quitter
+
+**Contexte** : deuxième retour terrain, dans le même message que ADR-137 — « impossibilité de quitter l'application proprement ». Cause trouvée en inspectant `ProjectSettings.asset` : aucun réglage de plein écran n'y avait jamais été fixé explicitement, donc le comportement par défaut d'un nouveau projet Unity s'appliquait — plein écran exclusif/sans bordure, pensé pour un jeu, jamais adapté à un utilitaire de bureau. Sans barre de titre ni bouton de fermeture visibles, et selon la configuration, Alt+F4 lui-même peut se comporter différemment en plein écran exclusif — l'utilisateur n'avait tout simplement aucun moyen visible de fermer l'application.
+
+**Décision, deux correctifs complémentaires plutôt qu'un seul** :
+1. `BuildScript.BuildWindowsPlayer` fixe désormais explicitement `PlayerSettings.fullScreenMode = FullScreenMode.Windowed` et `resizableWindow = true`, aux côtés des autres réglages déjà posés là (nom de société/produit, backend IL2CPP) — persisté dans `ProjectSettings.asset` comme les précédents, pas seulement pour ce build.
+2. Un bouton « Quitter » ajouté en bas de la barre latérale (`Shell.uxml`, toujours visible depuis n'importe quel écran, séparé visuellement des éléments de navigation par une bordure et une marge plutôt qu'un style alarmant — quitter n'est pas une action destructive). Décision délibérée de ne pas se reposer uniquement sur le correctif n°1 : même une fois une vraie fenêtre avec bordures obtenue, une action de sortie explicite et déclarée dans l'interface reste une meilleure pratique d'UX de bureau, indépendamment de ce que l'OS fournit par ailleurs.
+
+**`Application.Quit()` ne fait rien dans l'éditeur** (comportement documenté de Unity, pas une découverte) — `AppBootstrap.QuitApplication` bascule donc sur `UnityEditor.EditorApplication.isPlaying = false` sous `#if UNITY_EDITOR`, `Application.Quit()` sinon ; `OnApplicationQuit()` (déjà existant, dispose déjà `Container`) se déclenche dans les deux cas sans changement.
+
+**Reconstruit et republié** : ce correctif ne changeait rien pour l'utilisateur tant que l'installeur ADR-136 n'était pas régénéré — nouveau build IL2CPP, nouvel installeur compilé et revérifié (installation/désinstallation silencieuses), version montée à 1.0.1 pour distinguer ce correctif du tout premier envoi.
+
+**Documents concernés** : `07-Interface.md` §2, `09-Decisions_techniques.md` ADR-136.

@@ -173,6 +173,44 @@ namespace FinanceOS.EditorTools
             var decemberOccurrences = app.ForecastOccurrences.ListForAccount(current.Id, new DateTime(2026, 12, 1), new DateTime(2026, 12, 31));
             Check(decemberOccurrences.Count == 1 && decemberOccurrences[0].Id == oneOffOccurrence.Id, "the one-off occurrence appears when listing its account for its period");
 
+            // A dedicated recurring operation, not `rent` above — ChangeAccounts deletes and
+            // regenerates this operation's own pending occurrences, which would otherwise
+            // entangle with the October/November missed-occurrence assertions already made
+            // against `rent` earlier in this file.
+            var wrongAccountOperation = app.RecurringOperations.Create(
+                "Test compte erroné", RecurringOperationType.Expense, 1_000, RecurringFrequency.Monthly,
+                new DateTime(2026, 9, 1), sourceAccountId: savings.Id, expectedDayOfMonth: 1);
+            app.RecurringOperations.GenerateOccurrences(wrongAccountOperation.Id, new DateTime(2026, 9, 1), new DateTime(2026, 11, 30));
+
+            var onWrongAccount = app.ForecastOccurrences.ListForAccount(savings.Id, new DateTime(2026, 9, 1), new DateTime(2026, 11, 30))
+                .Where(o => o.RecurringOperationId == wrongAccountOperation.Id).ToList();
+            Check(onWrongAccount.Count == 3, "three monthly occurrences generated on the (wrong) account first");
+
+            app.RecurringOperations.ChangeAccounts(wrongAccountOperation.Id, current.Id, null);
+            Check(app.RecurringOperations.FindById(wrongAccountOperation.Id)!.SourceAccountId == current.Id,
+                "the corrected account is persisted on the recurring operation itself");
+
+            var stillOnWrongAccount = app.ForecastOccurrences.ListForAccount(savings.Id, new DateTime(2026, 9, 1), new DateTime(2026, 11, 30))
+                .Where(o => o.RecurringOperationId == wrongAccountOperation.Id).ToList();
+            Check(stillOnWrongAccount.Count == 0, "ChangeAccounts wipes the old pending occurrences, not just the operation's own field");
+
+            app.RecurringOperations.GenerateOccurrences(wrongAccountOperation.Id, new DateTime(2026, 9, 1), new DateTime(2026, 11, 30));
+            var regeneratedOnRightAccount = app.ForecastOccurrences.ListForAccount(current.Id, new DateTime(2026, 9, 1), new DateTime(2026, 11, 30))
+                .Where(o => o.RecurringOperationId == wrongAccountOperation.Id).ToList();
+            Check(regeneratedOnRightAccount.Count == 3, "regenerating after the fix produces fresh occurrences on the corrected account");
+
+            var invalidAccountChangeBlocked = false;
+            try
+            {
+                app.RecurringOperations.ChangeAccounts(wrongAccountOperation.Id, null, null);
+            }
+            catch (ArgumentException)
+            {
+                invalidAccountChangeBlocked = true;
+            }
+
+            Check(invalidAccountChangeBlocked, "an expense still requires a source account after the change — same validation as creation");
+
             var settings = app.Settings.Get();
             Check(settings.ForecastHorizonDays == 90, "default forecast horizon");
             app.Settings.UpdateForecastHorizon(60);

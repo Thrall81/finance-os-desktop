@@ -55,6 +55,19 @@ namespace FinanceOS.App
             _operations.Update(operation);
         }
 
+        /// <summary>Corrects the account(s) chosen at creation — a real, reachable mistake (e.g.
+        /// picking the wrong account in onboarding's minimal form) that previously had no fix
+        /// short of deleting and recreating the whole operation. Wipes this operation's still-
+        /// pending occurrences (they have the old account baked in); the caller is responsible for
+        /// regenerating them afterward, same as after Create — see the UI README.</summary>
+        public void ChangeAccounts(int operationId, int? sourceAccountId, int? destinationAccountId)
+        {
+            var operation = RequireOperation(operationId);
+            operation.ChangeAccounts(sourceAccountId, destinationAccountId);
+            _operations.Update(operation);
+            _occurrences.DeletePendingForRecurringOperation(operationId);
+        }
+
         /// <summary>Previews the first date this schedule would actually produce, without
         /// persisting anything — lets the UI warn before creation if a start date/day-of-month
         /// mismatch would silently skip the first cycle (e.g. day-of-month 28 with a start date of
@@ -70,10 +83,11 @@ namespace FinanceOS.App
 
         /// <summary>Deletes a recurring operation and every occurrence it generated, refusing if
         /// any of them was ever confirmed as a real transaction — deleting those would silently
-        /// erase the record of something that actually happened. The only way today to undo a
-        /// mistake at creation (wrong start date, wrong day-of-month, ...): editing is deliberately
-        /// limited to the expected amount and active/suspended state (see the UI README). Relies on
-        /// `forecast_occurrence.recurring_operation_id ON DELETE CASCADE` to remove the (never
+        /// erase the record of something that actually happened. Still the only way to undo a
+        /// mistake in the schedule itself (wrong start date, wrong day-of-month, wrong frequency);
+        /// the account can now be corrected directly via ChangeAccounts instead (ADR-137) — editing
+        /// otherwise stays limited to the expected amount and active/suspended state (see the UI
+        /// README). Relies on `forecast_occurrence.recurring_operation_id ON DELETE CASCADE` to remove the (never
         /// reconciled) occurrences themselves. See docs/07-Interface.md §3.</summary>
         public void Delete(int operationId)
         {

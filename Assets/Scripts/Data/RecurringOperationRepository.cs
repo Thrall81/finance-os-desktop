@@ -82,11 +82,13 @@ namespace FinanceOS.Data
         {
             _connection.Execute(
                 @"UPDATE recurring_operation SET
-                    name = ?, category_id = ?, counterparty_id = ?, expected_amount_minor = ?, frequency = ?,
-                    interval_value = ?, end_date = ?, expected_day_of_month = ?, date_tolerance_days = ?,
-                    amount_tolerance_minor = ?, is_active = ?, notes = ?, updated_at = ?
+                    name = ?, source_account_id = ?, destination_account_id = ?, category_id = ?, counterparty_id = ?,
+                    expected_amount_minor = ?, frequency = ?, interval_value = ?, end_date = ?, expected_day_of_month = ?,
+                    date_tolerance_days = ?, amount_tolerance_minor = ?, is_active = ?, notes = ?, updated_at = ?
                   WHERE id = ?",
                 operation.Name,
+                operation.SourceAccountId,
+                operation.DestinationAccountId,
                 operation.CategoryId,
                 operation.CounterpartyId,
                 operation.ExpectedAmountMinor,

@@ -9,6 +9,8 @@ namespace FinanceOS.UI
         string Name,
         string TypeText,
         string AccountText,
+        int? SourceAccountId,
+        int? DestinationAccountId,
         string FrequencyText,
         string AmountText,
         string CategoryText,

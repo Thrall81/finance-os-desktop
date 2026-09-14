@@ -34,6 +34,7 @@ namespace FinanceOS.UI
         private readonly Button _navBudgets;
         private readonly Button _navCategories;
         private readonly Button _navSettings;
+        private readonly Button _quitButton;
 
         public ShellController(
             VisualElement root,
@@ -44,7 +45,8 @@ namespace FinanceOS.UI
             Action onNavigateToForecasts,
             Action onNavigateToBudgets,
             Action onNavigateToCategories,
-            Action onNavigateToSettings)
+            Action onNavigateToSettings,
+            Action onQuit)
         {
             _themeRoot = root.Q<VisualElement>("shell-root");
             _sidebar = root.Q<VisualElement>("sidebar");
@@ -57,6 +59,7 @@ namespace FinanceOS.UI
             _navBudgets = root.Q<Button>("nav-budgets");
             _navCategories = root.Q<Button>("nav-categories");
             _navSettings = root.Q<Button>("nav-settings");
+            _quitButton = root.Q<Button>("quit-button");
 
             _navDashboard.clicked += onNavigateToDashboard;
             _navAccounts.clicked += onNavigateToAccounts;
@@ -66,6 +69,7 @@ namespace FinanceOS.UI
             _navBudgets.clicked += onNavigateToBudgets;
             _navCategories.clicked += onNavigateToCategories;
             _navSettings.clicked += onNavigateToSettings;
+            _quitButton.clicked += onQuit;
         }
 
         public void SetContent(VisualElement content)

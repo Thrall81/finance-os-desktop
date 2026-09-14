@@ -56,6 +56,28 @@
     padding: 20px 14px;
 }
 
+/* Pushes the Quitter button to the bottom of the sidebar, always visible from any screen
+   regardless of how tall .nav-list grows — a real fix reported after actually testing the
+   built app: the very first build had no titlebar/close button at all (ADR-138), and even once
+   a real window exists, a clearly discoverable in-app quit action is worth keeping either way. */
+.sidebar-spacer {
+    flex-grow: 1;
+}
+
+.nav-item-quit {
+    border-top-width: 1px;
+    border-top-color: var(--color-border);
+    border-radius: 0;
+    margin: 8px 0 0 0;
+    padding-top: 13px;
+    color: var(--color-ink-400);
+}
+
+.nav-item-quit:hover {
+    background-color: var(--color-bg);
+    color: var(--color-danger);
+}
+
 .sidebar-title {
     font-size: 16px;
     -unity-font-definition: url("../../Fonts/Spectral-Bold.ttf");

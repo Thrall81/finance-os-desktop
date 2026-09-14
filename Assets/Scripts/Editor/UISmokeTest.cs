@@ -546,6 +546,45 @@ namespace FinanceOS.EditorTools
             Check(recurringOperationsRoot.Q<Label>("form-skip-warning") is not null, "skip-warning label is bound");
             Check(recurringOperationsRoot.Q<Button>("form-delete-button") is not null, "delete button is bound");
 
+            // Isolated fixture: correcting an account regenerates this operation's occurrences,
+            // which would otherwise shift the "4 operations"/verification-queue assertions the
+            // shared `app`/`account` fixture already feeds above and below this block.
+            var wrongAccountUiPath = Path.Combine(Path.GetTempPath(), $"financeos-ui-smoke-wrong-account-{Guid.NewGuid():N}.db");
+            using (var wrongAccountApp = new AppContainer(wrongAccountUiPath))
+            {
+                var rightAccount = wrongAccountApp.Accounts.CreateAccount("Compte courant", AccountType.Current, "EUR", 100_000);
+                var wrongAccount = wrongAccountApp.Accounts.CreateAccount("Livret A", AccountType.Savings, "EUR", 50_000);
+
+                var operation = wrongAccountApp.RecurringOperations.Create(
+                    "Loyer mal saisi", RecurringOperationType.Expense, 60_000, RecurringFrequency.Monthly,
+                    new DateTime(2026, 9, 1), sourceAccountId: wrongAccount.Id, expectedDayOfMonth: 1);
+
+                var wrongAccountRoot = recurringOperationsTree.Instantiate();
+                var wrongAccountController = new RecurringOperationsController(
+                    wrongAccountRoot, wrongAccountApp.Accounts, wrongAccountApp.Categories, wrongAccountApp.Counterparties,
+                    wrongAccountApp.RecurringOperations, wrongAccountApp.Settings);
+
+                var rowViewModel = RecurringOperationsViewModelBuilder.Build(
+                        wrongAccountApp.Accounts, wrongAccountApp.Categories, wrongAccountApp.Counterparties, wrongAccountApp.RecurringOperations)
+                    .Operations.Single(o => o.Id == operation.Id);
+
+                wrongAccountController.OpenEditForm(rowViewModel);
+                Check(wrongAccountRoot.Q<VisualElement>("form-source-account-row").style.display == DisplayStyle.Flex,
+                    "the source-account field is editable in edit mode, not read-only");
+                Check(wrongAccountRoot.Q<DropdownField>("form-source-account").value == "Livret A",
+                    "the account dropdown opens pre-selected to the operation's current (wrong) account");
+
+                wrongAccountRoot.Q<DropdownField>("form-source-account").SetValueWithoutNotify("Compte courant");
+                wrongAccountController.SubmitForm();
+
+                Check(wrongAccountApp.RecurringOperations.FindById(operation.Id)!.SourceAccountId == rightAccount.Id,
+                    "submitting the edit form with a different account persists the correction");
+                Check(wrongAccountApp.ForecastOccurrences.ListForAccount(wrongAccount.Id, new DateTime(2026, 9, 1), new DateTime(2026, 9, 30)).Count == 0,
+                    "the operation's occurrence no longer sits on the old account after the UI-driven correction");
+            }
+
+            TryDeleteQuietly(wrongAccountUiPath);
+
             var forecastsViewModel = ForecastsViewModelBuilder.Build(app, null, today);
             Check(forecastsViewModel.SelectedAccountId == account.Id, "primary account resolved to the Current-type account");
             Check(forecastsViewModel.Synthesis is not null, "synthesis built for the resolved account");
@@ -1037,10 +1076,11 @@ namespace FinanceOS.EditorTools
             var budgetsCalls = 0;
             var categoriesCalls = 0;
             var settingsCalls = 0;
+            var quitCalls = 0;
             var shell = new ShellController(
                 root, () => dashboardCalls++, () => accountsCalls++, () => transactionsCalls++,
                 () => recurringOperationsCalls++, () => forecastsCalls++, () => budgetsCalls++,
-                () => categoriesCalls++, () => settingsCalls++);
+                () => categoriesCalls++, () => settingsCalls++, () => quitCalls++);
 
             var content = new VisualElement();
             shell.SetContent(content);
@@ -1050,6 +1090,8 @@ namespace FinanceOS.EditorTools
             shell.SetSidebarVisible(true);
             Check(root.Q<VisualElement>("sidebar").style.display == DisplayStyle.Flex, "sidebar shown again once onboarding finishes");
             Check(root.Q<VisualElement>("content-area").childCount == 1, "shell content area receives the screen's content");
+
+            Check(root.Q<Button>("quit-button") is not null, "quit button is bound (ADR-138) — a reliable way to close the app regardless of window chrome");
 
             Check(!root.Q<VisualElement>("shell-root").ClassListContains("theme-dark"), "light theme by default — no theme-dark class");
             shell.SetTheme(AppTheme.Dark);

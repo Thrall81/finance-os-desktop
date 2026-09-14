@@ -36,11 +36,6 @@
         <ui:DropdownField name="form-destination-account" class="form-field" />
       </ui:VisualElement>
 
-      <ui:VisualElement name="form-account-readonly-row" class="form-row" style="display: none;">
-        <ui:Label text="Compte" class="form-label" />
-        <ui:Label name="form-account-readonly" text="—" class="form-readonly-value" />
-      </ui:VisualElement>
-
       <ui:VisualElement name="form-amount-row" class="form-row">
         <ui:Label text="Montant attendu (€)" class="form-label" />
         <ui:TextField name="form-amount" class="form-field" />

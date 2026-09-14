@@ -11,8 +11,8 @@ namespace FinanceOS.Domain
         public int Id { get; private set; }
         public string Name { get; private set; }
         public RecurringOperationType Type { get; }
-        public int? SourceAccountId { get; }
-        public int? DestinationAccountId { get; }
+        public int? SourceAccountId { get; private set; }
+        public int? DestinationAccountId { get; private set; }
         public int? CategoryId { get; private set; }
         public int? CounterpartyId { get; private set; }
         public long ExpectedAmountMinor { get; private set; }
@@ -56,16 +56,7 @@ namespace FinanceOS.Domain
                 throw new ArgumentException("End date cannot precede start date.", nameof(endDate));
             }
 
-            switch (type)
-            {
-                case RecurringOperationType.Expense when sourceAccountId is null:
-                    throw new ArgumentException("An expense requires a source account.", nameof(sourceAccountId));
-                case RecurringOperationType.Income when destinationAccountId is null:
-                    throw new ArgumentException("An income requires a destination account.", nameof(destinationAccountId));
-                case RecurringOperationType.SavingsTransfer when sourceAccountId is null || destinationAccountId is null:
-                case RecurringOperationType.InternalTransfer when sourceAccountId is null || destinationAccountId is null:
-                    throw new ArgumentException("A transfer requires both a source and a destination account.");
-            }
+            ValidateAccounts(type, sourceAccountId, destinationAccountId);
 
             var timestamp = now ?? DateTimeOffset.Now;
 
@@ -190,6 +181,34 @@ namespace FinanceOS.Domain
         {
             var magnitude = Math.Abs(amountMinor);
             return type == RecurringOperationType.Income ? magnitude : -magnitude;
+        }
+
+        /// <summary>Corrects a source/destination account chosen wrongly at creation — a real,
+        /// reachable mistake (e.g. picking the wrong account during onboarding's minimal form)
+        /// that previously had no fix short of deleting and recreating the whole operation.
+        /// Callers must also clear and regenerate this operation's still-pending occurrences
+        /// (RecurringOperationService.ChangeAccounts) — the ones already generated have the old
+        /// account baked in and won't update just because this field did.</summary>
+        public void ChangeAccounts(int? sourceAccountId, int? destinationAccountId, DateTimeOffset? now = null)
+        {
+            ValidateAccounts(Type, sourceAccountId, destinationAccountId);
+            SourceAccountId = sourceAccountId;
+            DestinationAccountId = destinationAccountId;
+            Touch(now);
+        }
+
+        private static void ValidateAccounts(RecurringOperationType type, int? sourceAccountId, int? destinationAccountId)
+        {
+            switch (type)
+            {
+                case RecurringOperationType.Expense when sourceAccountId is null:
+                    throw new ArgumentException("An expense requires a source account.", nameof(sourceAccountId));
+                case RecurringOperationType.Income when destinationAccountId is null:
+                    throw new ArgumentException("An income requires a destination account.", nameof(destinationAccountId));
+                case RecurringOperationType.SavingsTransfer when sourceAccountId is null || destinationAccountId is null:
+                case RecurringOperationType.InternalTransfer when sourceAccountId is null || destinationAccountId is null:
+                    throw new ArgumentException("A transfer requires both a source and a destination account.");
+            }
         }
 
         public void UpdateTolerances(int dateToleranceDays, long amountToleranceMinor, DateTimeOffset? now = null)

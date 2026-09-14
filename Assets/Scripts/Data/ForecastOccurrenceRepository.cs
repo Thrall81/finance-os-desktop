@@ -153,6 +153,17 @@ namespace FinanceOS.Data
                 .Select(Map)
                 .ToList();
 
+        /// <summary>Removes every still-pending occurrence (planned or missed — never matched,
+        /// cancelled, or ignored) for a recurring operation, so a corrected schedule/account can
+        /// regenerate them cleanly instead of leaving old, wrong ones sitting alongside new ones.
+        /// See RecurringOperationService.ChangeAccounts, docs/07-Interface.md §3, ADR-137.</summary>
+        public void DeletePendingForRecurringOperation(int recurringOperationId) =>
+            _connection.Execute(
+                "DELETE FROM forecast_occurrence WHERE recurring_operation_id = ? AND status IN (?, ?)",
+                recurringOperationId,
+                ForecastOccurrenceStatus.Planned.ToStorageString(),
+                ForecastOccurrenceStatus.Missed.ToStorageString());
+
         /// <summary>Whether any occurrence of this recurring operation, at any date, was ever
         /// confirmed as a real transaction — the guard before allowing the operation itself to be
         /// deleted. See docs/07-Interface.md §3.</summary>

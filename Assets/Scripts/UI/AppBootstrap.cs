@@ -56,7 +56,7 @@ namespace FinanceOS.UI
             var root = GetComponent<UIDocument>().rootVisualElement;
             _shell = new ShellController(
                 root, ShowDashboard, ShowAccounts, ShowTransactions, ShowRecurringOperations, ShowForecasts,
-                ShowBudgets, ShowCategories, ShowSettings);
+                ShowBudgets, ShowCategories, ShowSettings, QuitApplication);
             _shell.SetTheme(settings.Theme);
 
             // "Aucun compte en base" is the whole gating condition (docs/01-Perimetre.md §2.1) —
@@ -288,6 +288,20 @@ namespace FinanceOS.UI
             {
                 _dashboardController.Render(viewModel);
             }
+        }
+
+        /// <summary>The sidebar's "Quitter" button (ADR-138) — added after the first installer
+        /// build shipped in exclusive fullscreen with no titlebar/close button, leaving no
+        /// reliable way to close the app at all. Application.Quit() is a documented no-op in the
+        /// Editor, so Play Mode instead stops playing directly — either way, OnApplicationQuit()
+        /// below still runs and disposes the database connection cleanly.</summary>
+        private void QuitApplication()
+        {
+#if UNITY_EDITOR
+            UnityEditor.EditorApplication.isPlaying = false;
+#else
+            Application.Quit();
+#endif
         }
 
         private void OnApplicationQuit()

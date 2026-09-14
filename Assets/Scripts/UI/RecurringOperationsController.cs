@@ -56,8 +56,6 @@ namespace FinanceOS.UI
         private readonly VisualElement _destinationAccountRow;
         private readonly Label _destinationAccountLabel;
         private readonly DropdownField _destinationAccountField;
-        private readonly VisualElement _accountReadonlyRow;
-        private readonly Label _accountReadonlyLabel;
         private readonly TextField _amountField;
         private readonly VisualElement _frequencyRow;
         private readonly DropdownField _frequencyField;
@@ -124,8 +122,6 @@ namespace FinanceOS.UI
             _destinationAccountRow = root.Q<VisualElement>("form-destination-account-row");
             _destinationAccountLabel = root.Q<Label>("form-destination-account-label");
             _destinationAccountField = root.Q<DropdownField>("form-destination-account");
-            _accountReadonlyRow = root.Q<VisualElement>("form-account-readonly-row");
-            _accountReadonlyLabel = root.Q<Label>("form-account-readonly");
             _amountField = root.Q<TextField>("form-amount");
             _frequencyRow = root.Q<VisualElement>("form-frequency-row");
             _frequencyField = root.Q<DropdownField>("form-frequency");
@@ -254,7 +250,6 @@ namespace FinanceOS.UI
             _typeReadonlyRow.style.display = DisplayStyle.None;
             _typeField.SetValueWithoutNotify(TypeOptions[0].Text);
 
-            _accountReadonlyRow.style.display = DisplayStyle.None;
             SetChoices(_sourceAccountField, _creatableAccounts);
             SetChoices(_destinationAccountField, _creatableAccounts);
 
@@ -289,7 +284,11 @@ namespace FinanceOS.UI
             _formCard.style.display = DisplayStyle.Flex;
         }
 
-        private void OpenEditForm(RecurringOperationRowViewModel row)
+        // Public only so UISmokeTest.cs can open the edit form directly — its real trigger is the
+        // MultiColumnListView's own selectionChanged event, which (like Button.clicked) never
+        // fires on a VisualTreeAsset instantiated without a panel. Same "public purely for
+        // testability" reasoning as AccountsController.OpenEditForm.
+        public void OpenEditForm(RecurringOperationRowViewModel row)
         {
             _editingOperationId = row.Id;
             _editingIsActive = row.IsActive;
@@ -302,10 +301,15 @@ namespace FinanceOS.UI
             _typeReadonlyRow.style.display = DisplayStyle.Flex;
             _typeReadonlyLabel.text = row.TypeText;
 
-            _sourceAccountRow.style.display = DisplayStyle.None;
-            _destinationAccountRow.style.display = DisplayStyle.None;
-            _accountReadonlyRow.style.display = DisplayStyle.Flex;
-            _accountReadonlyLabel.text = row.AccountText;
+            // Unlike the other creation-only fields below, the account(s) stay editable here — a
+            // wrong account picked at creation (e.g. during onboarding's minimal form) is a real,
+            // reported mistake with no other fix short of deleting and recreating the whole
+            // operation. See RecurringOperationService.ChangeAccounts, ADR-137.
+            SetChoices(_sourceAccountField, _creatableAccounts);
+            SelectAccount(_sourceAccountField, row.SourceAccountId);
+            SetChoices(_destinationAccountField, _creatableAccounts);
+            SelectAccount(_destinationAccountField, row.DestinationAccountId);
+            ApplyTypeVisibility(row.TypeText);
 
             _amountField.SetValueWithoutNotify(RawAmountText(row.AmountText));
 
@@ -347,9 +351,7 @@ namespace FinanceOS.UI
         {
             var typeIndex = TypeOptions.ToList().FindIndex(o => o.Text == typeText);
             var type = typeIndex < 0 ? TypeOptions[0].Type : TypeOptions[typeIndex].Type;
-
-            var needsSource = type is RecurringOperationType.Expense or RecurringOperationType.SavingsTransfer or RecurringOperationType.InternalTransfer;
-            var needsDestination = type is RecurringOperationType.Income or RecurringOperationType.SavingsTransfer or RecurringOperationType.InternalTransfer;
+            var (needsSource, needsDestination) = AccountRequirementsFor(type);
             var isTransfer = type is RecurringOperationType.SavingsTransfer or RecurringOperationType.InternalTransfer;
 
             _sourceAccountRow.style.display = needsSource ? DisplayStyle.Flex : DisplayStyle.None;
@@ -359,7 +361,17 @@ namespace FinanceOS.UI
             _destinationAccountLabel.text = isTransfer ? "Compte destination" : "Compte";
         }
 
-        private void SubmitForm()
+        /// <summary>Which account fields a type actually needs — the one piece of validation
+        /// logic shared by creation, edit-mode account correction, and this form's own field
+        /// visibility, kept in one place so the three can't quietly drift apart.</summary>
+        private static (bool NeedsSource, bool NeedsDestination) AccountRequirementsFor(RecurringOperationType type) => (
+            type is RecurringOperationType.Expense or RecurringOperationType.SavingsTransfer or RecurringOperationType.InternalTransfer,
+            type is RecurringOperationType.Income or RecurringOperationType.SavingsTransfer or RecurringOperationType.InternalTransfer);
+
+        /// <summary>Public only so UISmokeTest.cs can drive it directly, same reasoning as
+        /// <see cref="OpenEditForm"/> — its own trigger (a Button.clicked) can't be invoked from
+        /// another assembly without a real panel either.</summary>
+        public void SubmitForm()
         {
             if (_editingOperationId is int id)
             {
@@ -379,7 +391,43 @@ namespace FinanceOS.UI
                 return;
             }
 
+            var typeIndex = TypeOptions.ToList().FindIndex(o => o.Text == _typeReadonlyLabel.text);
+            var type = TypeOptions[typeIndex < 0 ? 0 : typeIndex].Type;
+            var (needsSource, needsDestination) = AccountRequirementsFor(type);
+
+            int? sourceAccountId = null;
+            if (needsSource)
+            {
+                if (_sourceAccountField.index < 0 || _sourceAccountField.index >= _creatableAccounts.Count)
+                {
+                    ShowError("Choisissez un compte.");
+                    return;
+                }
+
+                sourceAccountId = _creatableAccounts[_sourceAccountField.index].Id;
+            }
+
+            int? destinationAccountId = null;
+            if (needsDestination)
+            {
+                if (_destinationAccountField.index < 0 || _destinationAccountField.index >= _creatableAccounts.Count)
+                {
+                    ShowError("Choisissez un compte.");
+                    return;
+                }
+
+                destinationAccountId = _creatableAccounts[_destinationAccountField.index].Id;
+            }
+
+            if (sourceAccountId is not null && destinationAccountId is not null && sourceAccountId == destinationAccountId)
+            {
+                ShowError("Le compte destination doit être différent du compte source.");
+                return;
+            }
+
             _operations.UpdateExpectedAmount(id, magnitude);
+            _operations.ChangeAccounts(id, sourceAccountId, destinationAccountId);
+            _operations.GenerateUpcomingOccurrences(DateTime.Now, _settings.Get().ForecastHorizonDays);
 
             CloseForm();
             Refresh();
@@ -423,8 +471,7 @@ namespace FinanceOS.UI
             var frequencyIndex = FrequencyOptions.ToList().FindIndex(o => o.Text == _frequencyField.value);
             var frequency = FrequencyOptions[frequencyIndex < 0 ? 0 : frequencyIndex].Frequency;
 
-            var needsSource = type is RecurringOperationType.Expense or RecurringOperationType.SavingsTransfer or RecurringOperationType.InternalTransfer;
-            var needsDestination = type is RecurringOperationType.Income or RecurringOperationType.SavingsTransfer or RecurringOperationType.InternalTransfer;
+            var (needsSource, needsDestination) = AccountRequirementsFor(type);
 
             int? sourceAccountId = null;
             if (needsSource)
@@ -579,6 +626,24 @@ namespace FinanceOS.UI
             var choices = options.Select(o => o.Name).ToList();
             field.choices = choices;
             field.SetValueWithoutNotify(choices.Count > 0 ? choices[0] : string.Empty);
+        }
+
+        /// <summary>Overrides SetChoices's own "select the first choice" default with the
+        /// account this row actually has — used only in edit mode. Silently leaves the field on
+        /// its first-choice fallback if the account isn't found (e.g. archived since creation,
+        /// so it no longer appears among _creatableAccounts) rather than guessing.</summary>
+        private void SelectAccount(DropdownField field, int? accountId)
+        {
+            if (accountId is not int id)
+            {
+                return;
+            }
+
+            var index = _creatableAccounts.ToList().FindIndex(o => o.Id == id);
+            if (index >= 0)
+            {
+                field.SetValueWithoutNotify(field.choices[index]);
+            }
         }
 
         private void RebuildCategoryChoices()

@@ -13,6 +13,8 @@
         <ui:Button name="nav-categories" text="Catégories" class="nav-item" />
         <ui:Button name="nav-settings" text="Paramètres" class="nav-item" />
       </ui:VisualElement>
+      <ui:VisualElement class="sidebar-spacer" />
+      <ui:Button name="quit-button" text="Quitter" class="nav-item nav-item-quit" />
     </ui:VisualElement>
     <ui:VisualElement name="content-area" class="content-area" />
   </ui:VisualElement>

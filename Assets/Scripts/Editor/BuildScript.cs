@@ -21,7 +21,16 @@ namespace FinanceOS.EditorTools
         {
             PlayerSettings.companyName = "Florent Barbaouat";
             PlayerSettings.productName = "Finance OS";
+            PlayerSettings.bundleVersion = "1.0.1";
             PlayerSettings.SetScriptingBackend(NamedBuildTarget.Standalone, ScriptingImplementation.IL2CPP);
+
+            // A new Unity project defaults to exclusive/borderless fullscreen with no window
+            // chrome — fine for a game, wrong for a desktop utility app: the very first installer
+            // build shipped this way, and the user had no titlebar, no X button, and no reliable
+            // way to close it. Windowed + resizable + a real titlebar matches what a desktop app
+            // is expected to look like. See docs/09-Decisions_techniques.md ADR-138.
+            PlayerSettings.fullScreenMode = FullScreenMode.Windowed;
+            PlayerSettings.resizableWindow = true;
             AssetDatabase.SaveAssets();
 
             if (Directory.Exists(BuildOutputDirectory))

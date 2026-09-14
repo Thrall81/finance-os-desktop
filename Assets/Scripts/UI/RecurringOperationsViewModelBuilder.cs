@@ -34,6 +34,8 @@ namespace FinanceOS.UI
                     o.Name,
                     TypeText(o.Type),
                     AccountText(o, accountNames),
+                    o.SourceAccountId,
+                    o.DestinationAccountId,
                     FrequencyText(o.Frequency),
                     MoneyFormat.Format(o.ExpectedAmountMinor, "EUR", forceSign: true),
                     o.CategoryId is int categoryId && categoryNames.TryGetValue(categoryId, out var categoryName) ? categoryName : "—",
