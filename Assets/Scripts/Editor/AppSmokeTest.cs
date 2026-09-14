@@ -121,6 +121,48 @@ namespace FinanceOS.EditorTools
             Check(overview.RemainingToLiveMinor == 5_000, "reste à vivre only sums Expense-category remaining, unaffected by income/savings");
             Check(Math.Abs(overview.SavingsRatePercent - 13.6363636) < 0.01, "savings rate = savings / income * 100");
 
+            // The "Virement Livret A" transaction just above (line ~116) is exactly the real-world
+            // case this feature targets: one leg of a transfer entered manually, with nothing ever
+            // linking it to its counterpart. Adding that counterpart here (after every assertion
+            // above that depends on current/savings totals, so it can't disturb them) gives
+            // TransferDetectionService a genuine unlinked pair to find.
+            var transferCounterpart = app.Transactions.CreateManual(
+                savings.Id, 30_000, "EUR", new DateTime(2026, 9, 4), "Dépôt depuis compte courant");
+
+            var candidates = app.TransferDetection.DetectCandidates();
+            Check(candidates.Count == 1, "exactly one unlinked transfer-shaped pair is detected");
+            Check(candidates[0].Outgoing.AccountId == current.Id && candidates[0].Incoming.AccountId == savings.Id,
+                "the negative leg resolves as outgoing and the positive leg as incoming, regardless of creation order");
+            Check(app.TransferDetection.DetectCandidates().Count == 1, "detection is a pure read — re-running it neither consumes nor duplicates the candidate");
+
+            var farApartOutgoing = app.Transactions.CreateManual(current.Id, -8_000, "EUR", new DateTime(2026, 9, 6), "Retrait");
+            var farApartIncoming = app.Transactions.CreateManual(savings.Id, 8_000, "EUR", new DateTime(2026, 9, 11), "Dépôt tardif");
+            Check(app.TransferDetection.DetectCandidates().Count == 1, "a pair more than three days apart is not suggested");
+            app.Transactions.DeleteManual(farApartOutgoing.Id);
+            app.Transactions.DeleteManual(farApartIncoming.Id);
+
+            var sameAccountOutgoing = app.Transactions.CreateManual(current.Id, -4_000, "EUR", new DateTime(2026, 9, 6), "Dépense A");
+            var sameAccountIncoming = app.Transactions.CreateManual(current.Id, 4_000, "EUR", new DateTime(2026, 9, 6), "Remboursement");
+            Check(app.TransferDetection.DetectCandidates().Count == 1, "a same-account opposite pair is not suggested — it isn't a transfer between accounts");
+            app.Transactions.DeleteManual(sameAccountOutgoing.Id);
+            app.Transactions.DeleteManual(sameAccountIncoming.Id);
+
+            var rejectedLink = app.TransferDetection.Reject(candidates[0].Outgoing.Id, candidates[0].Incoming.Id);
+            Check(rejectedLink.Status == TransferLinkStatus.Rejected, "rejecting a suggestion persists it as Rejected");
+            Check(app.TransferDetection.DetectCandidates().Count == 0, "a rejected pair is never suggested again");
+            Check(app.Transactions.FindById(transferCounterpart.Id)!.IsInternalTransfer == false,
+                "rejecting a suggestion leaves the transactions themselves untouched");
+
+            var thirdOutgoing = app.Transactions.CreateManual(current.Id, -5_000, "EUR", new DateTime(2026, 9, 6), "Retrait");
+            var thirdIncoming = app.Transactions.CreateManual(savings.Id, 5_000, "EUR", new DateTime(2026, 9, 7), "Dépôt");
+            Check(app.TransferDetection.DetectCandidates().Count == 1, "a new, distinct pair is detected independently of the earlier rejected one");
+
+            var confirmedLink = app.TransferDetection.Confirm(thirdOutgoing.Id, thirdIncoming.Id);
+            Check(confirmedLink.Status == TransferLinkStatus.Confirmed, "confirming a suggestion persists it as Confirmed");
+            Check(app.Transactions.FindById(thirdOutgoing.Id)!.IsInternalTransfer, "confirming marks the outgoing leg as an internal transfer");
+            Check(app.Transactions.FindById(thirdIncoming.Id)!.IsInternalTransfer, "confirming marks the incoming leg as an internal transfer");
+            Check(app.TransferDetection.DetectCandidates().Count == 0, "a confirmed pair no longer appears as a candidate, same as InternalTransfers.CreateTransfer's pair never did");
+
             var settings = app.Settings.Get();
             Check(settings.ForecastHorizonDays == 90, "default forecast horizon");
             app.Settings.UpdateForecastHorizon(60);

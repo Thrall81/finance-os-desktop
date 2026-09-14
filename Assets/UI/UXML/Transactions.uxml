@@ -9,6 +9,16 @@
       <ui:Button name="new-transaction-button" text="+ Nouvelle transaction" class="primary-button" />
     </ui:VisualElement>
 
+    <ui:VisualElement name="transfer-suggestions-card" class="card">
+      <ui:VisualElement class="card-header">
+        <ui:Label text="Virements internes suggérés" class="card-title" />
+        <ui:Label name="transfer-suggestions-count" text="0" class="badge" />
+      </ui:VisualElement>
+      <ui:Label text="Deux transactions de montants opposés, sur des comptes différents, à quelques jours d'intervalle — jamais liées automatiquement." class="card-caption" />
+      <ui:Label name="transfer-suggestions-empty" text="Aucun virement interne suggéré pour l'instant." class="empty-state" />
+      <ui:VisualElement name="transfer-suggestions-list" class="list" />
+    </ui:VisualElement>
+
     <ui:VisualElement name="filters-card" class="card">
       <ui:VisualElement class="card-header">
         <ui:Label text="Filtres" class="card-title" />

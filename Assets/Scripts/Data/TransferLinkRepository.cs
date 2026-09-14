@@ -43,6 +43,9 @@ namespace FinanceOS.Data
         public void Update(TransferLink link) =>
             _connection.Execute("UPDATE transfer_link SET status = ? WHERE id = ?", link.Status.ToStorageString(), link.Id);
 
+        public IReadOnlyList<TransferLink> ListAll() =>
+            _connection.Query<TransferLinkRow>(SelectColumns).Select(Map).ToList();
+
         public TransferLink? FindById(int id)
         {
             var row = _connection.Query<TransferLinkRow>($"{SelectColumns} WHERE id = ?", id).FirstOrDefault();

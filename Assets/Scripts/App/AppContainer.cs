@@ -24,6 +24,7 @@ namespace FinanceOS.App
         public CounterpartyService Counterparties { get; }
         public TransactionService Transactions { get; }
         public InternalTransferService InternalTransfers { get; }
+        public TransferDetectionService TransferDetection { get; }
         public RecurringOperationService RecurringOperations { get; }
         public ForecastOccurrenceService ForecastOccurrences { get; }
         public ForecastService Forecast { get; }
@@ -57,6 +58,7 @@ namespace FinanceOS.App
             Counterparties = new CounterpartyService(counterpartyRepository);
             Transactions = new TransactionService(transactionRepository);
             InternalTransfers = new InternalTransferService(transactionRepository, transferLinkRepository);
+            TransferDetection = new TransferDetectionService(transactionRepository, transferLinkRepository);
             RecurringOperations = new RecurringOperationService(recurringOperationRepository, occurrenceRepository);
             ForecastOccurrences = new ForecastOccurrenceService(
                 occurrenceRepository, transactionRepository, transferLinkRepository, accountRepository);

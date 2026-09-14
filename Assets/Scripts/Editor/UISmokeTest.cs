@@ -274,7 +274,8 @@ namespace FinanceOS.EditorTools
 
             var transactionsRoot = transactionsTree.Instantiate();
             var transactionsController = new TransactionsController(
-                transactionsRoot, app.Accounts, app.Categories, app.Counterparties, app.Transactions, app.InternalTransfers);
+                transactionsRoot, app.Accounts, app.Categories, app.Counterparties, app.Transactions,
+                app.InternalTransfers, app.TransferDetection);
 
             var listView = transactionsRoot.Q<MultiColumnListView>("transactions-list-view");
             Check(listView.itemsSource.Count == 1, "transactions controller renders the one seeded transaction");
@@ -317,6 +318,43 @@ namespace FinanceOS.EditorTools
             filterAmountMinField.SetValueWithoutNotify(string.Empty);
             transactionsController.OnFilterChanged();
             Check(listView.itemsSource.Count == 1, "clearing filter-amount-min restores the unfiltered list");
+
+            Check(transactionsRoot.Q<Label>("transfer-suggestions-count").text == "0", "no transfer suggestion with only one seeded transaction");
+            Check(transactionsRoot.Q<Label>("transfer-suggestions-empty").style.display == DisplayStyle.Flex, "transfer-suggestions empty-state shown with nothing to suggest");
+
+            // Isolated fixture (own temp database), same reasoning as the "Prochaines opérations"
+            // block above: a genuine unlinked transfer pair, with a balance history fully under
+            // this test's control rather than the shared fixture's, so the suggestion count is
+            // unambiguous regardless of what else `app` accumulates elsewhere in this file.
+            var transferTestPath = Path.Combine(Path.GetTempPath(), $"financeos-ui-smoke-transfer-{Guid.NewGuid():N}.db");
+            using (var transferApp = new AppContainer(transferTestPath))
+            {
+                var transferCurrent = transferApp.Accounts.CreateAccount("Compte courant", AccountType.Current, "EUR", 100_000);
+                var transferSavings = transferApp.Accounts.CreateAccount("Livret A", AccountType.Savings, "EUR", 50_000);
+
+                var transferOutgoing = transferApp.Transactions.CreateManual(
+                    transferCurrent.Id, -20_000, "EUR", new DateTime(2026, 9, 6), "Retrait");
+                var transferIncoming = transferApp.Transactions.CreateManual(
+                    transferSavings.Id, 20_000, "EUR", new DateTime(2026, 9, 7), "Dépôt");
+
+                var transferTree = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(TransactionsUxmlPath);
+                var transferRoot = transferTree.Instantiate();
+                var transferController = new TransactionsController(
+                    transferRoot, transferApp.Accounts, transferApp.Categories, transferApp.Counterparties,
+                    transferApp.Transactions, transferApp.InternalTransfers, transferApp.TransferDetection);
+
+                Check(transferRoot.Q<Label>("transfer-suggestions-count").text == "1", "one suggested transfer pair is counted");
+                Check(transferRoot.Q<Label>("transfer-suggestions-empty").style.display == DisplayStyle.None, "suggestions empty-state hidden when a candidate exists");
+                Check(transferRoot.Q<VisualElement>("transfer-suggestions-list").childCount == 1, "one suggestion row rendered");
+
+                transferApp.TransferDetection.Reject(transferOutgoing.Id, transferIncoming.Id);
+                transferController.Refresh();
+                Check(transferRoot.Q<Label>("transfer-suggestions-count").text == "0", "rejecting the pair removes it from the suggestion list on the next refresh");
+                Check(transferRoot.Q<Label>("transfer-suggestions-empty").style.display == DisplayStyle.Flex, "suggestions empty-state reappears once nothing is left to suggest");
+                Check(!transferApp.Transactions.FindById(transferOutgoing.Id)!.IsInternalTransfer, "rejecting from the UI leaves the underlying transactions untouched, same as the App-layer behavior");
+            }
+
+            TryDeleteQuietly(transferTestPath);
 
             // Dashboard expense-breakdown donut: "Carrefour" above is dated in August, outside
             // this month's window, so a couple of September-dated expenses are needed to exercise
@@ -772,7 +810,7 @@ namespace FinanceOS.EditorTools
                 var emptyTransactionsRoot = transactionsTree.Instantiate();
                 _ = new TransactionsController(
                     emptyTransactionsRoot, noAccountApp.Accounts, noAccountApp.Categories, noAccountApp.Counterparties,
-                    noAccountApp.Transactions, noAccountApp.InternalTransfers);
+                    noAccountApp.Transactions, noAccountApp.InternalTransfers, noAccountApp.TransferDetection);
                 Check(emptyTransactionsRoot.Q<Label>("transactions-empty").style.display == DisplayStyle.Flex, "empty-state shown when no transactions exist");
                 Check(!emptyTransactionsRoot.Q<Button>("new-transaction-button").enabledSelf, "new-transaction button disabled with no account to post against");
 

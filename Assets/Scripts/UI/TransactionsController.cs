@@ -21,6 +21,7 @@ namespace FinanceOS.UI
         private readonly CounterpartyService _counterparties;
         private readonly TransactionService _transactions;
         private readonly InternalTransferService _internalTransfers;
+        private readonly TransferDetectionService _transferDetection;
 
         private readonly DropdownField _filterAccountField;
         private readonly DropdownField _filterCategoryField;
@@ -31,6 +32,10 @@ namespace FinanceOS.UI
         private readonly TextField _filterTextField;
         private readonly Button _filterResetButton;
         private readonly Button _newTransactionButton;
+
+        private readonly Label _transferSuggestionsCountLabel;
+        private readonly Label _transferSuggestionsEmptyLabel;
+        private readonly VisualElement _transferSuggestionsList;
 
         private readonly VisualElement _formCard;
         private readonly Label _formTitle;
@@ -74,6 +79,7 @@ namespace FinanceOS.UI
         private IReadOnlyList<DropdownOption> _creatableAccounts = Array.Empty<DropdownOption>();
         private IReadOnlyList<DropdownOption> _categoryOptions = Array.Empty<DropdownOption>();
         private List<TransactionRowViewModel> _rows = new();
+        private IReadOnlyDictionary<int, string> _accountNames = new Dictionary<int, string>();
 
         private int? _filterAccountId;
         private int? _filterCategoryId;
@@ -92,13 +98,15 @@ namespace FinanceOS.UI
             CategoryService categories,
             CounterpartyService counterparties,
             TransactionService transactions,
-            InternalTransferService internalTransfers)
+            InternalTransferService internalTransfers,
+            TransferDetectionService transferDetection)
         {
             _accounts = accounts;
             _categories = categories;
             _counterparties = counterparties;
             _transactions = transactions;
             _internalTransfers = internalTransfers;
+            _transferDetection = transferDetection;
 
             _filterAccountField = root.Q<DropdownField>("filter-account");
             _filterCategoryField = root.Q<DropdownField>("filter-category");
@@ -109,6 +117,10 @@ namespace FinanceOS.UI
             _filterTextField = root.Q<TextField>("filter-text");
             _filterResetButton = root.Q<Button>("filters-reset-button");
             _newTransactionButton = root.Q<Button>("new-transaction-button");
+
+            _transferSuggestionsCountLabel = root.Q<Label>("transfer-suggestions-count");
+            _transferSuggestionsEmptyLabel = root.Q<Label>("transfer-suggestions-empty");
+            _transferSuggestionsList = root.Q<VisualElement>("transfer-suggestions-list");
 
             _formCard = root.Q<VisualElement>("transaction-form-card");
             _formTitle = root.Q<Label>("form-title");
@@ -227,6 +239,7 @@ namespace FinanceOS.UI
             _creatableAccounts = viewModel.CreatableAccounts;
             _categoryOptions = viewModel.Categories;
             _rows = viewModel.Transactions.ToList();
+            _accountNames = viewModel.AccountFilterOptions.ToDictionary(o => o.Id, o => o.Name);
 
             RebuildFilterChoices(viewModel.AccountFilterOptions);
             RebuildFilterCategoryChoices(viewModel.Categories);
@@ -240,7 +253,72 @@ namespace FinanceOS.UI
             // Flex, and a bare item refresh left stale geometry from before the toggle in place,
             // rendering the table over its own card title. See ADR-116.
             _listView.Rebuild();
+
+            RenderTransferSuggestions();
         }
+
+        // Recomputed on every Refresh() (account-scale data, cheap) rather than cached, so
+        // confirming/rejecting one suggestion — or creating/editing/deleting a transaction that
+        // changes what pairs up — is reflected immediately without a separate invalidation path.
+        private void RenderTransferSuggestions()
+        {
+            var candidates = _transferDetection.DetectCandidates();
+            _transferSuggestionsCountLabel.text = candidates.Count.ToString();
+            _transferSuggestionsEmptyLabel.style.display = candidates.Count == 0 ? DisplayStyle.Flex : DisplayStyle.None;
+
+            _transferSuggestionsList.Clear();
+            foreach (var candidate in candidates)
+            {
+                _transferSuggestionsList.Add(BuildTransferSuggestionRow(candidate));
+            }
+        }
+
+        private VisualElement BuildTransferSuggestionRow(TransferCandidate candidate)
+        {
+            var element = new VisualElement();
+            element.AddToClassList("verification-row");
+
+            var textColumn = new VisualElement { style = { flexGrow = 1 } };
+            var labelElement = new Label($"{ResolveAccountName(candidate.Outgoing.AccountId)} → {ResolveAccountName(candidate.Incoming.AccountId)}");
+            labelElement.AddToClassList("verification-row-label");
+            var dateElement = new Label(candidate.Outgoing.OperationDate == candidate.Incoming.OperationDate
+                ? DateFormat.Short(candidate.Outgoing.OperationDate)
+                : $"{DateFormat.Short(candidate.Outgoing.OperationDate)} → {DateFormat.Short(candidate.Incoming.OperationDate)}");
+            dateElement.AddToClassList("verification-row-date");
+            textColumn.Add(labelElement);
+            textColumn.Add(dateElement);
+
+            var amountElement = new Label(MoneyFormat.Format(Math.Abs(candidate.Outgoing.AmountMinor), candidate.Outgoing.Currency));
+            amountElement.AddToClassList("verification-row-amount");
+
+            var actions = new VisualElement { style = { flexDirection = FlexDirection.Row } };
+            var confirmButton = new Button(() => ConfirmTransferSuggestion(candidate)) { text = "Confirmer" };
+            confirmButton.AddToClassList("secondary-button");
+            var rejectButton = new Button(() => RejectTransferSuggestion(candidate)) { text = "Ignorer" };
+            rejectButton.AddToClassList("secondary-button");
+            actions.Add(confirmButton);
+            actions.Add(rejectButton);
+
+            element.Add(textColumn);
+            element.Add(amountElement);
+            element.Add(actions);
+            return element;
+        }
+
+        private void ConfirmTransferSuggestion(TransferCandidate candidate)
+        {
+            _transferDetection.Confirm(candidate.Outgoing.Id, candidate.Incoming.Id);
+            Refresh();
+        }
+
+        private void RejectTransferSuggestion(TransferCandidate candidate)
+        {
+            _transferDetection.Reject(candidate.Outgoing.Id, candidate.Incoming.Id);
+            Refresh();
+        }
+
+        private string ResolveAccountName(int accountId) =>
+            _accountNames.TryGetValue(accountId, out var name) ? name : "—";
 
         private void RebuildFilterChoices(IReadOnlyList<DropdownOption> options)
         {
