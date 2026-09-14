@@ -87,7 +87,8 @@ Ce parcours n'est pas un simple assistant décoratif : sans connecteur pour pré
 
 - devise (EUR fixe en V1), horizon de prévision, seuil de solde faible ;
 - emplacement du fichier de données, export/sauvegarde manuelle (copie du fichier SQLite ou export JSON) ;
-- thème (clair/sombre), choisi manuellement — pas de détection automatique du thème système (cf. `09-Decisions_techniques.md`, ADR-135).
+- thème (clair/sombre), choisi manuellement — pas de détection automatique du thème système (cf. `09-Decisions_techniques.md`, ADR-135) ;
+- numéro de version affiché ; vérification automatique d'une nouvelle version au lancement, téléchargement silencieux si une version plus récente existe, installation toujours soumise à confirmation explicite de l'utilisateur (cf. `09-Decisions_techniques.md`, ADR-139 — seule exception documentée au principe « jamais automatique », cf. `08-Confidentialite_et_donnees.md` §1).
 
 ---
 

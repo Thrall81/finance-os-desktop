@@ -7,7 +7,7 @@
 ;   2. ISCC.exe packaging\FinanceOS.iss
 ; Output: packaging\Output\FinanceOS-Setup-<version>.exe (gitignored, rebuilt from source each time)
 
-#define AppVersion "1.0.1"
+#define AppVersion "1.0.2"
 
 [Setup]
 AppId={{3330EEC9-D1D8-44DB-B2E5-10E37473E979}}
@@ -27,6 +27,12 @@ Compression=lzma2/max
 SolidCompression=yes
 WizardStyle=modern
 UninstallDisplayIcon={app}\FinanceOS.exe
+; The self-update flow (ADR-139) launches this installer /VERYSILENT while FinanceOS.exe may
+; still be running (and holding GameAssembly.dll/UnityPlayer.dll locked) — CloseApplications lets
+; Windows Restart Manager detect and close it automatically instead of the copy silently failing,
+; and RestartApplications relaunches it once installation finishes, silent runs included.
+CloseApplications=yes
+RestartApplications=yes
 
 [Languages]
 Name: "french"; MessagesFile: "compiler:Languages\French.isl"

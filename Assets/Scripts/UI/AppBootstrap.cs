@@ -71,6 +71,45 @@ namespace FinanceOS.UI
             {
                 ShowDashboard();
             }
+
+            // The one deliberate, narrowly-scoped exception to "jamais automatique, jamais
+            // silencieux" (docs/08-Confidentialite_et_donnees.md §1) — see ADR-139. Started after
+            // the first screen already renders, so a slow/offline check never delays startup;
+            // every failure path inside UpdateChecker is silent by design, so this is safe to
+            // fire-and-forget without any error handling here.
+            StartCoroutine(new UpdateChecker().CheckAndDownload(OnUpdateReady));
+        }
+
+        private void OnUpdateReady(string version, string installerPath)
+        {
+            _shell?.ShowUpdateReady(version, () => InstallUpdateAndRestart(installerPath), () => _shell?.HideUpdateReady());
+        }
+
+        /// <summary>The explicit confirmation point ShowUpdateReady's doc comment refers to —
+        /// nothing from UpdateChecker's silent background download ever reaches this method
+        /// without the user clicking "Installer et redémarrer" first. Launches the already-
+        /// downloaded installer /VERYSILENT (no further Inno Setup prompts — the user already
+        /// confirmed via this app's own dialog) and quits; the installer's own CloseApplications/
+        /// RestartApplications directives (packaging/FinanceOS.iss, ADR-139) handle waiting for
+        /// this process to fully exit and relaunching it once installation finishes.</summary>
+        private void InstallUpdateAndRestart(string installerPath)
+        {
+            try
+            {
+                var startInfo = new System.Diagnostics.ProcessStartInfo(installerPath) { UseShellExecute = true };
+                startInfo.ArgumentList.Add("/VERYSILENT");
+                startInfo.ArgumentList.Add("/SUPPRESSMSGBOXES");
+                startInfo.ArgumentList.Add("/NORESTART");
+                System.Diagnostics.Process.Start(startInfo);
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning($"[AppBootstrap] Failed to launch the downloaded update: {ex.Message}");
+                _shell?.HideUpdateReady();
+                return;
+            }
+
+            QuitApplication();
         }
 
         private void ShowOnboarding()

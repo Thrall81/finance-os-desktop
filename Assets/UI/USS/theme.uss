@@ -78,6 +78,36 @@
     color: var(--color-danger);
 }
 
+/* The update-ready confirmation (ADR-139) — a direct child of .shell-root so it can cover the
+   whole window (sidebar included), not just .content-area. UI Toolkit elements are positioned
+   relative by default (unlike raw CSS's static default), so no extra rule is needed on the
+   parent for this absolute overlay to size against it correctly. */
+.modal-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(23, 27, 34, 0.45);
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-card {
+    width: 380px;
+    background-color: var(--color-surface);
+    border-radius: 10px;
+    padding: 24px;
+}
+
+.modal-message {
+    font-size: 13px;
+    color: var(--color-ink-600);
+    margin-top: 8px;
+    margin-bottom: 20px;
+    white-space: normal;
+}
+
 .sidebar-title {
     font-size: 16px;
     -unity-font-definition: url("../../Fonts/Spectral-Bold.ttf");

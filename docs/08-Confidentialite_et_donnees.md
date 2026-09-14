@@ -6,11 +6,12 @@
 
 # 1. Principe fondateur
 
-L'application ne transmet **aucune donnée sur le réseau**, jamais. Ce n'est pas une politique de confidentialité déclarative : c'est une contrainte d'architecture vérifiable.
+L'application ne transmet **aucune donnée personnelle ou financière sur le réseau**, jamais. Ce n'est pas une politique de confidentialité déclarative : c'est une contrainte d'architecture vérifiable.
 
-- aucun appel `UnityWebRequest`/`HttpClient` n'est présent dans le code, sauf éventuellement un bouton manuel de vérification de mise à jour en V2 (jamais automatique, jamais silencieux) ;
+- une unique exception, délibérée et scopée précisément (ADR-139) : au lancement, l'application interroge en arrière-plan l'API publique et anonyme des releases GitHub du projet (`UnityWebRequest`, aucune clé, aucun identifiant) pour savoir si une version plus récente existe, et télécharge silencieusement l'installeur correspondant si c'est le cas. Aucune donnée personnelle ou financière ne transite jamais par cet appel — uniquement un numéro de version. **L'installation elle-même n'est en revanche jamais automatique** : rien ne s'exécute, aucun fichier de l'application en cours n'est remplacé, sans une confirmation explicite de l'utilisateur dans une fenêtre dédiée (« Voulez-vous l'installer maintenant ? ») ;
+- en dehors de cette vérification de version, aucun autre appel `UnityWebRequest`/`HttpClient` n'est présent dans le code ;
 - aucun SDK d'analytics, de crash-reporting ou de télémétrie n'est inclus dans le build ;
-- le manifeste réseau du build Windows ne demande aucune capacité réseau.
+- le manifeste réseau du build Windows ne demande que l'accès nécessaire à cette unique vérification.
 
 Conséquence directe : le RGPD ne s'applique pas au fonctionnement de l'application elle-même, puisqu'aucun traitement de données à caractère personnel n'a lieu en dehors de la machine de l'utilisateur, sous sa seule maîtrise.
 

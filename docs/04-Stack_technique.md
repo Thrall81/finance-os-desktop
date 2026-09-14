@@ -102,7 +102,7 @@ finance-os-desktop/
 
 ```text
 Docker
-API réseau (HttpClient, UnityWebRequest) — sauf éventuel bouton manuel "vérifier une mise à jour" en V2, jamais automatique
+API réseau (HttpClient, UnityWebRequest) — sauf la vérification automatique de version au lancement contre l'API GitHub Releases (ADR-139), seule exception, jamais utilisée pour autre chose
 Toute bibliothèque de connecteur (Gmail, OAuth, Open Banking)
 NgRx / état global complexe — inutile, il n'y a pas de SPA
 ORM lourd — SQL direct via sqlite-net suffit au volume attendu (quelques dizaines de milliers de lignes)
@@ -123,5 +123,5 @@ Framework d'injection de dépendances (Zenject, VContainer) — composition manu
 
 - Build "Standalone Windows" (IL2CPP, architecture x64) ;
 - packaging en installeur via Inno Setup (script versionné dans `packaging/`) ou en simple dossier zip portable ;
-- diffusion gratuite : GitHub Releases ou site personnel — pas de store, pas de compte requis pour télécharger ;
+- diffusion gratuite : GitHub Releases (`github.com/Thrall81/finance-os-desktop`, public, mis en place à l'ADR-136/ADR-139) — pas de store, pas de compte requis pour télécharger ; chaque nouvel installeur y est publié comme asset d'une release taguée `vX.Y.Z`, c'est aussi la source que l'application interroge pour la vérification de version (ADR-139) ;
 - aucune télémétrie de build, aucun SDK d'analytics inclus.

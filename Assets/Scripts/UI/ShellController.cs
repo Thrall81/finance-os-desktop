@@ -36,6 +36,13 @@ namespace FinanceOS.UI
         private readonly Button _navSettings;
         private readonly Button _quitButton;
 
+        private readonly VisualElement _updateReadyOverlay;
+        private readonly Label _updateReadyMessage;
+        private readonly Button _updateLaterButton;
+        private readonly Button _updateInstallButton;
+        private Action? _onUpdateLater;
+        private Action? _onUpdateInstallNow;
+
         public ShellController(
             VisualElement root,
             Action onNavigateToDashboard,
@@ -60,6 +67,17 @@ namespace FinanceOS.UI
             _navCategories = root.Q<Button>("nav-categories");
             _navSettings = root.Q<Button>("nav-settings");
             _quitButton = root.Q<Button>("quit-button");
+
+            _updateReadyOverlay = root.Q<VisualElement>("update-ready-overlay");
+            // Same reasoning as every other "hidden by default" element in this app (ADR-117): a
+            // bare UXML "display: none" doesn't reliably populate .style.display outside a live
+            // panel, so this is set explicitly rather than trusted from the markup alone.
+            _updateReadyOverlay.style.display = DisplayStyle.None;
+            _updateReadyMessage = root.Q<Label>("update-ready-message");
+            _updateLaterButton = root.Q<Button>("update-later-button");
+            _updateInstallButton = root.Q<Button>("update-install-button");
+            _updateLaterButton.clicked += () => _onUpdateLater?.Invoke();
+            _updateInstallButton.clicked += () => _onUpdateInstallNow?.Invoke();
 
             _navDashboard.clicked += onNavigateToDashboard;
             _navAccounts.clicked += onNavigateToAccounts;
@@ -91,6 +109,25 @@ namespace FinanceOS.UI
         /// per-instance DarkTheme flag instead — a CSS custom property is not readable from C#.</summary>
         public void SetTheme(AppTheme theme) =>
             _themeRoot.EnableInClassList("theme-dark", theme == AppTheme.Dark);
+
+        /// <summary>The one deliberate exception to "never automatic" (ADR-139) surfaces here:
+        /// a silently-downloaded installer still always stops at this explicit confirmation
+        /// before anything gets installed. Shown from any screen — this overlay is a direct
+        /// child of .shell-root, not .content-area, so it isn't torn down by screen navigation.</summary>
+        public void ShowUpdateReady(string version, Action onInstallNow, Action onLater)
+        {
+            _updateReadyMessage.text = $"La version {version} a été téléchargée. Voulez-vous l'installer maintenant ? L'application redémarrera.";
+            _onUpdateInstallNow = onInstallNow;
+            _onUpdateLater = onLater;
+            _updateReadyOverlay.style.display = DisplayStyle.Flex;
+        }
+
+        public void HideUpdateReady()
+        {
+            _updateReadyOverlay.style.display = DisplayStyle.None;
+            _onUpdateInstallNow = null;
+            _onUpdateLater = null;
+        }
 
         public void SetActive(ShellScreen screen)
         {

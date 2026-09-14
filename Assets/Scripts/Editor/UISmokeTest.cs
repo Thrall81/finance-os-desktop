@@ -1093,6 +1093,30 @@ namespace FinanceOS.EditorTools
 
             Check(root.Q<Button>("quit-button") is not null, "quit button is bound (ADR-138) — a reliable way to close the app regardless of window chrome");
 
+            Check(root.Q<VisualElement>("update-ready-overlay").style.display == DisplayStyle.None, "update-ready overlay hidden by default (ADR-139)");
+            shell.ShowUpdateReady("9.9.9", () => { }, () => { });
+            Check(root.Q<VisualElement>("update-ready-overlay").style.display == DisplayStyle.Flex, "ShowUpdateReady reveals the overlay");
+            Check(root.Q<Label>("update-ready-message").text.Contains("9.9.9"), "the overlay message names the new version");
+            shell.HideUpdateReady();
+            Check(root.Q<VisualElement>("update-ready-overlay").style.display == DisplayStyle.None, "HideUpdateReady hides it again");
+
+            // UpdateChecker's actual network/coroutine flow can't run here (no real HTTP in
+            // batchmode, and it shouldn't depend on live internet either way) — but its decision
+            // logic is deliberately pure and separated out specifically so it's still verifiable.
+            Check(UpdateChecker.IsNewerVersion("v1.2.0", "1.0.1"), "a later tagged release counts as newer");
+            Check(UpdateChecker.IsNewerVersion("1.2.0", "1.0.1"), "the leading 'v' on a release tag is optional");
+            Check(!UpdateChecker.IsNewerVersion("1.0.1", "1.0.1"), "the same version is never \"newer\"");
+            Check(!UpdateChecker.IsNewerVersion("1.0.0", "1.0.1"), "an older tag is never newer");
+            Check(!UpdateChecker.IsNewerVersion("not-a-version", "1.0.1"), "a malformed tag is treated as not-newer rather than throwing");
+            Check(!UpdateChecker.IsNewerVersion("1.2.0", "not-a-version"), "a malformed current version is treated as not-newer rather than throwing");
+
+            var installerAsset = new ReleaseAssetInfo("FinanceOS-Setup-1.2.0.exe", "https://example.invalid/FinanceOS-Setup-1.2.0.exe");
+            var sourceZipAsset = new ReleaseAssetInfo("Source code.zip", "https://example.invalid/source.zip");
+            Check(UpdateChecker.FindInstallerDownloadUrl(new[] { sourceZipAsset, installerAsset }) == installerAsset.Url,
+                "the .exe asset is picked regardless of its position among a release's assets");
+            Check(UpdateChecker.FindInstallerDownloadUrl(new[] { sourceZipAsset }) is null,
+                "a release with no .exe asset yields no download URL rather than picking the wrong file");
+
             Check(!root.Q<VisualElement>("shell-root").ClassListContains("theme-dark"), "light theme by default — no theme-dark class");
             shell.SetTheme(AppTheme.Dark);
             Check(root.Q<VisualElement>("shell-root").ClassListContains("theme-dark"), "SetTheme(Dark) adds the theme-dark class that redefines every --color-* token");
