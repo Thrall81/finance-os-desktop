@@ -22,6 +22,8 @@ sysinfo.txt
 *.unitypackage
 *.app
 *.exe
+/Build/
+/packaging/Output/
 
 # Crashlytics generated file
 crashlytics-build.properties
