@@ -54,7 +54,7 @@ namespace FinanceOS.UI
         private int? _editingCategoryId;
         private bool _editingIsSystem;
 
-        public CategoriesController(VisualElement root, CategoryService categories)
+        public CategoriesController(VisualElement root, CategoryService categories, bool isDarkTheme = false)
         {
             _categories = categories;
 
@@ -75,6 +75,7 @@ namespace FinanceOS.UI
 
             _emptyLabel = root.Q<Label>("categories-empty");
             _listView = root.Q<MultiColumnListView>("categories-list-view");
+            TableHeaderTheme.Wire(_listView, isDarkTheme);
 
             _typeField.choices = TypeOptions.Select(o => o.Text).ToList();
 

@@ -91,6 +91,7 @@ namespace FinanceOS.UI
         public ForecastsController(VisualElement root, AppContainer app)
         {
             _app = app;
+            var isDarkTheme = app.Settings.Get().Theme == AppTheme.Dark;
 
             _accountField = root.Q<DropdownField>("forecast-account-select");
             _warningsList = root.Q<VisualElement>("warnings-list");
@@ -116,6 +117,7 @@ namespace FinanceOS.UI
 
             _occurrencesEmptyLabel = root.Q<Label>("occurrences-empty");
             _occurrencesListView = root.Q<MultiColumnListView>("occurrences-list-view");
+            TableHeaderTheme.Wire(_occurrencesListView, isDarkTheme);
 
             _occurrenceToggleButton = root.Q<Button>("occurrence-toggle-button");
             _occurrenceFormBody = root.Q<VisualElement>("occurrence-form-body");
@@ -135,7 +137,7 @@ namespace FinanceOS.UI
             _occurrenceTypeField.choices = OccurrenceTypeOptions.ToList();
             _occurrenceTypeField.SetValueWithoutNotify(OccurrenceTypeOptions[0]);
 
-            _cashFlowChart = new LineChartElement { DarkTheme = app.Settings.Get().Theme == AppTheme.Dark };
+            _cashFlowChart = new LineChartElement { DarkTheme = isDarkTheme };
             // The container has a fixed height (.chart in theme.uss) but a plain VisualElement's
             // own height is content-driven, i.e. zero for one with no children — without growing
             // to fill its parent, contentRect stays empty and OnGenerateVisualContent's own
@@ -146,6 +148,7 @@ namespace FinanceOS.UI
 
             _timelineEmptyLabel = root.Q<Label>("timeline-empty");
             _timelineListView = root.Q<MultiColumnListView>("timeline-list-view");
+            TableHeaderTheme.Wire(_timelineListView, isDarkTheme);
 
             _simulationToggleButton = root.Q<Button>("simulation-toggle-button");
             _simulationBody = root.Q<VisualElement>("simulation-body");

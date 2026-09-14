@@ -154,6 +154,7 @@ namespace FinanceOS.UI
 
             _emptyLabel = root.Q<Label>("operations-empty");
             _listView = root.Q<MultiColumnListView>("operations-list-view");
+            TableHeaderTheme.Wire(_listView, settings.Get().Theme == AppTheme.Dark);
 
             _typeField.choices = TypeOptions.Select(o => o.Text).ToList();
             _frequencyField.choices = FrequencyOptions.Select(o => o.Text).ToList();

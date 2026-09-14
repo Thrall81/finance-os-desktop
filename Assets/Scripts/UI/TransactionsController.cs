@@ -99,7 +99,8 @@ namespace FinanceOS.UI
             CounterpartyService counterparties,
             TransactionService transactions,
             InternalTransferService internalTransfers,
-            TransferDetectionService transferDetection)
+            TransferDetectionService transferDetection,
+            bool isDarkTheme = false)
         {
             _accounts = accounts;
             _categories = categories;
@@ -159,6 +160,7 @@ namespace FinanceOS.UI
 
             _emptyLabel = root.Q<Label>("transactions-empty");
             _listView = root.Q<MultiColumnListView>("transactions-list-view");
+            TableHeaderTheme.Wire(_listView, isDarkTheme);
 
             _typeField.choices = TypeOptions.ToList();
 

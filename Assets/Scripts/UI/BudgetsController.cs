@@ -113,6 +113,7 @@ namespace FinanceOS.UI
             _newAllocationButton = root.Q<Button>("new-allocation-button");
             _allocationsEmptyLabel = root.Q<Label>("allocations-empty");
             _allocationsListView = root.Q<MultiColumnListView>("allocations-list-view");
+            TableHeaderTheme.Wire(_allocationsListView, isDarkTheme);
 
             _formCard = root.Q<VisualElement>("allocation-form-card");
             _formTitle = root.Q<Label>("allocation-form-title");

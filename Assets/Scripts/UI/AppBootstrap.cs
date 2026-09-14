@@ -146,7 +146,7 @@ namespace FinanceOS.UI
             _shell.SetContent(content);
             _transactionsController = new TransactionsController(
                 content, Container.Accounts, Container.Categories, Container.Counterparties,
-                Container.Transactions, Container.InternalTransfers, Container.TransferDetection);
+                Container.Transactions, Container.InternalTransfers, Container.TransferDetection, IsDarkTheme);
             ClearOtherControllers(keepTransactions: true);
             _shell.SetActive(ShellScreen.Transactions);
         }
@@ -204,7 +204,7 @@ namespace FinanceOS.UI
 
             var content = CategoriesAsset.Instantiate();
             _shell.SetContent(content);
-            _categoriesController = new CategoriesController(content, Container.Categories);
+            _categoriesController = new CategoriesController(content, Container.Categories, IsDarkTheme);
             ClearOtherControllers(keepCategories: true);
             _shell.SetActive(ShellScreen.Categories);
         }
