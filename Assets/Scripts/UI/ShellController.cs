@@ -22,6 +22,7 @@ namespace FinanceOS.UI
     /// </summary>
     public sealed class ShellController
     {
+        private readonly VisualElement _sidebar;
         private readonly VisualElement _contentArea;
         private readonly Button _navDashboard;
         private readonly Button _navAccounts;
@@ -43,6 +44,7 @@ namespace FinanceOS.UI
             Action onNavigateToCategories,
             Action onNavigateToSettings)
         {
+            _sidebar = root.Q<VisualElement>("sidebar");
             _contentArea = root.Q<VisualElement>("content-area");
             _navDashboard = root.Q<Button>("nav-dashboard");
             _navAccounts = root.Q<Button>("nav-accounts");
@@ -68,6 +70,12 @@ namespace FinanceOS.UI
             _contentArea.Clear();
             _contentArea.Add(content);
         }
+
+        /// <summary>Hidden during the first-launch onboarding flow (docs/07-Interface.md §4) —
+        /// a guided flow shouldn't let the user navigate away mid-flow into an otherwise-empty
+        /// screen. Shown again as soon as onboarding finishes.</summary>
+        public void SetSidebarVisible(bool visible) =>
+            _sidebar.style.display = visible ? DisplayStyle.Flex : DisplayStyle.None;
 
         public void SetActive(ShellScreen screen)
         {

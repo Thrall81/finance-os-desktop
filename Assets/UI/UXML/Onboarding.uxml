@@ -1,0 +1,96 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="False">
+  <Style src="../USS/theme.uss" />
+  <ui:ScrollView name="onboarding-root" class="page" mode="Vertical">
+    <ui:VisualElement class="page-header">
+      <ui:VisualElement>
+        <ui:Label text="Bienvenue" class="page-title" />
+        <ui:Label name="step-indicator" text="Étape 1 sur 4" class="page-subtitle" />
+      </ui:VisualElement>
+    </ui:VisualElement>
+
+    <ui:VisualElement name="step-welcome" class="card">
+      <ui:Label text="Finance OS vous aide à prévoir votre trésorerie, pas à faire votre comptabilité." class="card-title" />
+      <ui:Label text="Trois étapes courtes : un premier compte, vos charges et revenus principaux (facultatif), puis un récapitulatif. Vous pourrez tout compléter ou modifier plus tard." class="card-caption" />
+      <ui:VisualElement class="form-actions">
+        <ui:Button name="welcome-next-button" text="Commencer" class="primary-button" />
+      </ui:VisualElement>
+    </ui:VisualElement>
+
+    <ui:VisualElement name="step-account" class="card" style="display: none;">
+      <ui:Label text="Votre premier compte" class="card-title" />
+      <ui:Label text="Nom, type et solde actuel. Vous pourrez en ajouter d'autres, ou ajuster celui-ci, depuis l'écran Comptes." class="card-caption" />
+
+      <ui:VisualElement class="form-row">
+        <ui:Label text="Nom" class="form-label" />
+        <ui:TextField name="account-name-field" class="form-field" />
+      </ui:VisualElement>
+      <ui:VisualElement class="form-row">
+        <ui:Label text="Type" class="form-label" />
+        <ui:DropdownField name="account-type-field" class="form-field" />
+      </ui:VisualElement>
+      <ui:VisualElement class="form-row">
+        <ui:Label text="Solde actuel (€)" class="form-label" />
+        <ui:TextField name="account-balance-field" class="form-field" />
+      </ui:VisualElement>
+      <ui:Label name="account-error" text="" class="form-error" style="display: none;" />
+      <ui:VisualElement class="form-actions">
+        <ui:Button name="account-add-button" text="Ajouter ce compte" class="secondary-button" />
+      </ui:VisualElement>
+
+      <ui:VisualElement name="account-list" class="list" />
+
+      <ui:VisualElement class="form-actions">
+        <ui:Button name="account-back-button" text="Précédent" class="secondary-button" />
+        <ui:Button name="account-next-button" text="Suivant" class="primary-button" />
+      </ui:VisualElement>
+      <ui:Label name="account-next-error" text="" class="form-error" style="display: none;" />
+    </ui:VisualElement>
+
+    <ui:VisualElement name="step-recurring" class="card" style="display: none;">
+      <ui:Label text="Charges et revenus principaux" class="card-title" />
+      <ui:Label text="Salaire, loyer, une ou deux factures récurrentes — facultatif, et complétable plus tard depuis l'écran Opérations récurrentes." class="card-caption" />
+
+      <ui:VisualElement class="form-row">
+        <ui:Label text="Nom" class="form-label" />
+        <ui:TextField name="operation-name-field" class="form-field" />
+      </ui:VisualElement>
+      <ui:VisualElement class="form-row">
+        <ui:Label text="Type" class="form-label" />
+        <ui:DropdownField name="operation-type-field" class="form-field" />
+      </ui:VisualElement>
+      <ui:VisualElement class="form-row">
+        <ui:Label text="Montant mensuel (€)" class="form-label" />
+        <ui:TextField name="operation-amount-field" class="form-field" />
+      </ui:VisualElement>
+      <ui:VisualElement class="form-row">
+        <ui:Label text="Compte" class="form-label" />
+        <ui:DropdownField name="operation-account-field" class="form-field" />
+      </ui:VisualElement>
+      <ui:Label name="operation-error" text="" class="form-error" style="display: none;" />
+      <ui:VisualElement class="form-actions">
+        <ui:Button name="operation-add-button" text="Ajouter" class="secondary-button" />
+      </ui:VisualElement>
+
+      <ui:VisualElement name="operation-list" class="list" />
+
+      <ui:VisualElement class="form-actions">
+        <ui:Button name="recurring-back-button" text="Précédent" class="secondary-button" />
+        <ui:Button name="recurring-next-button" text="Passer" class="primary-button" />
+      </ui:VisualElement>
+    </ui:VisualElement>
+
+    <ui:VisualElement name="step-recap" class="card" style="display: none;">
+      <ui:Label text="Récapitulatif" class="card-title" />
+      <ui:Label text="Comptes" class="card-caption" />
+      <ui:VisualElement name="recap-account-list" class="list" />
+      <ui:Label text="Opérations récurrentes" class="card-caption" />
+      <ui:Label name="recap-operations-empty" text="Aucune — vous pourrez en ajouter depuis l'écran Opérations récurrentes." class="empty-state" />
+      <ui:VisualElement name="recap-operation-list" class="list" />
+
+      <ui:VisualElement class="form-actions">
+        <ui:Button name="recap-back-button" text="Précédent" class="secondary-button" />
+        <ui:Button name="recap-finish-button" text="Terminer" class="primary-button" />
+      </ui:VisualElement>
+    </ui:VisualElement>
+  </ui:ScrollView>
+</ui:UXML>

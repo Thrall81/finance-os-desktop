@@ -43,6 +43,7 @@ Journal des décisions structurantes, dans le même format que l'ancien projet (
 | ADR-127 | Synthèse budgétaire sur le Tableau de bord ; barres de progression compactes | ACCEPTED |
 | ADR-128 | Alertes sur le Tableau de bord ; solde faible + dépassement de budget, jamais persistées | ACCEPTED |
 | ADR-129 | Écran Catégories ajouté après audit du périmètre V1 ; validation « deux niveaux » côté service | ACCEPTED |
+| ADR-130 | Parcours de premier lancement ; réutilise le Shell existant plutôt qu'un chemin de démarrage séparé | ACCEPTED |
 
 ---
 
@@ -508,3 +509,25 @@ Chaque alerte porte `IsSevere` : dépassement de budget (danger/rust, cohérent 
 **Vérifié en batchmode** : mapping du view model (sous-catégorie créée, tri parent/enfant, catégorie déjà sous-catégorisée exclue des choix de parent possibles), les trois refus de validation (troisième niveau, catégorie avec enfants devenant elle-même enfant, catégorie devenant son propre parent), le refus d'archivage d'une catégorie système (comportement déjà existant sur `Category.Archive`, jamais testé jusqu'ici), présence/rendu du contrôleur (peuplé et vide — ce dernier cas différent de partout ailleurs : c'est l'absence de catégories elles-mêmes qui est testée, pas l'absence de comptes), navigation du shell. Vert du premier coup, y compris le correctif d'ordre de mutation ci-dessus (trouvé et corrigé avant le premier passage batchmode, pas après un échec).
 
 **Documents concernés** : `07-Interface.md` §3/§3bis.
+
+---
+
+# 32. ADR-130 — Parcours de premier lancement
+
+**Contexte** : deuxième des cinq lacunes trouvées par l'audit du périmètre V1 (ADR-129) — `07-Interface.md` §4 décrivait déjà le parcours en détail (écrit avant le code, comme la plupart de la documentation d'interface), mais rien n'était construit.
+
+**Décision** : `Onboarding.uxml` + `OnboardingController`, quatre étapes (Bienvenue, Premier compte, Charges et revenus facultatif, Récapitulatif) dans une seule carte affichée/masquée par étape — pas un neuvième écran de navigation, pas de scène séparée. `AppBootstrap.Awake()` teste `Container.Accounts.ListAll().Count == 0` ; si vrai, appelle `ShellController.SetContent` avec le contenu d'onboarding (exactement le même mécanisme que n'importe quel autre écran) et une nouvelle méthode `ShellController.SetSidebarVisible(false)` pour masquer la barre latérale — empêcher de naviguer ailleurs pendant un parcours guidé, sans réécrire la logique d'affichage de contenu qui existe déjà. Aucun drapeau « onboarding terminé » séparé : la condition (aucun compte) devient fausse dès la création du premier compte, ce qui suffit déjà à satisfaire « ne réapparaît jamais, même si seule l'étape 2 a été complétée » (`07-Interface.md` §4) sans état supplémentaire à maintenir.
+
+**« Quitter à tout moment conserve les données » est vrai par construction, pas par un mécanisme dédié** : chaque compte/opération ajouté pendant l'onboarding est persisté immédiatement via `AccountService.CreateAccount`/`RecurringOperationService.Create` — les mêmes appels que n'importe quel autre écran, rien de mis en tampon en attendant une validation finale à l'étape 4 (« Terminer » n'appelle d'ailleurs aucune mutation, seulement le callback de fin). Fermer l'application à n'importe quelle étape laisse donc exactement ce qui a déjà été ajouté, sans code spécifique à écrire ou tester pour cette garantie.
+
+**Formulaire de l'étape 3 délibérément plus minimal que l'écran Opérations récurrentes** : seulement Dépense/Revenu (pas Épargne/Virement interne — hors du « salaire, loyer, une ou deux factures » du périmètre), pas de champ jour du mois ni date de début. Chaque opération créée ici démarre aujourd'hui, donc son jour du mois (jamais demandé, déduit de la date de début par `ForecastOccurrenceGenerator`) correspond toujours exactement à la date de début — élimine structurellement le piège date-de-début/jour-du-mois qu'ADR-120 a dû corriger ailleurs, plutôt que de le réintroduire dans un nouveau formulaire.
+
+**Public uniquement pour la testabilité, même logique qu'ADR-120/124/129** : `Button.clicked` est un `event` C# classique, invocable seulement depuis la classe qui le déclare — impossible de simuler un clic depuis `UISmokeTest.cs` (assembly différent). `GoToStep`, `AddAccount`, `AddOperation`, `TryAdvanceFromAccountStep` et `Finish` sont donc publics, uniquement pour que les tests puissent piloter tout le parcours directement plutôt que de se limiter à l'état initial du constructeur — la glue des boutons (`clicked +=`) reste privée. Première fois que ce patron s'applique à une machine à états à plusieurs écrans plutôt qu'à un pur calcul (détection de survol, aperçu de date) : le principe reste le même — exposer uniquement ce que le déclencheur réel (ici, une interaction utilisateur) ne permet pas de vérifier autrement.
+
+**Un bug de validation qui aurait pu passer inaperçu, écarté par construction plutôt que par un test après coup** : si le formulaire avait exposé le jour du mois comme sur l'écran Opérations récurrentes, la même classe de bug que celle documentée dans le journal du projet (une opération créée le 29 avec un jour du mois 28 saute silencieusement le premier mois) aurait pu se reproduire ici, dans le tout premier écran vu par l'utilisateur. En ne demandant jamais ce champ et en fixant toujours la date de début à aujourd'hui, le problème ne peut structurellement pas se poser — un choix de conception plutôt qu'une correction.
+
+**Simplification assumée** : « navigation clavier complète » et « `aria`-équivalent » (`07-Interface.md` §4) s'appuient sur l'ordre de tabulation et le focus natifs de UI Toolkit plutôt qu'une implémentation ARIA dédiée — UI Toolkit n'a pas de système ARIA à proprement parler. Pas de bouton « Quitter l'onboarding » explicite non plus : fermer l'application (ou, actuellement, naviguer autrement n'est pas possible tant que la barre latérale est masquée) est le seul moyen de sortir avant l'étape 4, cohérent avec « quitter à tout moment » du §4 qui ne décrit qu'une garantie de non-perte de données, pas une action de sortie dédiée.
+
+**Vérifié en batchmode** : les quatre étapes pilotées de bout en bout (bienvenue → compte → refus d'avancer sans compte → compte créé → avance → opération facultative ajoutée → récapitulatif → terminer), le texte du bouton « Passer »/« Suivant » qui change selon qu'une opération a été ajoutée, les données réellement persistées à chaque étape (pas seulement affichées), le masquage/affichage de la barre latérale. Vert du premier coup malgré la taille de la machine à états.
+
+**Documents concernés** : `07-Interface.md` §4.

@@ -26,6 +26,7 @@ namespace FinanceOS.EditorTools
         private const string BudgetsUxmlPath = "Assets/UI/UXML/Budgets.uxml";
         private const string CategoriesUxmlPath = "Assets/UI/UXML/Categories.uxml";
         private const string SettingsUxmlPath = "Assets/UI/UXML/Settings.uxml";
+        private const string OnboardingUxmlPath = "Assets/UI/UXML/Onboarding.uxml";
         private const string ShellUxmlPath = "Assets/UI/UXML/Shell.uxml";
 
         [MenuItem("Finance OS/Run UI Smoke Test")]
@@ -740,6 +741,81 @@ namespace FinanceOS.EditorTools
             }
 
             TryDeleteQuietly(noAccountPath);
+
+            var onboardingPath = Path.Combine(Path.GetTempPath(), $"financeos-ui-smoke-onboarding-{Guid.NewGuid():N}.db");
+            using (var onboardingApp = new AppContainer(onboardingPath))
+            {
+                var freshOnboardingViewModel = OnboardingViewModelBuilder.Build(onboardingApp.Accounts, onboardingApp.RecurringOperations);
+                Check(freshOnboardingViewModel.Accounts.Count == 0, "a fresh onboarding scenario starts with no accounts");
+                Check(freshOnboardingViewModel.Operations.Count == 0, "a fresh onboarding scenario starts with no operations");
+
+                var onboardingTree = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(OnboardingUxmlPath);
+                if (onboardingTree == null)
+                {
+                    throw new FileNotFoundException($"Onboarding UXML not found at {OnboardingUxmlPath}");
+                }
+
+                var onboardingRoot = onboardingTree.Instantiate();
+                var onboardingFinishedCalls = 0;
+                var onboardingController = new OnboardingController(
+                    onboardingRoot, onboardingApp.Accounts, onboardingApp.RecurringOperations, () => onboardingFinishedCalls++);
+
+                Check(onboardingRoot.Q<VisualElement>("step-welcome").style.display == DisplayStyle.Flex, "welcome step shown first");
+                Check(onboardingRoot.Q<VisualElement>("step-account").style.display == DisplayStyle.None, "account step hidden initially");
+                Check(onboardingRoot.Q<Label>("step-indicator").text == "Étape 1 sur 4", "step indicator starts at step 1");
+
+                onboardingController.GoToStep(1);
+                Check(onboardingRoot.Q<VisualElement>("step-welcome").style.display == DisplayStyle.None, "welcome step hidden after advancing");
+                Check(onboardingRoot.Q<VisualElement>("step-account").style.display == DisplayStyle.Flex, "account step shown");
+                Check(onboardingRoot.Q<Label>("step-indicator").text == "Étape 2 sur 4", "step indicator advances to step 2");
+
+                onboardingController.TryAdvanceFromAccountStep();
+                Check(onboardingRoot.Q<VisualElement>("step-recurring").style.display == DisplayStyle.None, "cannot advance past the account step with no account created");
+                Check(onboardingRoot.Q<Label>("account-next-error").style.display == DisplayStyle.Flex, "error shown when trying to advance with no account");
+
+                onboardingRoot.Q<TextField>("account-name-field").value = "Compte courant";
+                onboardingRoot.Q<DropdownField>("account-type-field").value = "Épargne";
+                onboardingRoot.Q<TextField>("account-balance-field").value = "1500";
+                onboardingController.AddAccount();
+
+                Check(onboardingApp.Accounts.ListAll().Count == 1, "the account was actually persisted");
+                var createdAccount = onboardingApp.Accounts.ListAll()[0];
+                Check(createdAccount.Name == "Compte courant", "account name carried through");
+                Check(createdAccount.Type == AccountType.Savings, "account type carried through");
+                Check(createdAccount.OfficialBalanceMinor == 150_000, "account balance carried through (1500,00 €)");
+                Check(onboardingRoot.Q<VisualElement>("account-list").childCount == 1, "the newly added account is rendered in the step's own list");
+                Check(string.IsNullOrEmpty(onboardingRoot.Q<TextField>("account-name-field").value), "name field clears after a successful add, ready for another account");
+
+                onboardingController.TryAdvanceFromAccountStep();
+                Check(onboardingRoot.Q<Label>("account-next-error").style.display == DisplayStyle.None, "no error once an account exists");
+                Check(onboardingRoot.Q<VisualElement>("step-recurring").style.display == DisplayStyle.Flex, "advances to the recurring-operations step now that an account exists");
+                Check(onboardingRoot.Q<Button>("recurring-next-button").text == "Passer", "the advance button reads 'Passer' with nothing added yet — this step is optional");
+
+                onboardingRoot.Q<TextField>("operation-name-field").value = "Salaire";
+                onboardingRoot.Q<DropdownField>("operation-type-field").value = "Revenu";
+                onboardingRoot.Q<TextField>("operation-amount-field").value = "2500";
+                onboardingController.AddOperation();
+
+                Check(onboardingApp.RecurringOperations.ListAll().Count == 1, "the recurring operation was actually persisted");
+                var createdOperation = onboardingApp.RecurringOperations.ListAll()[0];
+                Check(createdOperation.Name == "Salaire", "operation name carried through");
+                Check(createdOperation.Type == RecurringOperationType.Income, "operation type carried through");
+                Check(createdOperation.DestinationAccountId == createdAccount.Id, "income targets the account created in step 2 as its destination");
+                Check(createdOperation.ExpectedAmountMinor == 250_000, "operation amount carried through (2500,00 €)");
+                Check(createdOperation.Frequency == RecurringFrequency.Monthly, "onboarding always creates monthly operations — no frequency field to keep the form minimal");
+                Check(onboardingRoot.Q<Button>("recurring-next-button").text == "Suivant", "the advance button relabels to 'Suivant' once something has been added");
+
+                onboardingController.GoToStep(3);
+                Check(onboardingRoot.Q<Label>("step-indicator").text == "Étape 4 sur 4", "step indicator reaches the last step");
+                Check(onboardingRoot.Q<VisualElement>("recap-account-list").childCount == 1, "recap lists the account created earlier");
+                Check(onboardingRoot.Q<VisualElement>("recap-operation-list").childCount == 1, "recap lists the operation created earlier");
+                Check(onboardingRoot.Q<Label>("recap-operations-empty").style.display == DisplayStyle.None, "operations empty-state hidden once one was added");
+
+                onboardingController.Finish();
+                Check(onboardingFinishedCalls == 1, "finishing the flow calls the completion callback exactly once");
+            }
+
+            TryDeleteQuietly(onboardingPath);
         }
 
         private static void CheckShell()
@@ -766,6 +842,11 @@ namespace FinanceOS.EditorTools
 
             var content = new VisualElement();
             shell.SetContent(content);
+
+            shell.SetSidebarVisible(false);
+            Check(root.Q<VisualElement>("sidebar").style.display == DisplayStyle.None, "sidebar hidden during onboarding");
+            shell.SetSidebarVisible(true);
+            Check(root.Q<VisualElement>("sidebar").style.display == DisplayStyle.Flex, "sidebar shown again once onboarding finishes");
             Check(root.Q<VisualElement>("content-area").childCount == 1, "shell content area receives the screen's content");
 
             shell.SetActive(ShellScreen.Accounts);

@@ -22,6 +22,7 @@ namespace FinanceOS.UI
         public VisualTreeAsset? BudgetsAsset;
         public VisualTreeAsset? CategoriesAsset;
         public VisualTreeAsset? SettingsAsset;
+        public VisualTreeAsset? OnboardingAsset;
 
         public static AppContainer? Container { get; private set; }
 
@@ -34,6 +35,7 @@ namespace FinanceOS.UI
         private BudgetsController? _budgetsController;
         private CategoriesController? _categoriesController;
         private SettingsController? _settingsController;
+        private OnboardingController? _onboardingController;
 
         private void Awake()
         {
@@ -52,6 +54,50 @@ namespace FinanceOS.UI
             _shell = new ShellController(
                 root, ShowDashboard, ShowAccounts, ShowTransactions, ShowRecurringOperations, ShowForecasts,
                 ShowBudgets, ShowCategories, ShowSettings);
+
+            // "Aucun compte en base" is the whole gating condition (docs/01-Perimetre.md §2.1) —
+            // deliberately not a separate "onboarding completed" flag: the flow never reappears
+            // once a first account exists, including if the user quit right after creating just
+            // one (docs/07-Interface.md §4), which this check already satisfies for free.
+            if (Container.Accounts.ListAll().Count == 0)
+            {
+                ShowOnboarding();
+            }
+            else
+            {
+                ShowDashboard();
+            }
+        }
+
+        private void ShowOnboarding()
+        {
+            if (Container is null || _shell is null || OnboardingAsset is null)
+            {
+                return;
+            }
+
+            var content = OnboardingAsset.Instantiate();
+            _shell.SetContent(content);
+            _shell.SetSidebarVisible(false);
+            _onboardingController = new OnboardingController(content, Container.Accounts, Container.RecurringOperations, OnOnboardingFinished);
+            ClearOtherControllers();
+        }
+
+        private void OnOnboardingFinished()
+        {
+            if (Container is null)
+            {
+                return;
+            }
+
+            // Any recurring operation added during onboarding needs its occurrences generated
+            // before the Dashboard renders — the same idempotent call Awake() already makes on
+            // every launch, just re-run now that onboarding may have just created new operations.
+            var settings = Container.Settings.Get();
+            Container.RecurringOperations.GenerateUpcomingOccurrences(DateTime.Now, settings.ForecastHorizonDays);
+
+            _onboardingController = null;
+            _shell?.SetSidebarVisible(true);
             ShowDashboard();
         }
 

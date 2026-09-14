@@ -82,6 +82,10 @@ Tant qu'aucun compte n'existe en base, la fenêtre principale ouvre sur un parco
 
 Navigation clavier complète, `aria`-équivalent UI Toolkit pour l'étape courante. Quitter à n'importe quelle étape conserve les données déjà saisies. Ce parcours ne réapparaît jamais une fois un premier compte créé — y compris si l'utilisateur n'a complété que l'étape 2.
 
+**État d'implémentation** (ADR-130) : `Onboarding.uxml` + `OnboardingController` couvrent les quatre étapes telles que décrites ci-dessus. Ni un neuvième écran du menu latéral ni une scène séparée — `AppBootstrap.Awake()` teste `Container.Accounts.ListAll().Count == 0` et, si vrai, affiche l'onboarding dans la même zone de contenu que les autres écrans (`ShellController.SetContent`) avec la barre latérale masquée (`ShellController.SetSidebarVisible`) plutôt qu'un chemin de démarrage entièrement séparé. Chaque compte/opération ajouté est persisté immédiatement via `AccountService`/`RecurringOperationService`, exactement comme tout le reste de l'application — rien n'est mis en tampon en attente d'une validation finale, donc « quitter à n'importe quelle étape conserve les données déjà saisies » est vrai par construction, sans code dédié. Aucun drapeau « onboarding terminé » séparé non plus : la condition d'affichage (aucun compte) redevient fausse dès la création du premier compte, ce qui satisfait déjà « ne réapparaît jamais... même si seule l'étape 2 a été complétée ».
+
+L'étape 3 utilise un formulaire volontairement plus minimal que l'écran Opérations récurrentes : seulement Dépense/Revenu (pas Épargne/Virement interne), pas de champ jour du mois ni date de début (toujours aujourd'hui, donc le jour du mois généré correspond toujours à la date de début par construction — aucun risque de retomber dans le piège date-de-début/jour-du-mois d'ADR-120). « Navigation clavier complète » et « `aria`-équivalent » s'appuient sur ce que UI Toolkit offre nativement (ordre de tabulation, focus) plutôt qu'une implémentation `aria` dédiée — UI Toolkit n'a pas de système ARIA à proprement parler, simplification assumée.
+
 ---
 
 # 5. Tableau de bord
