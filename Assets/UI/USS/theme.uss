@@ -505,6 +505,18 @@
     font-size: 13px;
 }
 
+/* MultiColumnListView's header row ships with Unity's own default runtime theme background
+   (unity-theme://default, never one of our tokens) — it stays a fixed light gray regardless of
+   .theme-dark, while the header text inherits .transactions-table's color: var(--color-ink-900)
+   above just fine and turns light in dark mode, leaving pale text on a still-light background.
+   ADR-135. Class name confirmed via a Unity Discussions thread demonstrating the same selector
+   (no official USS reference page lists it) — not guessed; a batchmode attempt to discover it by
+   walking the constructed tree found nothing, since a MultiColumnListView never builds its header
+   without an attached panel (same limitation as ADR-112/113). */
+.transactions-table .unity-multi-column-view__header-container {
+    background-color: var(--color-border);
+}
+
 .amount-negative {
     color: var(--color-danger);
 }
