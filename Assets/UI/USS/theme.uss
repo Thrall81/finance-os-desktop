@@ -429,6 +429,31 @@
     width: 220px;
 }
 
+.filters-row {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    margin-top: 4px;
+}
+
+.filter-group {
+    flex-direction: column;
+    margin-right: 16px;
+    margin-bottom: 12px;
+}
+
+.filter-group > .form-label {
+    margin-bottom: 4px;
+}
+
+.filter-group > .form-field {
+    width: 160px;
+}
+
+.filter-group-wide > .form-field {
+    width: 260px;
+}
+
 .form-readonly-value {
     font-size: 13px;
     color: var(--color-ink-600);

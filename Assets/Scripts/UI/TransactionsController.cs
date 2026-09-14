@@ -23,6 +23,13 @@ namespace FinanceOS.UI
         private readonly InternalTransferService _internalTransfers;
 
         private readonly DropdownField _filterAccountField;
+        private readonly DropdownField _filterCategoryField;
+        private readonly TextField _filterDateFromField;
+        private readonly TextField _filterDateToField;
+        private readonly TextField _filterAmountMinField;
+        private readonly TextField _filterAmountMaxField;
+        private readonly TextField _filterTextField;
+        private readonly Button _filterResetButton;
         private readonly Button _newTransactionButton;
 
         private readonly VisualElement _formCard;
@@ -68,7 +75,14 @@ namespace FinanceOS.UI
         private IReadOnlyList<DropdownOption> _categoryOptions = Array.Empty<DropdownOption>();
         private List<TransactionRowViewModel> _rows = new();
 
-        private int? _accountFilter;
+        private int? _filterAccountId;
+        private int? _filterCategoryId;
+        private DateTime? _filterDateFrom;
+        private DateTime? _filterDateTo;
+        private long? _filterAmountMinMinor;
+        private long? _filterAmountMaxMinor;
+        private string? _filterText;
+
         private int? _editingTransactionId;
         private bool _categoryManuallySet;
 
@@ -87,6 +101,13 @@ namespace FinanceOS.UI
             _internalTransfers = internalTransfers;
 
             _filterAccountField = root.Q<DropdownField>("filter-account");
+            _filterCategoryField = root.Q<DropdownField>("filter-category");
+            _filterDateFromField = root.Q<TextField>("filter-date-from");
+            _filterDateToField = root.Q<TextField>("filter-date-to");
+            _filterAmountMinField = root.Q<TextField>("filter-amount-min");
+            _filterAmountMaxField = root.Q<TextField>("filter-amount-max");
+            _filterTextField = root.Q<TextField>("filter-text");
+            _filterResetButton = root.Q<Button>("filters-reset-button");
             _newTransactionButton = root.Q<Button>("new-transaction-button");
 
             _formCard = root.Q<VisualElement>("transaction-form-card");
@@ -132,6 +153,13 @@ namespace FinanceOS.UI
             SetupColumns();
 
             _filterAccountField.RegisterValueChangedCallback(_ => OnFilterChanged());
+            _filterCategoryField.RegisterValueChangedCallback(_ => OnFilterChanged());
+            _filterDateFromField.RegisterValueChangedCallback(_ => OnFilterChanged());
+            _filterDateToField.RegisterValueChangedCallback(_ => OnFilterChanged());
+            _filterAmountMinField.RegisterValueChangedCallback(_ => OnFilterChanged());
+            _filterAmountMaxField.RegisterValueChangedCallback(_ => OnFilterChanged());
+            _filterTextField.RegisterValueChangedCallback(_ => OnFilterChanged());
+            _filterResetButton.clicked += ResetFilters;
             _newTransactionButton.clicked += OpenCreateForm;
             _cancelButton.clicked += CloseForm;
             _submitButton.clicked += SubmitForm;
@@ -191,13 +219,17 @@ namespace FinanceOS.UI
 
         public void Refresh()
         {
-            var viewModel = TransactionsViewModelBuilder.Build(_accounts, _categories, _counterparties, _transactions, _accountFilter);
+            var filter = new TransactionFilter(
+                _filterAccountId, _filterCategoryId, _filterDateFrom, _filterDateTo,
+                _filterAmountMinMinor, _filterAmountMaxMinor, _filterText);
+            var viewModel = TransactionsViewModelBuilder.Build(_accounts, _categories, _counterparties, _transactions, filter);
 
             _creatableAccounts = viewModel.CreatableAccounts;
             _categoryOptions = viewModel.Categories;
             _rows = viewModel.Transactions.ToList();
 
             RebuildFilterChoices(viewModel.AccountFilterOptions);
+            RebuildFilterCategoryChoices(viewModel.Categories);
             _newTransactionButton.SetEnabled(_creatableAccounts.Count > 0);
 
             var hasRows = _rows.Count > 0;
@@ -217,16 +249,67 @@ namespace FinanceOS.UI
             choices.AddRange(options.Select(o => o.Name));
             _filterAccountField.choices = choices;
 
-            var selectedIndex = _accountFilter is int currentId
+            var selectedIndex = _filterAccountId is int currentId
                 ? options.ToList().FindIndex(o => o.Id == currentId) + 1
                 : 0;
             _filterAccountField.SetValueWithoutNotify(choices[Math.Max(selectedIndex, 0)]);
         }
 
-        private void OnFilterChanged()
+        private void RebuildFilterCategoryChoices(IReadOnlyList<DropdownOption> options)
         {
-            var index = _filterAccountField.index;
-            _accountFilter = index <= 0 ? null : _filterAccountOptions[index - 1].Id;
+            var choices = new List<string> { "Toutes les catégories" };
+            choices.AddRange(options.Select(o => o.Name));
+            _filterCategoryField.choices = choices;
+
+            var selectedIndex = _filterCategoryId is int currentId
+                ? options.ToList().FindIndex(o => o.Id == currentId) + 1
+                : 0;
+            _filterCategoryField.SetValueWithoutNotify(choices[Math.Max(selectedIndex, 0)]);
+        }
+
+        // Every filter field re-reads its own value on each change rather than tracking deltas,
+        // and an unparseable date/amount is treated as "no constraint on that field" rather than
+        // blocking the whole filter — this is a live, incremental search box, not a submitted
+        // form, so it must never show a validation error while the user is mid-keystroke.
+        // Public only so UISmokeTest.cs can trigger it directly: an instantiated-but-unattached
+        // VisualTreeAsset has no panel, so the ChangeEvent a real .value assignment sends never
+        // dispatches in batchmode — same "public purely for testability" reasoning as
+        // OnboardingController (ADR-130), applied here to a field callback instead of a click.
+        public void OnFilterChanged()
+        {
+            var accountIndex = _filterAccountField.index;
+            _filterAccountId = accountIndex <= 0 ? null : _filterAccountOptions[accountIndex - 1].Id;
+
+            var categoryIndex = _filterCategoryField.index;
+            _filterCategoryId = categoryIndex <= 0 ? null : _categoryOptions[categoryIndex - 1].Id;
+
+            _filterDateFrom = DateFormat.TryParseInput(_filterDateFromField.value, out var dateFrom) ? dateFrom : null;
+            _filterDateTo = DateFormat.TryParseInput(_filterDateToField.value, out var dateTo) ? dateTo : null;
+
+            _filterAmountMinMinor = MoneyFormat.TryParseEurosToMinor(_filterAmountMinField.value, out var amountMin) ? amountMin : null;
+            _filterAmountMaxMinor = MoneyFormat.TryParseEurosToMinor(_filterAmountMaxField.value, out var amountMax) ? amountMax : null;
+
+            _filterText = string.IsNullOrWhiteSpace(_filterTextField.value) ? null : _filterTextField.value.Trim();
+
+            Refresh();
+        }
+
+        private void ResetFilters()
+        {
+            _filterAccountId = null;
+            _filterCategoryId = null;
+            _filterDateFrom = null;
+            _filterDateTo = null;
+            _filterAmountMinMinor = null;
+            _filterAmountMaxMinor = null;
+            _filterText = null;
+
+            _filterDateFromField.SetValueWithoutNotify(string.Empty);
+            _filterDateToField.SetValueWithoutNotify(string.Empty);
+            _filterAmountMinField.SetValueWithoutNotify(string.Empty);
+            _filterAmountMaxField.SetValueWithoutNotify(string.Empty);
+            _filterTextField.SetValueWithoutNotify(string.Empty);
+
             Refresh();
         }
 

@@ -44,6 +44,7 @@ Journal des décisions structurantes, dans le même format que l'ancien projet (
 | ADR-128 | Alertes sur le Tableau de bord ; solde faible + dépassement de budget, jamais persistées | ACCEPTED |
 | ADR-129 | Écran Catégories ajouté après audit du périmètre V1 ; validation « deux niveaux » côté service | ACCEPTED |
 | ADR-130 | Parcours de premier lancement ; réutilise le Shell existant plutôt qu'un chemin de démarrage séparé | ACCEPTED |
+| ADR-131 | Filtres de transactions (compte, catégorie, période, montant, texte) ; filtrage live, borne non analysable ignorée plutôt que bloquante | ACCEPTED |
 
 ---
 
@@ -531,3 +532,23 @@ Chaque alerte porte `IsSevere` : dépassement de budget (danger/rust, cohérent 
 **Vérifié en batchmode** : les quatre étapes pilotées de bout en bout (bienvenue → compte → refus d'avancer sans compte → compte créé → avance → opération facultative ajoutée → récapitulatif → terminer), le texte du bouton « Passer »/« Suivant » qui change selon qu'une opération a été ajoutée, les données réellement persistées à chaque étape (pas seulement affichées), le masquage/affichage de la barre latérale. Vert du premier coup malgré la taille de la machine à états.
 
 **Documents concernés** : `07-Interface.md` §4.
+
+---
+
+# 33. ADR-131 — Filtres de transactions
+
+**Contexte** : troisième des cinq lacunes trouvées par l'audit du périmètre V1 (ADR-129) — `01-Perimetre.md` §2.6 exige « recherche, filtres (compte, période, catégorie, montant, texte) », mais l'écran Transactions n'avait qu'un filtre par compte depuis le tout début du projet.
+
+**Décision** : nouveau record `TransactionFilter` (toutes les six dimensions optionnelles : `AccountId`, `CategoryId`, `DateFrom`, `DateTo`, `AmountMinMinor`, `AmountMaxMinor`, `Text`) remplace le paramètre `int? accountFilter` de `TransactionsViewModelBuilder.Build`, qui l'applique comme une chaîne de `.Where(...)`. `TransactionsController` garde une valeur par champ (`_filterAccountId`, `_filterCategoryId`, …) reconstruite en un `TransactionFilter` à chaque `Refresh()`. Pas de nouveau champ `CategoryFilterOptions` sur le view model : la liste `Categories` déjà présente (menu déroulant du formulaire de création) sert aussi au filtre, avec un placeholder différent selon le contexte (« Aucune » en création, « Toutes les catégories » en filtre) — même liste, même construction, deux menus déroulants distincts.
+
+**Comparaison par magnitude, pas par montant signé** : `AmountMinMinor`/`AmountMaxMinor` se comparent à `Math.Abs(t.AmountMinor)`, jamais au montant signé — « entre 50 et 100 € » doit retrouver aussi bien une dépense qu'un revenu de cette taille, sans que l'utilisateur ait à connaître le signe à l'avance pour formuler sa recherche.
+
+**Filtrage live, jamais bloquant** : chaque champ (compte, catégorie, dates, montants, texte) déclenche un nouveau filtrage à chaque changement, sans bouton « Rechercher » séparé. Une date ou un montant qui ne s'analyse pas (`DateFormat.TryParseInput`/`MoneyFormat.TryParseEurosToMinor` renvoient `false`, ex. pendant la frappe) est traité comme « aucune contrainte sur ce champ » plutôt que de bloquer tout le filtre ou d'afficher une erreur — cohérent avec une recherche incrémentale plutôt qu'un formulaire soumis, où interrompre l'utilisateur à chaque caractère serait la pire expérience possible.
+
+**Recherche texte** : `OriginalLabel.IndexOf(text, StringComparison.OrdinalIgnoreCase) >= 0`, pas l'overload `string.Contains(string, StringComparison)` — repéré et écarté avant toute tentative de compilation, la même famille de risque que `Dictionary.GetValueOrDefault` déjà documentée par ADR-114 pour cet assembly (`FinanceOS.UI`).
+
+**`OnFilterChanged` public uniquement pour la testabilité, même logique qu'ADR-120/124/129/130** : un `VisualTreeAsset` instancié sans panel attaché (le cas de `UISmokeTest.cs`) ne dispatch jamais le `ChangeEvent` qu'une affectation `.value` normale envoie — `RegisterValueChangedCallback` ne se déclenche donc pas, la même limitation que `Button.clicked`, mais pour un champ plutôt qu'un bouton. Trouvé en pratique (pas anticipé) : un premier passage batchmode a échoué sur une assertion qui, en réalité, ne testait rien — le filtre texte n'avait jamais été appliqué, la liste étant restée non filtrée par coïncidence sur le premier cas testé (« carrefour » correspondait de toute façon). Corrigé en rendant `OnFilterChanged` public et en l'appelant directement depuis le test après un `SetValueWithoutNotify`, plutôt qu'en comptant sur l'assignation `.value` pour déclencher le callback.
+
+**Vérifié en batchmode** : chacune des six dimensions du filtre côté `TransactionsViewModelBuilder` (compte, catégorie, période, montant par magnitude, texte insensible à la casse), plus un passage par les champs réels de `Transactions.uxml` (texte qui filtre puis se réinitialise, date qui exclut puis qu'une valeur non analysable rend inoffensive, montant minimum qui exclut). Vert après correction du piège panel-less ci-dessus.
+
+**Documents concernés** : `01-Perimetre.md` §2.6.

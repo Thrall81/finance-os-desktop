@@ -225,15 +225,46 @@ namespace FinanceOS.EditorTools
             Check(!DateFormat.TryParseInput("not a date", out _), "garbage text is rejected");
 
             var transactionsViewModel = TransactionsViewModelBuilder.Build(
-                app.Accounts, app.Categories, app.Counterparties, app.Transactions, accountFilter: null);
+                app.Accounts, app.Categories, app.Counterparties, app.Transactions, new TransactionFilter());
             Check(transactionsViewModel.Transactions.Count == 1, "one transaction appears in the unfiltered view model");
             Check(transactionsViewModel.Transactions[0].CategoryText == "Alimentation", "category resolved by name");
             Check(transactionsViewModel.Transactions[0].AccountName == "Compte courant", "account resolved by name");
             Check(Normalize(transactionsViewModel.Transactions[0].AmountText) == "−42,50 €", "amount formatted with its sign");
 
             var filteredOnOtherAccount = TransactionsViewModelBuilder.Build(
-                app.Accounts, app.Categories, app.Counterparties, app.Transactions, accountFilter: savings.Id);
+                app.Accounts, app.Categories, app.Counterparties, app.Transactions, new TransactionFilter(AccountId: savings.Id));
             Check(filteredOnOtherAccount.Transactions.Count == 0, "filtering by an unrelated account yields an empty list");
+
+            var filteredOnOtherCategory = TransactionsViewModelBuilder.Build(
+                app.Accounts, app.Categories, app.Counterparties, app.Transactions, new TransactionFilter(CategoryId: housing.Id));
+            Check(filteredOnOtherCategory.Transactions.Count == 0, "filtering by an unrelated category yields an empty list");
+
+            var filteredOnMatchingCategory = TransactionsViewModelBuilder.Build(
+                app.Accounts, app.Categories, app.Counterparties, app.Transactions, new TransactionFilter(CategoryId: groceries.Id));
+            Check(filteredOnMatchingCategory.Transactions.Count == 1, "filtering by the matching category keeps the transaction");
+
+            var filteredOnDateRange = TransactionsViewModelBuilder.Build(
+                app.Accounts, app.Categories, app.Counterparties, app.Transactions,
+                new TransactionFilter(DateFrom: new DateTime(2026, 9, 1), DateTo: new DateTime(2026, 9, 30)));
+            Check(filteredOnDateRange.Transactions.Count == 0, "the August transaction falls outside a September date range");
+
+            var filteredOnAmountRange = TransactionsViewModelBuilder.Build(
+                app.Accounts, app.Categories, app.Counterparties, app.Transactions,
+                new TransactionFilter(AmountMinMinor: 4_000, AmountMaxMinor: 4_500));
+            Check(filteredOnAmountRange.Transactions.Count == 1, "amount filter matches by magnitude regardless of the transaction's sign");
+
+            var filteredOnAmountRangeMiss = TransactionsViewModelBuilder.Build(
+                app.Accounts, app.Categories, app.Counterparties, app.Transactions,
+                new TransactionFilter(AmountMinMinor: 5_000));
+            Check(filteredOnAmountRangeMiss.Transactions.Count == 0, "amount filter excludes a transaction below the minimum magnitude");
+
+            var filteredOnMatchingText = TransactionsViewModelBuilder.Build(
+                app.Accounts, app.Categories, app.Counterparties, app.Transactions, new TransactionFilter(Text: "carre"));
+            Check(filteredOnMatchingText.Transactions.Count == 1, "text filter matches a case-insensitive substring of the label");
+
+            var filteredOnOtherText = TransactionsViewModelBuilder.Build(
+                app.Accounts, app.Categories, app.Counterparties, app.Transactions, new TransactionFilter(Text: "nomatch"));
+            Check(filteredOnOtherText.Transactions.Count == 0, "text filter excludes a label that doesn't contain the search text");
 
             var transactionsTree = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(TransactionsUxmlPath);
             if (transactionsTree == null)
@@ -252,6 +283,40 @@ namespace FinanceOS.EditorTools
 
             transactionsController.Refresh();
             Check(listView.itemsSource.Count == 1, "refresh re-renders without duplication");
+
+            // The tree instantiated above has no panel, so a normal .value assignment's ChangeEvent
+            // never dispatches here (same limitation as Button.clicked, cf. TransactionsController's
+            // public OnFilterChanged) — use SetValueWithoutNotify then call it directly.
+            var filterTextField = transactionsRoot.Q<TextField>("filter-text");
+            filterTextField.SetValueWithoutNotify("carrefour");
+            transactionsController.OnFilterChanged();
+            Check(listView.itemsSource.Count == 1, "filter-text field keeps a transaction whose label matches, driven through the real UXML field");
+
+            filterTextField.SetValueWithoutNotify("nomatch");
+            transactionsController.OnFilterChanged();
+            Check(listView.itemsSource.Count == 0, "filter-text field hides transactions once the value matches nothing");
+            Check(transactionsRoot.Q<Label>("transactions-empty").style.display == DisplayStyle.Flex, "empty-state reappears when a live filter matches nothing");
+            filterTextField.SetValueWithoutNotify(string.Empty);
+            transactionsController.OnFilterChanged();
+            Check(listView.itemsSource.Count == 1, "clearing filter-text restores the unfiltered list");
+
+            var filterDateFromField = transactionsRoot.Q<TextField>("filter-date-from");
+            filterDateFromField.SetValueWithoutNotify("01/09/2026");
+            transactionsController.OnFilterChanged();
+            Check(listView.itemsSource.Count == 0, "filter-date-from excludes the August-dated seed transaction");
+            filterDateFromField.SetValueWithoutNotify("not a date");
+            transactionsController.OnFilterChanged();
+            Check(listView.itemsSource.Count == 1, "an unparseable filter-date-from value is treated as no constraint rather than blocking the list");
+            filterDateFromField.SetValueWithoutNotify(string.Empty);
+            transactionsController.OnFilterChanged();
+
+            var filterAmountMinField = transactionsRoot.Q<TextField>("filter-amount-min");
+            filterAmountMinField.SetValueWithoutNotify("50");
+            transactionsController.OnFilterChanged();
+            Check(listView.itemsSource.Count == 0, "filter-amount-min excludes a transaction below the minimum magnitude");
+            filterAmountMinField.SetValueWithoutNotify(string.Empty);
+            transactionsController.OnFilterChanged();
+            Check(listView.itemsSource.Count == 1, "clearing filter-amount-min restores the unfiltered list");
 
             // Dashboard expense-breakdown donut: "Carrefour" above is dated in August, outside
             // this month's window, so a couple of September-dated expenses are needed to exercise

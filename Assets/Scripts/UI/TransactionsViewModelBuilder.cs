@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using FinanceOS.App;
 
@@ -15,7 +16,7 @@ namespace FinanceOS.UI
             CategoryService categories,
             CounterpartyService counterparties,
             TransactionService transactions,
-            int? accountFilter)
+            TransactionFilter filter)
         {
             var accountList = accounts.ListAll();
             var accountNames = accountList.ToDictionary(a => a.Id, a => a.Name);
@@ -25,9 +26,15 @@ namespace FinanceOS.UI
 
             var counterpartyNames = counterparties.ListAll().ToDictionary(c => c.Id, c => c.Name);
 
-            var source = accountFilter is int accountId
-                ? transactions.ListForAccount(accountId)
-                : transactions.ListAll();
+            var source = (filter.AccountId is int accountId ? transactions.ListForAccount(accountId) : transactions.ListAll())
+                .Where(t => filter.CategoryId is not int categoryFilterId || t.CategoryId == categoryFilterId)
+                .Where(t => filter.DateFrom is not DateTime dateFrom || t.OperationDate >= dateFrom)
+                .Where(t => filter.DateTo is not DateTime dateTo || t.OperationDate <= dateTo)
+                .Where(t => filter.AmountMinMinor is not long amountMin || Math.Abs(t.AmountMinor) >= amountMin)
+                .Where(t => filter.AmountMaxMinor is not long amountMax || Math.Abs(t.AmountMinor) <= amountMax)
+                // IndexOf, not the string.Contains(string, StringComparison) overload — that one
+                // is a .NET Standard 2.1+ member, unavailable in this assembly (ADR-114).
+                .Where(t => string.IsNullOrWhiteSpace(filter.Text) || t.OriginalLabel.IndexOf(filter.Text, StringComparison.OrdinalIgnoreCase) >= 0);
 
             var rows = source
                 .Select(t => new TransactionRowViewModel(
