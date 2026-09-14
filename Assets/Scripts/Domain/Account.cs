@@ -156,10 +156,26 @@ namespace FinanceOS.Domain
             Touch(now);
         }
 
-        public void RecordOfficialBalance(long balanceMinor, DateTime balanceDate, DateTimeOffset? now = null)
+        /// <summary>Records a newly observed official balance. Only moves the forecast's own
+        /// reference point (<see cref="OfficialBalanceMinor"/>/<see cref="OfficialBalanceDate"/>,
+        /// see ForecastCalculator.ResolveOpeningBalance) forward when this observation is the
+        /// most recent one known — an earlier, backfilled entry is still recorded as history (by
+        /// the caller, via AccountBalanceSnapshotRepository) but must never pull the forecast's
+        /// anchor date backward, which would silently double-count real transactions between the
+        /// two dates. See docs/01-Perimetre.md §2.2 ("historique de soldes officiels").</summary>
+        public void RecordOfficialBalance(long balanceMinor, DateTime balanceDate, DateTime? today = null, DateTimeOffset? now = null)
         {
-            OfficialBalanceMinor = balanceMinor;
-            OfficialBalanceDate = balanceDate;
+            if (balanceDate.Date > (today ?? DateTime.Now).Date)
+            {
+                throw new ArgumentException("An officially observed balance cannot be dated in the future.", nameof(balanceDate));
+            }
+
+            if (OfficialBalanceDate is null || balanceDate >= OfficialBalanceDate.Value)
+            {
+                OfficialBalanceMinor = balanceMinor;
+                OfficialBalanceDate = balanceDate;
+            }
+
             Touch(now);
         }
 

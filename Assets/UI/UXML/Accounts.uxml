@@ -44,6 +44,27 @@
       </ui:VisualElement>
 
       <ui:Label name="form-error" text="" class="form-error" style="display: none;" />
+
+      <ui:VisualElement name="balance-history-section" style="display: none;">
+        <ui:Label text="Nouveau solde officiel" class="card-title" />
+        <ui:Label text="Enregistre un solde observé (ex. relevé bancaire) à une date donnée. Seul le plus récent sert de point de départ aux prévisions ; les autres restent conservés comme historique." class="card-caption" />
+        <ui:VisualElement class="form-row">
+          <ui:Label text="Date" class="form-label" />
+          <ui:TextField name="balance-history-date" class="form-field" />
+        </ui:VisualElement>
+        <ui:VisualElement class="form-row">
+          <ui:Label text="Solde (€)" class="form-label" />
+          <ui:TextField name="balance-history-amount" class="form-field" />
+        </ui:VisualElement>
+        <ui:VisualElement class="form-actions">
+          <ui:Button name="balance-history-submit-button" text="Enregistrer" class="secondary-button" />
+        </ui:VisualElement>
+        <ui:Label name="balance-history-error" text="" class="form-error" style="display: none;" />
+
+        <ui:Label text="Historique" class="card-title" />
+        <ui:Label name="balance-history-empty" text="Aucun solde officiel enregistré." class="empty-state" />
+        <ui:VisualElement name="balance-history-list" class="list" />
+      </ui:VisualElement>
     </ui:VisualElement>
 
     <ui:VisualElement name="accounts-card" class="card">

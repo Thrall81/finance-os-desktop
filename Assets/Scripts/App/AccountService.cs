@@ -58,16 +58,22 @@ namespace FinanceOS.App
             _accounts.Update(account);
         }
 
-        /// <summary>Records a new officially observed balance — keeps the historical snapshot
-        /// and the account's own "latest known balance" fields in sync.
-        /// See docs/03-Modele_de_donnees.md §8.</summary>
+        /// <summary>Records a new officially observed balance as a permanent history entry —
+        /// and, only if it is the most recent one known for this account, also moves the
+        /// account's own forecast reference point forward (see Account.RecordOfficialBalance).
+        /// See docs/03-Modele_de_donnees.md §8 and docs/01-Perimetre.md §2.2.</summary>
         public void RecordOfficialBalance(int accountId, long balanceMinor, DateTime balanceDate)
         {
             var account = RequireAccount(accountId);
-            _snapshots.Insert(new AccountBalanceSnapshot(accountId, balanceMinor, balanceDate));
             account.RecordOfficialBalance(balanceMinor, balanceDate);
+            _snapshots.Insert(new AccountBalanceSnapshot(accountId, balanceMinor, balanceDate));
             _accounts.Update(account);
         }
+
+        /// <summary>Every officially observed balance ever recorded for this account, most
+        /// recent first — the "historique" half of docs/01-Perimetre.md §2.2.</summary>
+        public IReadOnlyList<AccountBalanceSnapshot> ListBalanceHistory(int accountId) =>
+            _snapshots.ListForAccount(accountId);
 
         public void Archive(int accountId)
         {

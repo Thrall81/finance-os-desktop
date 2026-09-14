@@ -202,6 +202,36 @@ namespace FinanceOS.EditorTools
             Check(app.ForecastOccurrences.ListDueForVerification(new DateTime(2026, 11, 1)).Any(o => o.Id == octoberOccurrence.Id),
                 "a missed occurrence still appears in the verification queue rather than disappearing");
 
+            // Balance history on `savings`, not `current` — nothing above depends on savings's
+            // balance, so this can freely move its forecast anchor without disturbing any
+            // already-asserted forecast/budget figure computed against `current`.
+            app.Accounts.RecordOfficialBalance(savings.Id, 305_000, new DateTime(2026, 9, 10));
+            var afterSecondObservation = app.Accounts.FindById(savings.Id)!;
+            Check(afterSecondObservation.OfficialBalanceMinor == 305_000 && afterSecondObservation.OfficialBalanceDate == new DateTime(2026, 9, 10),
+                "a later observation moves the account's forecast anchor forward");
+
+            app.Accounts.RecordOfficialBalance(savings.Id, 299_000, new DateTime(2026, 9, 5));
+            var afterBackfill = app.Accounts.FindById(savings.Id)!;
+            Check(afterBackfill.OfficialBalanceMinor == 305_000 && afterBackfill.OfficialBalanceDate == new DateTime(2026, 9, 10),
+                "a backfilled, earlier observation does not pull the forecast anchor backward");
+
+            var balanceHistory = app.Accounts.ListBalanceHistory(savings.Id);
+            Check(balanceHistory.Count == 3, "every recorded observation is kept as history, including the backfilled one");
+            Check(balanceHistory[0].BalanceDate == new DateTime(2026, 9, 10), "history is ordered most-recent-first");
+
+            var futureBalanceRejected = false;
+            try
+            {
+                app.Accounts.RecordOfficialBalance(savings.Id, 300_000, new DateTime(2026, 12, 31));
+            }
+            catch (ArgumentException)
+            {
+                futureBalanceRejected = true;
+            }
+
+            Check(futureBalanceRejected, "recording a future-dated official balance is rejected");
+            Check(app.Accounts.ListBalanceHistory(savings.Id).Count == 3, "a rejected future balance is not recorded as history either");
+
             var backupPath = app.Backup.CreateBackup(new DateTimeOffset(2026, 9, 13, 10, 0, 0, TimeSpan.Zero));
             Check(File.Exists(backupPath), "backup creates a real file");
             Check(new FileInfo(backupPath).Length == new FileInfo(tempPath).Length, "backup is a byte-for-byte copy of the live database file");

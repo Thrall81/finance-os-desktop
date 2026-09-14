@@ -49,6 +49,14 @@ namespace FinanceOS.UI
         private readonly Label _emptyLabel;
         private readonly VisualElement _list;
 
+        private readonly VisualElement _balanceHistorySection;
+        private readonly TextField _balanceHistoryDateField;
+        private readonly TextField _balanceHistoryAmountField;
+        private readonly Button _balanceHistorySubmitButton;
+        private readonly Label _balanceHistoryErrorLabel;
+        private readonly Label _balanceHistoryEmptyLabel;
+        private readonly VisualElement _balanceHistoryList;
+
         private int? _editingAccountId;
         private bool _liquidityManuallySet;
 
@@ -73,6 +81,18 @@ namespace FinanceOS.UI
             _emptyLabel = root.Q<Label>("accounts-empty");
             _list = root.Q<VisualElement>("accounts-list");
 
+            _balanceHistorySection = root.Q<VisualElement>("balance-history-section");
+            // Set explicitly rather than relying on the UXML inline style alone — see ADR-117:
+            // a bare "style=display:none;" does not reliably populate .style.display outside a
+            // live panel.
+            _balanceHistorySection.style.display = DisplayStyle.None;
+            _balanceHistoryDateField = root.Q<TextField>("balance-history-date");
+            _balanceHistoryAmountField = root.Q<TextField>("balance-history-amount");
+            _balanceHistorySubmitButton = root.Q<Button>("balance-history-submit-button");
+            _balanceHistoryErrorLabel = root.Q<Label>("balance-history-error");
+            _balanceHistoryEmptyLabel = root.Q<Label>("balance-history-empty");
+            _balanceHistoryList = root.Q<VisualElement>("balance-history-list");
+
             _typeField.choices = TypeOptions.Select(o => o.Text).ToList();
             _liquidityField.choices = LiquidityOptions.Select(o => o.Text).ToList();
 
@@ -80,6 +100,7 @@ namespace FinanceOS.UI
             _cancelButton.clicked += CloseForm;
             _submitButton.clicked += SubmitForm;
             _archiveButton.clicked += ToggleArchive;
+            _balanceHistorySubmitButton.clicked += SubmitBalanceHistory;
             _typeField.RegisterValueChangedCallback(OnTypeChanged);
             _liquidityField.RegisterValueChangedCallback(_ => _liquidityManuallySet = true);
 
@@ -143,13 +164,18 @@ namespace FinanceOS.UI
             _balanceRow.style.display = DisplayStyle.Flex;
             _institutionRow.style.display = DisplayStyle.Flex;
             _archiveButton.style.display = DisplayStyle.None;
+            _balanceHistorySection.style.display = DisplayStyle.None;
             _submitButton.text = "Créer";
             HideError();
 
             _formCard.style.display = DisplayStyle.Flex;
         }
 
-        private void OpenEditForm(AccountRowViewModel row)
+        // Public only so UISmokeTest.cs can open the edit form directly: it's normally reached by
+        // a row ClickEvent (element.RegisterCallback<ClickEvent>), which — like Button.clicked —
+        // never dispatches on a VisualTreeAsset instantiated without a panel (see ADR-113). Same
+        // "public purely for testability" reasoning as TransactionsController.OnFilterChanged.
+        public void OpenEditForm(AccountRowViewModel row)
         {
             _editingAccountId = row.Id;
             _liquidityManuallySet = true;
@@ -166,6 +192,12 @@ namespace FinanceOS.UI
             _archiveButton.text = row.IsArchived ? "Restaurer" : "Archiver";
             _submitButton.text = "Enregistrer";
             HideError();
+
+            _balanceHistorySection.style.display = DisplayStyle.Flex;
+            _balanceHistoryDateField.SetValueWithoutNotify(DateFormat.ForInput(DateTime.Now));
+            _balanceHistoryAmountField.SetValueWithoutNotify(string.Empty);
+            HideBalanceHistoryError();
+            RenderBalanceHistory(row.Id);
 
             _formCard.style.display = DisplayStyle.Flex;
         }
@@ -253,6 +285,89 @@ namespace FinanceOS.UI
 
             var defaultPolicy = Account.DefaultLiquidityPolicyFor(TypeOptions[typeIndex].Type);
             _liquidityField.SetValueWithoutNotify(LiquidityOptions.First(o => o.Policy == defaultPolicy).Text);
+        }
+
+        private void RenderBalanceHistory(int accountId)
+        {
+            var currency = _accounts.FindById(accountId)?.Currency ?? "EUR";
+            var rows = AccountsViewModelBuilder.BuildBalanceHistory(_accounts.ListBalanceHistory(accountId), currency);
+
+            _balanceHistoryEmptyLabel.style.display = rows.Count == 0 ? DisplayStyle.Flex : DisplayStyle.None;
+
+            _balanceHistoryList.Clear();
+            foreach (var row in rows)
+            {
+                _balanceHistoryList.Add(BuildBalanceHistoryRow(row));
+            }
+        }
+
+        private static VisualElement BuildBalanceHistoryRow(BalanceHistoryRowViewModel row)
+        {
+            var element = new VisualElement();
+            element.AddToClassList("verification-row");
+
+            var dateLabel = new Label(row.DateText);
+            dateLabel.AddToClassList("verification-row-label");
+
+            var amountLabel = new Label(row.AmountText);
+            amountLabel.AddToClassList("verification-row-amount");
+
+            element.Add(dateLabel);
+            element.Add(amountLabel);
+            return element;
+        }
+
+        /// <summary>Public only so UISmokeTest.cs can drive it directly, same reasoning as
+        /// <see cref="OpenEditForm"/> — its own trigger (a Button.clicked) can't be invoked from
+        /// another assembly without a real panel either.</summary>
+        public void SubmitBalanceHistory()
+        {
+            if (_editingAccountId is not int accountId)
+            {
+                return;
+            }
+
+            if (!MoneyFormat.TryParseEurosToMinor(_balanceHistoryAmountField.value, out var balanceMinor))
+            {
+                ShowBalanceHistoryError("Le solde doit être un montant valide, ex. 1234,56.");
+                return;
+            }
+
+            if (!DateFormat.TryParseInput(_balanceHistoryDateField.value, out var date))
+            {
+                ShowBalanceHistoryError("La date doit être au format jj/mm/aaaa.");
+                return;
+            }
+
+            try
+            {
+                _accounts.RecordOfficialBalance(accountId, balanceMinor, date);
+            }
+            catch (ArgumentException ex)
+            {
+                ShowBalanceHistoryError(ex.Message);
+                return;
+            }
+
+            _balanceHistoryAmountField.SetValueWithoutNotify(string.Empty);
+            _balanceHistoryDateField.SetValueWithoutNotify(DateFormat.ForInput(DateTime.Now));
+            HideBalanceHistoryError();
+            RenderBalanceHistory(accountId);
+            // Also refreshes the account row behind the form — its displayed balance changes
+            // when this entry becomes the newest known one, see Account.RecordOfficialBalance.
+            Refresh();
+        }
+
+        private void ShowBalanceHistoryError(string message)
+        {
+            _balanceHistoryErrorLabel.text = message;
+            _balanceHistoryErrorLabel.style.display = DisplayStyle.Flex;
+        }
+
+        private void HideBalanceHistoryError()
+        {
+            _balanceHistoryErrorLabel.text = string.Empty;
+            _balanceHistoryErrorLabel.style.display = DisplayStyle.None;
         }
 
         private void ShowError(string message)

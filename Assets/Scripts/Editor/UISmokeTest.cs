@@ -211,6 +211,51 @@ namespace FinanceOS.EditorTools
             accountsController.Refresh();
             Check(accountsList.childCount == 2, "refresh re-renders the same two rows without duplication");
 
+            // Isolated fixture: recording a new official balance moves the account's forecast
+            // anchor (Account.RecordOfficialBalance) — doing this on the shared `account` fixture
+            // would disturb the many forecast/budget assertions it feeds for the rest of this
+            // file, same reasoning as the other isolated blocks in this suite.
+            var balanceHistoryPath = Path.Combine(Path.GetTempPath(), $"financeos-ui-smoke-balance-history-{Guid.NewGuid():N}.db");
+            using (var balanceHistoryApp = new AppContainer(balanceHistoryPath))
+            {
+                var balanceHistoryAccount = balanceHistoryApp.Accounts.CreateAccount("Compte test", AccountType.Current, "EUR", 100_000);
+
+                var balanceHistoryTree = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(AccountsUxmlPath);
+                var balanceHistoryRoot = balanceHistoryTree.Instantiate();
+                var balanceHistoryController = new AccountsController(balanceHistoryRoot, balanceHistoryApp.Accounts);
+
+                Check(balanceHistoryRoot.Q<VisualElement>("balance-history-section").style.display == DisplayStyle.None,
+                    "balance-history section hidden before any account is opened for edit");
+
+                var balanceHistoryRowViewModel = AccountsViewModelBuilder.Build(balanceHistoryApp.Accounts).Accounts.Single();
+                balanceHistoryController.OpenEditForm(balanceHistoryRowViewModel);
+                Check(balanceHistoryRoot.Q<VisualElement>("balance-history-section").style.display == DisplayStyle.Flex,
+                    "balance-history section shown once an account is opened for edit");
+                Check(balanceHistoryRoot.Q<Label>("balance-history-empty").style.display == DisplayStyle.Flex,
+                    "balance-history empty-state shown with no recorded balance yet");
+                Check(balanceHistoryRoot.Q<VisualElement>("balance-history-list").childCount == 0, "no balance-history rows rendered yet");
+
+                var balanceHistoryDateField = balanceHistoryRoot.Q<TextField>("balance-history-date");
+                var balanceHistoryAmountField = balanceHistoryRoot.Q<TextField>("balance-history-amount");
+                balanceHistoryDateField.SetValueWithoutNotify("10/09/2026");
+                balanceHistoryAmountField.SetValueWithoutNotify("1050,00");
+                balanceHistoryController.SubmitBalanceHistory();
+
+                Check(balanceHistoryRoot.Q<Label>("balance-history-empty").style.display == DisplayStyle.None,
+                    "balance-history empty-state hidden once a balance is recorded");
+                Check(balanceHistoryRoot.Q<VisualElement>("balance-history-list").childCount == 1, "one balance-history row rendered after submit");
+                Check(balanceHistoryApp.Accounts.FindById(balanceHistoryAccount.Id)!.OfficialBalanceMinor == 105_000,
+                    "the submitted balance became the account's new official balance");
+
+                balanceHistoryAmountField.SetValueWithoutNotify("not a number");
+                balanceHistoryController.SubmitBalanceHistory();
+                Check(balanceHistoryRoot.Q<Label>("balance-history-error").style.display == DisplayStyle.Flex,
+                    "an invalid amount shows the balance-history form's own error label");
+                Check(balanceHistoryRoot.Q<VisualElement>("balance-history-list").childCount == 1, "a rejected submission does not add a row");
+            }
+
+            TryDeleteQuietly(balanceHistoryPath);
+
             var groceries = app.Categories.ListActive().First(c => c.Name == "Alimentation");
             var firstGroceries = app.Transactions.CreateManual(
                 account.Id, -4_250, "EUR", new DateTime(2026, 8, 10), "  Carrefour  ", categoryId: groceries.Id);

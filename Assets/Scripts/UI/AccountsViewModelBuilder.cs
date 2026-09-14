@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Linq;
 using FinanceOS.App;
 using FinanceOS.Domain;
@@ -27,6 +28,12 @@ namespace FinanceOS.UI
 
             return new AccountsViewModel(rows);
         }
+
+        public static IReadOnlyList<BalanceHistoryRowViewModel> BuildBalanceHistory(
+            IReadOnlyList<AccountBalanceSnapshot> snapshots, string currency) =>
+            snapshots
+                .Select(s => new BalanceHistoryRowViewModel(DateFormat.Short(s.BalanceDate), MoneyFormat.Format(s.BalanceMinor, currency)))
+                .ToList();
 
         public static string TypeText(AccountType type) => type switch
         {
