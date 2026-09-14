@@ -536,8 +536,20 @@ namespace FinanceOS.EditorTools
             Check(forecastsRoot.Q<VisualElement>("simulation-body").style.display == DisplayStyle.None, "simulation body collapsed by default");
             Check(forecastsRoot.Q<Button>("simulation-toggle-button").text == "Simuler un scénario", "simulation toggle shows its initial label");
 
+            Check(forecastsRoot.Q<VisualElement>("occurrence-form-body").style.display == DisplayStyle.None, "one-off occurrence form collapsed by default");
+            Check(forecastsRoot.Q<Button>("occurrence-toggle-button").text == "+ Nouvelle occurrence", "occurrence toggle shows its initial label");
+            Check(forecastsRoot.Q<Button>("occurrence-toggle-button").enabledSelf, "occurrence toggle enabled once an account is selected");
+            Check(forecastsRoot.Q<DropdownField>("occurrence-category").choices.Count == forecastsViewModel.Categories.Count + 1,
+                "occurrence category dropdown carries every active category plus the \"Aucune\" placeholder");
+
             forecastsController.Refresh();
             Check(forecastOccurrencesListView.itemsSource.Count == forecastsViewModel.Occurrences.Count, "refresh re-renders without duplication");
+
+            var oneOffOccurrenceForForecastsScreen = app.ForecastOccurrences.Create(
+                account.Id, "Cadeau anniversaire", new DateTime(2026, 9, 18), 15_000);
+            forecastsController.Refresh();
+            Check(forecastOccurrencesListView.itemsSource.Count == forecastsViewModel.Occurrences.Count + 1,
+                "a one-off occurrence created directly through the service appears in the occurrences list after refresh, same path the form's submit button uses");
 
             var septemberBudget = app.Budget.GetOrCreate(2026, 9);
             app.Budget.UpsertAllocation(septemberBudget.Id, housing.Id, 70_000);

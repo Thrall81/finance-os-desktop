@@ -16,6 +16,7 @@ namespace FinanceOS.UI
     public sealed class ForecastsController
     {
         private static readonly string[] SimulationTypeOptions = { "Dépense", "Revenu" };
+        private static readonly string[] OccurrenceTypeOptions = { "Dépense", "Revenu" };
 
         private readonly AppContainer _app;
 
@@ -43,6 +44,18 @@ namespace FinanceOS.UI
 
         private readonly Label _occurrencesEmptyLabel;
         private readonly MultiColumnListView _occurrencesListView;
+
+        private readonly Button _occurrenceToggleButton;
+        private readonly VisualElement _occurrenceFormBody;
+        private readonly TextField _occurrenceLabelField;
+        private readonly DropdownField _occurrenceTypeField;
+        private readonly TextField _occurrenceAmountField;
+        private readonly TextField _occurrenceDateField;
+        private readonly DropdownField _occurrenceCategoryField;
+        private readonly TextField _occurrenceCounterpartyField;
+        private readonly Label _occurrenceErrorLabel;
+        private readonly Button _occurrenceCancelButton;
+        private readonly Button _occurrenceSubmitButton;
 
         private readonly LineChartElement _cashFlowChart;
         private readonly Label _timelineEmptyLabel;
@@ -72,6 +85,7 @@ namespace FinanceOS.UI
         private int? _confirmingOccurrenceId;
         private bool _confirmingIsNegative;
         private bool _simulationExpanded;
+        private bool _occurrenceFormExpanded;
 
         public ForecastsController(VisualElement root, AppContainer app)
         {
@@ -101,6 +115,24 @@ namespace FinanceOS.UI
 
             _occurrencesEmptyLabel = root.Q<Label>("occurrences-empty");
             _occurrencesListView = root.Q<MultiColumnListView>("occurrences-list-view");
+
+            _occurrenceToggleButton = root.Q<Button>("occurrence-toggle-button");
+            _occurrenceFormBody = root.Q<VisualElement>("occurrence-form-body");
+            // Same reasoning as _simulationBody just below: a bare UXML "display: none" doesn't
+            // reliably populate .style.display outside a live panel, so this is set explicitly.
+            _occurrenceFormBody.style.display = DisplayStyle.None;
+            _occurrenceLabelField = root.Q<TextField>("occurrence-label");
+            _occurrenceTypeField = root.Q<DropdownField>("occurrence-type");
+            _occurrenceAmountField = root.Q<TextField>("occurrence-amount");
+            _occurrenceDateField = root.Q<TextField>("occurrence-date");
+            _occurrenceCategoryField = root.Q<DropdownField>("occurrence-category");
+            _occurrenceCounterpartyField = root.Q<TextField>("occurrence-counterparty");
+            _occurrenceErrorLabel = root.Q<Label>("occurrence-error");
+            _occurrenceCancelButton = root.Q<Button>("occurrence-cancel-button");
+            _occurrenceSubmitButton = root.Q<Button>("occurrence-submit-button");
+
+            _occurrenceTypeField.choices = OccurrenceTypeOptions.ToList();
+            _occurrenceTypeField.SetValueWithoutNotify(OccurrenceTypeOptions[0]);
 
             _cashFlowChart = new LineChartElement();
             // The container has a fixed height (.chart in theme.uss) but a plain VisualElement's
@@ -147,6 +179,9 @@ namespace FinanceOS.UI
             _simulationToggleButton.clicked += ToggleSimulationBody;
             _simulationRunButton.clicked += RunSimulation;
             _simulationResetButton.clicked += () => _simulationResultCard.style.display = DisplayStyle.None;
+            _occurrenceToggleButton.clicked += ToggleOccurrenceForm;
+            _occurrenceCancelButton.clicked += CloseOccurrenceForm;
+            _occurrenceSubmitButton.clicked += SubmitOccurrence;
 
             Refresh();
         }
@@ -276,6 +311,7 @@ namespace FinanceOS.UI
                 _accountField.SetValueWithoutNotify("Aucun compte");
                 _accountField.SetEnabled(false);
                 _simulationRunButton.SetEnabled(false);
+                _occurrenceToggleButton.SetEnabled(false);
                 return;
             }
 
@@ -287,6 +323,7 @@ namespace FinanceOS.UI
             _accountField.SetValueWithoutNotify(index >= 0 && index < choices.Count ? choices[index] : string.Empty);
 
             _simulationRunButton.SetEnabled(_selectedAccountId is not null);
+            _occurrenceToggleButton.SetEnabled(_selectedAccountId is not null);
         }
 
         private void RebuildCategoryChoices()
@@ -297,6 +334,12 @@ namespace FinanceOS.UI
             if (string.IsNullOrEmpty(_simulationCategoryField.value))
             {
                 _simulationCategoryField.SetValueWithoutNotify(choices[0]);
+            }
+
+            _occurrenceCategoryField.choices = choices;
+            if (string.IsNullOrEmpty(_occurrenceCategoryField.value))
+            {
+                _occurrenceCategoryField.SetValueWithoutNotify(choices[0]);
             }
         }
 
@@ -435,6 +478,7 @@ namespace FinanceOS.UI
 
             _selectedAccountId = _accountOptions[index].Id;
             CloseConfirmForm();
+            CloseOccurrenceForm();
             Refresh();
         }
 
@@ -491,6 +535,87 @@ namespace FinanceOS.UI
             HideSimulationError();
 
             _simulationResultCard.style.display = DisplayStyle.Flex;
+        }
+
+        /// <summary>Collapsed by default, same reasoning as the simulation form (§2.7's "occurrence
+        /// ponctuelle" is an occasional action, not something every visit needs open).</summary>
+        private void ToggleOccurrenceForm()
+        {
+            _occurrenceFormExpanded = !_occurrenceFormExpanded;
+            if (_occurrenceFormExpanded)
+            {
+                _occurrenceLabelField.SetValueWithoutNotify(string.Empty);
+                _occurrenceTypeField.SetValueWithoutNotify(OccurrenceTypeOptions[0]);
+                _occurrenceAmountField.SetValueWithoutNotify(string.Empty);
+                _occurrenceDateField.SetValueWithoutNotify(DateFormat.ForInput(DateTime.Now));
+                _occurrenceCategoryField.SetValueWithoutNotify(_occurrenceCategoryField.choices.Count > 0 ? _occurrenceCategoryField.choices[0] : string.Empty);
+                _occurrenceCounterpartyField.SetValueWithoutNotify(string.Empty);
+                HideOccurrenceError();
+            }
+
+            _occurrenceFormBody.style.display = _occurrenceFormExpanded ? DisplayStyle.Flex : DisplayStyle.None;
+            _occurrenceToggleButton.text = _occurrenceFormExpanded ? "Masquer" : "+ Nouvelle occurrence";
+        }
+
+        private void CloseOccurrenceForm()
+        {
+            _occurrenceFormExpanded = false;
+            _occurrenceFormBody.style.display = DisplayStyle.None;
+            _occurrenceToggleButton.text = "+ Nouvelle occurrence";
+        }
+
+        private void SubmitOccurrence()
+        {
+            if (_selectedAccountId is not int accountId)
+            {
+                return;
+            }
+
+            var label = _occurrenceLabelField.value?.Trim() ?? string.Empty;
+            if (string.IsNullOrEmpty(label))
+            {
+                ShowOccurrenceError("Le libellé est requis.");
+                return;
+            }
+
+            if (!MoneyFormat.TryParseEurosToMinor(_occurrenceAmountField.value, out var magnitude) || magnitude <= 0)
+            {
+                ShowOccurrenceError("Le montant doit être un nombre positif, ex. 45,90.");
+                return;
+            }
+
+            if (!DateFormat.TryParseInput(_occurrenceDateField.value, out var date))
+            {
+                ShowOccurrenceError("La date doit être au format jj/mm/aaaa.");
+                return;
+            }
+
+            var signedAmount = _occurrenceTypeField.value == OccurrenceTypeOptions[0] ? -magnitude : magnitude;
+
+            var categoryIndex = _occurrenceCategoryField.index;
+            var categoryId = categoryIndex <= 0 ? (int?)null : _categoryOptions[categoryIndex - 1].Id;
+
+            var counterpartyName = _occurrenceCounterpartyField.value?.Trim();
+            var counterpartyId = string.IsNullOrEmpty(counterpartyName)
+                ? (int?)null
+                : _app.Counterparties.FindOrCreateByName(counterpartyName).Id;
+
+            _app.ForecastOccurrences.Create(accountId, label, date, signedAmount, categoryId: categoryId, counterpartyId: counterpartyId);
+
+            CloseOccurrenceForm();
+            Refresh();
+        }
+
+        private void ShowOccurrenceError(string message)
+        {
+            _occurrenceErrorLabel.text = message;
+            _occurrenceErrorLabel.style.display = DisplayStyle.Flex;
+        }
+
+        private void HideOccurrenceError()
+        {
+            _occurrenceErrorLabel.text = string.Empty;
+            _occurrenceErrorLabel.style.display = DisplayStyle.None;
         }
 
         private static string PlainAmountText(long magnitude) => $"{magnitude / 100},{magnitude % 100:D2}";

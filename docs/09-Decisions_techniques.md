@@ -46,6 +46,7 @@ Journal des décisions structurantes, dans le même format que l'ancien projet (
 | ADR-130 | Parcours de premier lancement ; réutilise le Shell existant plutôt qu'un chemin de démarrage séparé | ACCEPTED |
 | ADR-131 | Filtres de transactions (compte, catégorie, période, montant, texte) ; filtrage live, borne non analysable ignorée plutôt que bloquante | ACCEPTED |
 | ADR-132 | Détection assistée des virements internes ; proposition recalculée à la volée, rien de persisté avant confirmation/rejet | ACCEPTED |
+| ADR-133 | Création d'occurrences ponctuelles depuis l'écran Prévisions ; formulaire repliable, portée volontairement limitée à dépense/revenu | ACCEPTED |
 
 ---
 
@@ -569,3 +570,19 @@ Chaque alerte porte `IsSevere` : dépassement de budget (danger/rust, cohérent 
 **Vérifié en batchmode** : côté `TransferDetectionService` (une paire réelle détectée, l'ordre de création n'influence pas la résolution sortant/entrant, un appel répété ne consomme ni ne duplique, un écart de dates trop grand n'est jamais suggéré, une paire sur le même compte n'est jamais suggérée, un rejet rend la paire définitivement invisible sans toucher aux transactions, une confirmation marque les deux jambes et fait disparaître la paire des suggestions futures) et côté `TransactionsController` (compteur et état vide corrects avec zéro candidat, une vraie paire non liée rendue comme une ligne, le rejet actualise l'écran) — cette dernière sur une fixture isolée (compte/solde propres), même raisonnement que les autres blocs isolés de ce fichier de test : une paire de virement ajoutée à la fixture partagée aurait changé des soldes déjà vérifiés par d'autres assertions plus loin dans le même fichier.
 
 **Documents concernés** : `01-Perimetre.md` §2.6.
+
+---
+
+# 35. ADR-133 — Création d'occurrences ponctuelles
+
+**Contexte** : cinquième et dernière lacune trouvée par l'audit du périmètre V1 (ADR-129) — `01-Perimetre.md` §2.7 prévoit des « occurrences ponctuelles (dépense ou revenu exceptionnel prévu, sans récurrence) ». `ForecastOccurrenceService.Create` existe depuis la construction du moteur de prévision (il sert notamment à `ConfirmAsTransaction` et à la génération récurrente), mais son seul appelant dans toute l'application était du code de fixture de test — aucun écran n'y menait.
+
+**Décision** : formulaire de création directement sur la carte « Occurrences prévues » de l'écran Prévisions, plutôt qu'un nouvel écran ou une nouvelle carte séparée — l'occurrence créée y apparaît immédiatement après rafraîchissement, donc la garder au même endroit que là où elle se lit ensuite évite une navigation superflue. Repliée par défaut derrière un bouton « + Nouvelle occurrence » dans l'en-tête de carte, même patron que le bouton « Simuler un scénario » déjà en place sur ce même écran (ADR-117) — cette carte est déjà dense, et la création reste une action occasionnelle. Le formulaire crée toujours pour le compte actuellement sélectionné dans le sélecteur de l'écran (pas de champ compte séparé) : l'écran entier est déjà scopé à un compte à la fois, et les occurrences affichées juste en dessous le sont déjà pour ce même compte — ajouter un second sélecteur de compte aurait introduit une incohérence (« pour quel compte la liste se rafraîchit-elle après création ? ») sans bénéfice réel.
+
+**Portée volontairement limitée à Dépense/Revenu, pas de virement ponctuel** : `ForecastOccurrenceService.Create` accepte un `destinationAccountId` optionnel (utilisé ailleurs pour les occurrences de virement récurrent), mais `01-Perimetre.md` §2.7 ne mentionne que « dépense ou revenu exceptionnel » pour ce cas précis — un virement ponctuel exceptionnel n'est pas un besoin exprimé. Le formulaire n'expose donc que Type (Dépense/Revenu), pas de compte destination, même choix de minimalisme assumé que le formulaire d'onboarding (ADR-130) pour une raison différente : ici, coller à la formulation exacte de la spec plutôt que d'exposer tout ce que le service peut techniquement faire.
+
+**Aucun changement côté `App`/`Domain`/`Data`** — première des cinq lacunes de l'audit à ne nécessiter aucune addition en dessous de la couche UI, `ForecastOccurrenceService.Create` couvrant déjà exactement ce dont le formulaire a besoin (libellé, date, montant signé, compte, catégorie optionnelle, tiers optionnel via `CounterpartyService.FindOrCreateByName`, même résolution que `TransactionsController`).
+
+**Vérifié en batchmode, mais volontairement pas par un clic simulé** : comme pour la file de vérification de ce même écran (`RunSimulation`, jamais cliquée par les tests non plus), les boutons du nouveau formulaire ne sont pas rendus publics pour être invoqués directement — cohérence avec le choix déjà établi sur cet écran précis plutôt qu'avec le patron « public pour la testabilité » utilisé ailleurs (Transactions, Catégories, Onboarding). À la place : `ForecastOccurrenceService.Create` a reçu une couverture directe côté `AppSmokeTest.cs` (catégorie transmise, `RecurringOperationId` bien nul, apparition dans `ListForAccount`), et `UISmokeTest.cs` vérifie l'état structurel du formulaire (replié par défaut, bouton activé une fois un compte sélectionné, menu catégorie peuplé) puis qu'une occurrence créée directement via le service (le même chemin que « Créer » emprunterait) apparaît bien dans la liste après `Refresh()` — la liaison d'affichage est donc prouvée, le déclenchement par clic ne l'est pas, exactement la même limitation documentée depuis ADR-112/113.
+
+**Documents concernés** : `01-Perimetre.md` §2.7.

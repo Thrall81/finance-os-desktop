@@ -163,6 +163,16 @@ namespace FinanceOS.EditorTools
             Check(app.Transactions.FindById(thirdIncoming.Id)!.IsInternalTransfer, "confirming marks the incoming leg as an internal transfer");
             Check(app.TransferDetection.DetectCandidates().Count == 0, "a confirmed pair no longer appears as a candidate, same as InternalTransfers.CreateTransfer's pair never did");
 
+            // A one-off occurrence's whole point is having no RecurringOperationId — dated in
+            // December, well outside every date this file's later MarkStaleAsMissed lookups
+            // filter by exact ExpectedDate, so it can't be mistaken for the October/November rent.
+            var oneOffOccurrence = app.ForecastOccurrences.Create(
+                current.Id, "Prime exceptionnelle", new DateTime(2026, 12, 15), 50_000, categoryId: revenus.Id, counterpartyId: null);
+            Check(oneOffOccurrence.RecurringOperationId is null, "a one-off occurrence has no recurring operation behind it");
+            Check(oneOffOccurrence.CategoryId == revenus.Id, "category is carried through Create");
+            var decemberOccurrences = app.ForecastOccurrences.ListForAccount(current.Id, new DateTime(2026, 12, 1), new DateTime(2026, 12, 31));
+            Check(decemberOccurrences.Count == 1 && decemberOccurrences[0].Id == oneOffOccurrence.Id, "the one-off occurrence appears when listing its account for its period");
+
             var settings = app.Settings.Get();
             Check(settings.ForecastHorizonDays == 90, "default forecast horizon");
             app.Settings.UpdateForecastHorizon(60);
