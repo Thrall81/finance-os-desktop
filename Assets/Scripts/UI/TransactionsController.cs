@@ -190,7 +190,7 @@ namespace FinanceOS.UI
 
         private void SetupColumns()
         {
-            _listView.columns.Add(BuildColumn("date", "Date", r => r.DateText, width: 90, minWidth: 80, mono: true));
+            _listView.columns.Add(BuildColumn("date", "Date", r => r.DateText, width: 130, minWidth: 110, mono: true));
             _listView.columns.Add(BuildColumn("account", "Compte", r => r.AccountName, width: 130, minWidth: 100));
             _listView.columns.Add(BuildColumn("label", "Libellé", r => r.Label, width: 220, minWidth: 120, stretchable: true));
             _listView.columns.Add(BuildColumn("category", "Catégorie", r => r.CategoryText, width: 130, minWidth: 100));

@@ -188,7 +188,7 @@ namespace FinanceOS.UI
 
         private void SetupOccurrenceColumns()
         {
-            _occurrencesListView.columns.Add(BuildOccurrenceColumn("date", "Date", r => r.DateText, width: 90, minWidth: 80, mono: true));
+            _occurrencesListView.columns.Add(BuildOccurrenceColumn("date", "Date", r => r.DateText, width: 130, minWidth: 110, mono: true));
             _occurrencesListView.columns.Add(BuildOccurrenceColumn("label", "Libellé", r => r.Label, width: 220, minWidth: 120, stretchable: true));
             _occurrencesListView.columns.Add(BuildOccurrenceColumn("amount", "Montant", r => r.AmountText, width: 110, minWidth: 90, alignRight: true));
             _occurrencesListView.columns.Add(BuildOccurrenceColumn("status", "Statut", r => r.StatusText, width: 100, minWidth: 80));
@@ -231,8 +231,8 @@ namespace FinanceOS.UI
             {
                 name = "date",
                 title = "Date",
-                width = 90,
-                minWidth = 80,
+                width = 130,
+                minWidth = 110,
                 makeCell = () =>
                 {
                     var label = new Label();
