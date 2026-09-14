@@ -133,6 +133,13 @@ namespace FinanceOS.EditorTools
             Check(LineChartElement.FindNearestPointIndex(pointCount: 5, elementWidth: 300, sidePadding: 6, localX: 294) == 4, "rightmost pointer position resolves to the last point");
             Check(LineChartElement.FindNearestPointIndex(pointCount: 5, elementWidth: 300, sidePadding: 6, localX: 150) == 2, "middle pointer position resolves to the middle point");
 
+            Check(!dashboardChart.DarkTheme, "dashboard chart defaults to light theme when isDarkTheme is omitted");
+            var darkRoot = visualTree.Instantiate();
+            var darkController = new DashboardController(darkRoot, isDarkTheme: true);
+            darkController.Render(viewModel);
+            Check(darkRoot.Q<LineChartElement>()!.DarkTheme, "isDarkTheme: true reaches the cash-flow chart");
+            Check(darkRoot.Q<ExpenseDonutElement>()!.DarkTheme, "isDarkTheme: true reaches the expense donut too");
+
             Check(viewModel.ExpenseBreakdown.Count == 0, "no September expense transactions exist yet at this point in the scenario");
             Check(root.Q<Label>("donut-empty").style.display == DisplayStyle.Flex, "donut empty-state shown with no expenses this month");
             Check(root.Q<VisualElement>("donut-row").style.display == DisplayStyle.None, "donut row hidden with no expenses this month");
@@ -570,6 +577,13 @@ namespace FinanceOS.EditorTools
             Check(cashFlowChart is not null, "cash-flow chart element added to the timeline card");
             Check(cashFlowChart!.Points.Count == forecastsViewModel.ChartSeries.Count, "chart element receives the full chart series");
             Check(cashFlowChart.style.flexGrow.value == 1f, "chart element grows to fill its fixed-height container — without this it renders nothing (blank contentRect), confirmed by screenshot");
+            Check(!cashFlowChart.DarkTheme, "forecasts chart follows AppSettings.Theme, light by default");
+
+            app.Settings.UpdateTheme(AppTheme.Dark);
+            var darkForecastsRoot = forecastsTree.Instantiate();
+            _ = new ForecastsController(darkForecastsRoot, app);
+            Check(darkForecastsRoot.Q<LineChartElement>()!.DarkTheme, "a fresh ForecastsController picks up AppSettings.Theme at construction time");
+            app.Settings.UpdateTheme(AppTheme.Light);
 
             var forecastTimelineListView = forecastsRoot.Q<MultiColumnListView>("timeline-list-view");
             Check(forecastTimelineListView.columns.Count == 3, "three timeline columns configured");
@@ -693,6 +707,12 @@ namespace FinanceOS.EditorTools
             Check(budgetChart.style.flexGrow.value == 1f, "bar chart element grows to fill its fixed-height container, same requirement as the cash-flow chart");
             Check(budgetChart.Q<Label>(className: "chart-tooltip") is not null, "budget bar chart's hover tooltip label exists");
             Check(budgetChart.Q<Label>(className: "chart-tooltip")!.style.display == DisplayStyle.None, "budget bar chart's hover tooltip is hidden by default");
+
+            Check(!budgetChart.DarkTheme, "budget bar chart defaults to light theme when isDarkTheme is omitted");
+            var darkBudgetsRoot = budgetsTree.Instantiate();
+            _ = new BudgetsController(darkBudgetsRoot, app.Budget, app.Categories, today, isDarkTheme: true);
+            Check(darkBudgetsRoot.Q<BudgetBarChartElement>()!.DarkTheme, "isDarkTheme: true reaches the budget bar chart");
+            Check(darkBudgetsRoot.Q<SavingsEvolutionElement>()!.DarkTheme, "isDarkTheme: true reaches the savings-evolution chart too");
 
             // 300x200: one group (Logement, planned 70 000 / actual 9 000 / committed 65 000 minor
             // at this point in the scenario), groupWidth 300, drawableHeight 170 (200-12-18).
@@ -854,6 +874,28 @@ namespace FinanceOS.EditorTools
             settingsController.Refresh();
             Check(settingsRoot.Q<TextField>("horizon-field").value == "45", "refresh re-renders without changing the value");
 
+            Check(settingsRoot.Q<DropdownField>("theme-field").choices.Count == 2, "theme dropdown offers exactly Clair/Sombre");
+            Check(settingsRoot.Q<DropdownField>("theme-field").value == "Clair", "light theme shown by default");
+
+            var themeChangedCallCount = 0;
+            var lastThemeChangedTo = AppTheme.Light;
+            var themeSettingsRoot = settingsTree.Instantiate();
+            var themeController = new SettingsController(
+                themeSettingsRoot, app.Settings, app.Accounts, app.Backup, app.DatabasePath,
+                onThemeChanged: theme =>
+                {
+                    themeChangedCallCount++;
+                    lastThemeChangedTo = theme;
+                });
+            themeSettingsRoot.Q<DropdownField>("theme-field").SetValueWithoutNotify("Sombre");
+            themeController.OnThemeFieldChanged();
+            Check(app.Settings.Get().Theme == AppTheme.Dark, "selecting Sombre persists immediately, not gated behind Enregistrer");
+            Check(themeChangedCallCount == 1 && lastThemeChangedTo == AppTheme.Dark, "the onThemeChanged callback fires with the new theme");
+
+            themeSettingsRoot.Q<DropdownField>("theme-field").SetValueWithoutNotify("Clair");
+            themeController.OnThemeFieldChanged();
+            Check(app.Settings.Get().Theme == AppTheme.Light, "selecting Clair reverts it, same live behavior");
+
             var noAccountPath = Path.Combine(Path.GetTempPath(), $"financeos-ui-smoke-empty-{Guid.NewGuid():N}.db");
             using (var noAccountApp = new AppContainer(noAccountPath))
             {
@@ -1008,6 +1050,12 @@ namespace FinanceOS.EditorTools
             shell.SetSidebarVisible(true);
             Check(root.Q<VisualElement>("sidebar").style.display == DisplayStyle.Flex, "sidebar shown again once onboarding finishes");
             Check(root.Q<VisualElement>("content-area").childCount == 1, "shell content area receives the screen's content");
+
+            Check(!root.Q<VisualElement>("shell-root").ClassListContains("theme-dark"), "light theme by default — no theme-dark class");
+            shell.SetTheme(AppTheme.Dark);
+            Check(root.Q<VisualElement>("shell-root").ClassListContains("theme-dark"), "SetTheme(Dark) adds the theme-dark class that redefines every --color-* token");
+            shell.SetTheme(AppTheme.Light);
+            Check(!root.Q<VisualElement>("shell-root").ClassListContains("theme-dark"), "SetTheme(Light) removes it again");
 
             shell.SetActive(ShellScreen.Accounts);
             Check(root.Q<Button>("nav-accounts").ClassListContains("nav-item-active"), "accounts nav item marked active");

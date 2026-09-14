@@ -70,4 +70,13 @@ namespace FinanceOS.Domain
         Active,
         Closed,
     }
+
+    /// <summary>The whole app's color scheme — chosen manually in Paramètres, never inferred from
+    /// the OS. A user-requested addition to Paramètres beyond docs/01-Perimetre.md §2.11's
+    /// original list (devise/horizon/seuil/emplacement/export) — see ADR-135.</summary>
+    public enum AppTheme
+    {
+        Light,
+        Dark,
+    }
 }

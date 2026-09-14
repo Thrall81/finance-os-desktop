@@ -16,10 +16,14 @@ namespace FinanceOS.UI
     /// </summary>
     public sealed class LineChartElement : VisualElement
     {
-        private static readonly Color ActualLineColor = new(0.180f, 0.227f, 0.349f); // --color-accent
-        private static readonly Color ForecastLineColor = new(0.525f, 0.549f, 0.580f); // --color-ink-400
-        private static readonly Color LowestMarkerColor = new(0.663f, 0.463f, 0.184f); // --color-gold
-        private static readonly Color ZeroLineColor = new(0.882f, 0.874f, 0.827f); // --color-border
+        private static readonly Color ActualLineColorLight = new(0.180f, 0.227f, 0.349f); // --color-accent
+        private static readonly Color ActualLineColorDark = new(0.561f, 0.627f, 0.839f);
+        private static readonly Color ForecastLineColorLight = new(0.525f, 0.549f, 0.580f); // --color-ink-400
+        private static readonly Color ForecastLineColorDark = new(0.463f, 0.486f, 0.525f);
+        private static readonly Color LowestMarkerColorLight = new(0.663f, 0.463f, 0.184f); // --color-gold
+        private static readonly Color LowestMarkerColorDark = new(0.851f, 0.663f, 0.310f);
+        private static readonly Color ZeroLineColorLight = new(0.882f, 0.874f, 0.827f); // --color-border
+        private static readonly Color ZeroLineColorDark = new(0.169f, 0.184f, 0.216f);
 
         private const float TopPadding = 12f;
         private const float BottomPadding = 12f;
@@ -29,6 +33,7 @@ namespace FinanceOS.UI
 
         private readonly Label _tooltip;
         private IReadOnlyList<ChartPointViewModel> _points = Array.Empty<ChartPointViewModel>();
+        private bool _darkTheme;
 
         public IReadOnlyList<ChartPointViewModel> Points
         {
@@ -39,6 +44,24 @@ namespace FinanceOS.UI
                 MarkDirtyRepaint();
             }
         }
+
+        /// <summary>Which color pair to draw with — set once per construction by the owning
+        /// controller from the current AppSettings.Theme (ADR-135), never read from theme.uss
+        /// directly since Painter2D colors are plain C# values, not CSS custom properties.</summary>
+        public bool DarkTheme
+        {
+            get => _darkTheme;
+            set
+            {
+                _darkTheme = value;
+                MarkDirtyRepaint();
+            }
+        }
+
+        private Color ActualLineColor => _darkTheme ? ActualLineColorDark : ActualLineColorLight;
+        private Color ForecastLineColor => _darkTheme ? ForecastLineColorDark : ForecastLineColorLight;
+        private Color LowestMarkerColor => _darkTheme ? LowestMarkerColorDark : LowestMarkerColorLight;
+        private Color ZeroLineColor => _darkTheme ? ZeroLineColorDark : ZeroLineColorLight;
 
         public LineChartElement()
         {

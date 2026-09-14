@@ -178,6 +178,10 @@ namespace FinanceOS.EditorTools
             app.Settings.UpdateForecastHorizon(60);
             Check(app.Settings.Get().ForecastHorizonDays == 60, "forecast horizon persisted through the service");
 
+            Check(settings.Theme == AppTheme.Light, "theme defaults to light");
+            app.Settings.UpdateTheme(AppTheme.Dark);
+            Check(app.Settings.Get().Theme == AppTheme.Dark, "theme persisted through the service");
+
             // October's and November's rent occurrences (generated earlier, never confirmed) are
             // still "planned" at this point in the test — a good, untouched pair to exercise the
             // missed-threshold transition without disturbing any assertion above.

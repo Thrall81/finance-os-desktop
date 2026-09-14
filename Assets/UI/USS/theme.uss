@@ -1,4 +1,5 @@
-/* Design tokens. Light theme only for this first pass — see docs/07-Interface.md.
+/* Design tokens. Light theme is the default; dark theme lives in the .theme-dark block below
+   (ADR-135), toggled by ShellController.SetTheme — see docs/07-Interface.md.
    Typography: Spectral for the wordmark and every heading (page/card title), IBM Plex Sans for
    the rest of the interface (the base font, set once on .shell-root and inherited), IBM Plex
    Mono for every money/date display — see docs/07-Interface.md §8bis and
@@ -16,11 +17,34 @@
     --color-gold: #A9762F;
     --color-gold-soft: #F3E7D3;
     --color-danger: #A3402F;
+    --color-on-accent: #FFFFFF;
 
     flex-grow: 1;
     flex-direction: row;
     background-color: var(--color-bg);
     -unity-font-definition: url("../../Fonts/IBMPlexSans-Regular.ttf");
+}
+
+/* Dark theme (ADR-135) — same ten tokens redefined, applied by toggling this class on
+   .shell-root itself (ShellController.SetTheme) rather than a media query, since UI Toolkit has
+   no OS theme detection here and the user picks explicitly in Paramètres. Values match the
+   dashboard mockup's own light/dark pairs (docs/mockups/dashboard.html) where a token exists
+   there; --color-danger maps to its --negative, and --color-on-accent has no mockup equivalent
+   (needed here specifically so .primary-button's white text stays readable once --color-accent
+   itself turns light in dark mode). Painter2D chart colors are plain C# values, not CSS custom
+   properties, so they can't read these — see LineChartElement.DarkTheme and its siblings instead. */
+.shell-root.theme-dark {
+    --color-bg: #14171C;
+    --color-surface: #1A1E24;
+    --color-border: #2B2F37;
+    --color-ink-900: #EDEEF0;
+    --color-ink-600: #ABB0B8;
+    --color-ink-400: #767C86;
+    --color-accent: #8FA0D6;
+    --color-gold: #D9A94F;
+    --color-gold-soft: #3A2E18;
+    --color-danger: #E0876A;
+    --color-on-accent: #171B22;
 }
 
 .sidebar {
@@ -312,7 +336,7 @@
 
 .primary-button {
     background-color: var(--color-accent);
-    color: #FFFFFF;
+    color: var(--color-on-accent);
     border-width: 0;
     border-radius: 8px;
     padding: 8px 16px;

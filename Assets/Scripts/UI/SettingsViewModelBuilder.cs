@@ -19,7 +19,8 @@ namespace FinanceOS.UI
                 current.MissedThresholdDays,
                 accountOptions,
                 current.DefaultCurrentAccountId,
-                databasePath);
+                databasePath,
+                current.Theme);
         }
     }
 }

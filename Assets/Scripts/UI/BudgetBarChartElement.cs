@@ -16,9 +16,12 @@ namespace FinanceOS.UI
     /// </summary>
     public sealed class BudgetBarChartElement : VisualElement
     {
-        private static readonly Color PlannedColor = new(0.180f, 0.227f, 0.349f); // --color-accent
-        private static readonly Color ActualColor = new(0.663f, 0.463f, 0.184f); // --color-gold
-        private static readonly Color CommittedColor = new(0.525f, 0.549f, 0.580f); // --color-ink-400
+        private static readonly Color PlannedColorLight = new(0.180f, 0.227f, 0.349f); // --color-accent
+        private static readonly Color PlannedColorDark = new(0.561f, 0.627f, 0.839f);
+        private static readonly Color ActualColorLight = new(0.663f, 0.463f, 0.184f); // --color-gold
+        private static readonly Color ActualColorDark = new(0.851f, 0.663f, 0.310f);
+        private static readonly Color CommittedColorLight = new(0.525f, 0.549f, 0.580f); // --color-ink-400
+        private static readonly Color CommittedColorDark = new(0.463f, 0.486f, 0.525f);
 
         private static readonly string[] SeriesLabels = { "Prévu", "Réel", "Engagé" };
 
@@ -30,6 +33,24 @@ namespace FinanceOS.UI
         private readonly Label _tooltip;
         private IReadOnlyList<BudgetChartBarGroupViewModel> _groups = Array.Empty<BudgetChartBarGroupViewModel>();
         private readonly List<Label> _categoryLabels = new();
+        private bool _darkTheme;
+
+        /// <summary>See LineChartElement.DarkTheme (ADR-135) — same reasoning, repeated per chart
+        /// class rather than through a shared base, same posture as this file's other small
+        /// per-chart duplications (padding constants, tooltip wiring).</summary>
+        public bool DarkTheme
+        {
+            get => _darkTheme;
+            set
+            {
+                _darkTheme = value;
+                MarkDirtyRepaint();
+            }
+        }
+
+        private Color PlannedColor => _darkTheme ? PlannedColorDark : PlannedColorLight;
+        private Color ActualColor => _darkTheme ? ActualColorDark : ActualColorLight;
+        private Color CommittedColor => _darkTheme ? CommittedColorDark : CommittedColorLight;
 
         /// <summary>Fixed left-to-right order within every group: prévu, réel, engagé — the way
         /// the three bars are told apart without relying on color alone (§8.4), explained in the

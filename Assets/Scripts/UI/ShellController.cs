@@ -1,4 +1,5 @@
 using System;
+using FinanceOS.Domain;
 using UnityEngine.UIElements;
 
 namespace FinanceOS.UI
@@ -22,6 +23,7 @@ namespace FinanceOS.UI
     /// </summary>
     public sealed class ShellController
     {
+        private readonly VisualElement _themeRoot;
         private readonly VisualElement _sidebar;
         private readonly VisualElement _contentArea;
         private readonly Button _navDashboard;
@@ -44,6 +46,7 @@ namespace FinanceOS.UI
             Action onNavigateToCategories,
             Action onNavigateToSettings)
         {
+            _themeRoot = root.Q<VisualElement>("shell-root");
             _sidebar = root.Q<VisualElement>("sidebar");
             _contentArea = root.Q<VisualElement>("content-area");
             _navDashboard = root.Q<Button>("nav-dashboard");
@@ -76,6 +79,14 @@ namespace FinanceOS.UI
         /// screen. Shown again as soon as onboarding finishes.</summary>
         public void SetSidebarVisible(bool visible) =>
             _sidebar.style.display = visible ? DisplayStyle.Flex : DisplayStyle.None;
+
+        /// <summary>Toggles the class that redefines every --color-* custom property in
+        /// theme.uss (ADR-135) — applied to the same element that first defines them, so USS
+        /// cascading resolves the override for every descendant automatically. Does not touch
+        /// Painter2D chart colors (LineChartElement and siblings), which read a separate,
+        /// per-instance DarkTheme flag instead — a CSS custom property is not readable from C#.</summary>
+        public void SetTheme(AppTheme theme) =>
+            _themeRoot.EnableInClassList("theme-dark", theme == AppTheme.Dark);
 
         public void SetActive(ShellScreen screen)
         {

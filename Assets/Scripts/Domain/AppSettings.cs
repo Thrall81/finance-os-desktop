@@ -17,6 +17,7 @@ namespace FinanceOS.Domain
         public int ForecastHorizonDays { get; private set; }
         public long LowBalanceThresholdMinor { get; private set; }
         public int? DefaultCurrentAccountId { get; private set; }
+        public AppTheme Theme { get; private set; }
 
         /// <summary>Days an unresolved occurrence may sit past its expected date before it
         /// transitions to "Manquée" — visible but non-blocking, still confirmable or cancellable.
@@ -28,7 +29,8 @@ namespace FinanceOS.Domain
             int forecastHorizonDays = DefaultForecastHorizonDays,
             long lowBalanceThresholdMinor = DefaultLowBalanceThresholdMinor,
             int? defaultCurrentAccountId = null,
-            int missedThresholdDays = DefaultMissedThresholdDays)
+            int missedThresholdDays = DefaultMissedThresholdDays,
+            AppTheme theme = AppTheme.Light)
         {
             if (string.IsNullOrWhiteSpace(defaultCurrency))
             {
@@ -50,6 +52,7 @@ namespace FinanceOS.Domain
             LowBalanceThresholdMinor = lowBalanceThresholdMinor;
             DefaultCurrentAccountId = defaultCurrentAccountId;
             MissedThresholdDays = missedThresholdDays;
+            Theme = theme;
         }
 
         public void UpdateForecastHorizon(int days)
@@ -75,5 +78,7 @@ namespace FinanceOS.Domain
 
             MissedThresholdDays = days;
         }
+
+        public void SetTheme(AppTheme theme) => Theme = theme;
     }
 }

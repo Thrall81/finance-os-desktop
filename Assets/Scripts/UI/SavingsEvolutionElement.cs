@@ -18,7 +18,8 @@ namespace FinanceOS.UI
     /// </summary>
     public sealed class SavingsEvolutionElement : VisualElement
     {
-        private static readonly Color BarColor = new(0.420f, 0.478f, 0.369f); // sage, same as ExpenseDonutElement.Palette[2]
+        private static readonly Color BarColorLight = new(0.420f, 0.478f, 0.369f); // sage, same as ExpenseDonutElement.LightPalette[2]
+        private static readonly Color BarColorDark = new(0.612f, 0.686f, 0.545f); // same as ExpenseDonutElement.DarkPalette[2]
 
         private const float TopPadding = 12f;
         private const float LabelRowHeight = 18f;
@@ -27,6 +28,20 @@ namespace FinanceOS.UI
         private readonly Label _tooltip;
         private IReadOnlyList<SavingsEvolutionPointViewModel> _points = Array.Empty<SavingsEvolutionPointViewModel>();
         private readonly List<Label> _monthLabels = new();
+        private bool _darkTheme;
+
+        /// <summary>See LineChartElement.DarkTheme (ADR-135).</summary>
+        public bool DarkTheme
+        {
+            get => _darkTheme;
+            set
+            {
+                _darkTheme = value;
+                MarkDirtyRepaint();
+            }
+        }
+
+        private Color BarColor => _darkTheme ? BarColorDark : BarColorLight;
 
         public IReadOnlyList<SavingsEvolutionPointViewModel> Points
         {

@@ -29,7 +29,7 @@ namespace FinanceOS.UI
         /// swatches so a slice and its legend row always match. Cycles (index % length) past eight
         /// categories — a known limit for this first version, same posture as every other chart's
         /// "revisit once real usage shows it's a problem."</summary>
-        public static readonly Color[] Palette =
+        public static readonly Color[] LightPalette =
         {
             new(0.180f, 0.227f, 0.349f), // navy (--color-accent)
             new(0.663f, 0.463f, 0.184f), // gold (--color-gold)
@@ -41,6 +41,23 @@ namespace FinanceOS.UI
             new(0.545f, 0.369f, 0.235f), // clay
         };
 
+        /// <summary>Same eight hues as <see cref="LightPalette"/>, brightened for a dark
+        /// background (ADR-135) — hand-picked, not algorithmically derived from the light values,
+        /// same as theme.uss's own light/dark pairs.</summary>
+        public static readonly Color[] DarkPalette =
+        {
+            new(0.561f, 0.627f, 0.839f), // navy → periwinkle (--color-accent dark)
+            new(0.851f, 0.663f, 0.310f), // gold (--color-gold dark)
+            new(0.612f, 0.686f, 0.545f), // sage
+            new(0.690f, 0.573f, 0.588f), // mauve
+            new(0.478f, 0.639f, 0.686f), // teal
+            new(0.827f, 0.710f, 0.490f), // ochre
+            new(0.671f, 0.690f, 0.722f), // ink-600 (--color-ink-600 dark)
+            new(0.749f, 0.592f, 0.443f), // clay
+        };
+
+        public static Color[] PaletteFor(bool isDark) => isDark ? DarkPalette : LightPalette;
+
         private const float TopPadding = 6f;
         private const float BottomPadding = 6f;
         private const float SidePadding = 6f;
@@ -49,6 +66,7 @@ namespace FinanceOS.UI
 
         private readonly Label _tooltip;
         private IReadOnlyList<ExpenseCategorySliceViewModel> _slices = Array.Empty<ExpenseCategorySliceViewModel>();
+        private bool _darkTheme;
 
         public IReadOnlyList<ExpenseCategorySliceViewModel> Slices
         {
@@ -59,6 +77,19 @@ namespace FinanceOS.UI
                 MarkDirtyRepaint();
             }
         }
+
+        /// <summary>See LineChartElement.DarkTheme (ADR-135).</summary>
+        public bool DarkTheme
+        {
+            get => _darkTheme;
+            set
+            {
+                _darkTheme = value;
+                MarkDirtyRepaint();
+            }
+        }
+
+        private Color[] Palette => PaletteFor(_darkTheme);
 
         public ExpenseDonutElement()
         {

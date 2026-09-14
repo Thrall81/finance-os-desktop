@@ -70,7 +70,8 @@ namespace FinanceOS.UI
         private int? _editingAllocationId;
         private int? _editingCategoryId;
 
-        public BudgetsController(VisualElement root, BudgetService budgets, CategoryService categories, DateTime? initialDate = null)
+        public BudgetsController(
+            VisualElement root, BudgetService budgets, CategoryService categories, DateTime? initialDate = null, bool isDarkTheme = false)
         {
             _budgets = budgets;
             _categories = categories;
@@ -99,12 +100,12 @@ namespace FinanceOS.UI
             _savingsChartCard = root.Q<VisualElement>("savings-chart-card");
             _savingsEmptyLabel = root.Q<Label>("savings-empty");
             _savingsChartContainer = root.Q<VisualElement>("savings-chart-container");
-            _savingsChart = new SavingsEvolutionElement();
+            _savingsChart = new SavingsEvolutionElement { DarkTheme = isDarkTheme };
             _savingsChart.style.flexGrow = 1;
             _savingsChartContainer.Add(_savingsChart);
 
             _chartCard = root.Q<VisualElement>("chart-card");
-            _chart = new BudgetBarChartElement();
+            _chart = new BudgetBarChartElement { DarkTheme = isDarkTheme };
             _chart.style.flexGrow = 1;
             root.Q<VisualElement>("budget-chart-container").Add(_chart);
 

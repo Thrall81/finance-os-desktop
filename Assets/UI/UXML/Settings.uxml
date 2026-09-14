@@ -38,6 +38,11 @@
         <ui:DropdownField name="default-account-field" class="form-field" />
       </ui:VisualElement>
 
+      <ui:VisualElement class="form-row">
+        <ui:Label text="Thème" class="form-label" />
+        <ui:DropdownField name="theme-field" class="form-field" />
+      </ui:VisualElement>
+
       <ui:VisualElement class="form-actions">
         <ui:Button name="save-button" text="Enregistrer" class="primary-button" />
       </ui:VisualElement>

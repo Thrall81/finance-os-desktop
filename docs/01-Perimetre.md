@@ -86,7 +86,8 @@ Ce parcours n'est pas un simple assistant décoratif : sans connecteur pour pré
 ## 2.11 Paramètres
 
 - devise (EUR fixe en V1), horizon de prévision, seuil de solde faible ;
-- emplacement du fichier de données, export/sauvegarde manuelle (copie du fichier SQLite ou export JSON).
+- emplacement du fichier de données, export/sauvegarde manuelle (copie du fichier SQLite ou export JSON) ;
+- thème (clair/sombre), choisi manuellement — pas de détection automatique du thème système (cf. `09-Decisions_techniques.md`, ADR-135).
 
 ---
 

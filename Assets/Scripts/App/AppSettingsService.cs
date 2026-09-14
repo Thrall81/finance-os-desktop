@@ -40,5 +40,12 @@ namespace FinanceOS.App
             settings.UpdateMissedThreshold(days);
             _settings.Save(settings);
         }
+
+        public void UpdateTheme(AppTheme theme)
+        {
+            var settings = _settings.Load();
+            settings.SetTheme(theme);
+            _settings.Save(settings);
+        }
     }
 }

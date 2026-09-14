@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using FinanceOS.App;
+using FinanceOS.Domain;
 using UnityEngine.UIElements;
 
 namespace FinanceOS.UI
@@ -134,7 +135,7 @@ namespace FinanceOS.UI
             _occurrenceTypeField.choices = OccurrenceTypeOptions.ToList();
             _occurrenceTypeField.SetValueWithoutNotify(OccurrenceTypeOptions[0]);
 
-            _cashFlowChart = new LineChartElement();
+            _cashFlowChart = new LineChartElement { DarkTheme = app.Settings.Get().Theme == AppTheme.Dark };
             // The container has a fixed height (.chart in theme.uss) but a plain VisualElement's
             // own height is content-driven, i.e. zero for one with no children — without growing
             // to fill its parent, contentRect stays empty and OnGenerateVisualContent's own

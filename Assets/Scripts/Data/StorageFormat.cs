@@ -184,5 +184,19 @@ namespace FinanceOS.Data
             "closed" => BudgetStatus.Closed,
             _ => throw new ArgumentOutOfRangeException(nameof(value), value, "Unknown budget status."),
         };
+
+        public static string ToStorageString(this AppTheme theme) => theme switch
+        {
+            AppTheme.Light => "light",
+            AppTheme.Dark => "dark",
+            _ => throw new ArgumentOutOfRangeException(nameof(theme), theme, null),
+        };
+
+        public static AppTheme ParseAppTheme(string value) => value switch
+        {
+            "light" => AppTheme.Light,
+            "dark" => AppTheme.Dark,
+            _ => throw new ArgumentOutOfRangeException(nameof(value), value, "Unknown theme."),
+        };
     }
 }

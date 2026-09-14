@@ -1,5 +1,6 @@
 using System;
 using FinanceOS.App;
+using FinanceOS.Domain;
 using UnityEngine;
 using UnityEngine.UIElements;
 
@@ -25,6 +26,8 @@ namespace FinanceOS.UI
         public VisualTreeAsset? OnboardingAsset;
 
         public static AppContainer? Container { get; private set; }
+
+        private static bool IsDarkTheme => Container?.Settings.Get().Theme == AppTheme.Dark;
 
         private ShellController? _shell;
         private DashboardController? _dashboardController;
@@ -54,6 +57,7 @@ namespace FinanceOS.UI
             _shell = new ShellController(
                 root, ShowDashboard, ShowAccounts, ShowTransactions, ShowRecurringOperations, ShowForecasts,
                 ShowBudgets, ShowCategories, ShowSettings);
+            _shell.SetTheme(settings.Theme);
 
             // "Aucun compte en base" is the whole gating condition (docs/01-Perimetre.md §2.1) —
             // deliberately not a separate "onboarding completed" flag: the flow never reappears
@@ -110,7 +114,7 @@ namespace FinanceOS.UI
 
             var content = DashboardAsset.Instantiate();
             _shell.SetContent(content);
-            _dashboardController = new DashboardController(content);
+            _dashboardController = new DashboardController(content, IsDarkTheme);
             ClearOtherControllers(keepDashboard: true);
             _shell.SetActive(ShellScreen.Dashboard);
 
@@ -186,7 +190,7 @@ namespace FinanceOS.UI
 
             var content = BudgetsAsset.Instantiate();
             _shell.SetContent(content);
-            _budgetsController = new BudgetsController(content, Container.Budget, Container.Categories);
+            _budgetsController = new BudgetsController(content, Container.Budget, Container.Categories, isDarkTheme: IsDarkTheme);
             ClearOtherControllers(keepBudgets: true);
             _shell.SetActive(ShellScreen.Budgets);
         }
@@ -215,7 +219,8 @@ namespace FinanceOS.UI
             var content = SettingsAsset.Instantiate();
             _shell.SetContent(content);
             _settingsController = new SettingsController(
-                content, Container.Settings, Container.Accounts, Container.Backup, Container.DatabasePath);
+                content, Container.Settings, Container.Accounts, Container.Backup, Container.DatabasePath,
+                onThemeChanged: _shell.SetTheme);
             ClearOtherControllers(keepSettings: true);
             _shell.SetActive(ShellScreen.Settings);
         }

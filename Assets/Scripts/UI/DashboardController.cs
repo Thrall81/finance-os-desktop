@@ -30,9 +30,12 @@ namespace FinanceOS.UI
         private readonly VisualElement _budgetSummaryList;
         private readonly Label _alertsEmptyLabel;
         private readonly VisualElement _alertsList;
+        private readonly bool _isDarkTheme;
 
-        public DashboardController(VisualElement root)
+        public DashboardController(VisualElement root, bool isDarkTheme = false)
         {
+            _isDarkTheme = isDarkTheme;
+
             _accountNameLabel = root.Q<Label>("account-name-label");
             _availableValueLabel = root.Q<Label>("kpi-available-value");
             _endOfMonthValueLabel = root.Q<Label>("kpi-endofmonth-value");
@@ -43,13 +46,13 @@ namespace FinanceOS.UI
             _verificationEmptyLabel = root.Q<Label>("verification-empty");
             _verificationList = root.Q<VisualElement>("verification-list");
 
-            _cashFlowChart = new LineChartElement();
+            _cashFlowChart = new LineChartElement { DarkTheme = isDarkTheme };
             _cashFlowChart.style.flexGrow = 1;
             root.Q<VisualElement>("cashflow-chart-container").Add(_cashFlowChart);
 
             _donutEmptyLabel = root.Q<Label>("donut-empty");
             _donutRow = root.Q<VisualElement>("donut-row");
-            _donutChart = new ExpenseDonutElement();
+            _donutChart = new ExpenseDonutElement { DarkTheme = isDarkTheme };
             _donutChart.style.flexGrow = 1;
             root.Q<VisualElement>("donut-chart-container").Add(_donutChart);
             _donutLegend = root.Q<VisualElement>("donut-legend");
@@ -81,9 +84,10 @@ namespace FinanceOS.UI
             _donutChart.Slices = viewModel.ExpenseBreakdown;
 
             _donutLegend.Clear();
+            var palette = ExpenseDonutElement.PaletteFor(_isDarkTheme);
             for (var i = 0; i < viewModel.ExpenseBreakdown.Count; i++)
             {
-                _donutLegend.Add(BuildDonutLegendRow(viewModel.ExpenseBreakdown[i], ExpenseDonutElement.Palette[i % ExpenseDonutElement.Palette.Length]));
+                _donutLegend.Add(BuildDonutLegendRow(viewModel.ExpenseBreakdown[i], palette[i % palette.Length]));
             }
 
             _verificationCountLabel.text = viewModel.VerificationQueue.Count.ToString();

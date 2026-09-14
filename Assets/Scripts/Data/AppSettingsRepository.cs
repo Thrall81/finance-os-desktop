@@ -22,6 +22,7 @@ namespace FinanceOS.Data
         private const string LowBalanceThresholdMinorKey = "low_balance_threshold_minor";
         private const string DefaultCurrentAccountIdKey = "default_current_account_id";
         private const string MissedThresholdDaysKey = "missed_threshold_days";
+        private const string ThemeKey = "theme";
 
         private readonly SQLiteConnection _connection;
 
@@ -49,7 +50,8 @@ namespace FinanceOS.Data
                     : null,
                 missedThresholdDays: values.TryGetValue(MissedThresholdDaysKey, out var missedThreshold) && int.TryParse(missedThreshold, out var missedThresholdDays)
                     ? missedThresholdDays
-                    : AppSettings.DefaultMissedThresholdDays);
+                    : AppSettings.DefaultMissedThresholdDays,
+                theme: values.TryGetValue(ThemeKey, out var theme) ? StorageFormat.ParseAppTheme(theme) : AppTheme.Light);
 
             return settings;
         }
@@ -62,6 +64,7 @@ namespace FinanceOS.Data
                 Upsert(ForecastHorizonDaysKey, settings.ForecastHorizonDays.ToString());
                 Upsert(LowBalanceThresholdMinorKey, settings.LowBalanceThresholdMinor.ToString());
                 Upsert(MissedThresholdDaysKey, settings.MissedThresholdDays.ToString());
+                Upsert(ThemeKey, settings.Theme.ToStorageString());
 
                 if (settings.DefaultCurrentAccountId is { } accountId)
                 {

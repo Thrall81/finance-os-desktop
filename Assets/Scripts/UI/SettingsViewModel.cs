@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using FinanceOS.Domain;
 
 namespace FinanceOS.UI
 {
@@ -12,5 +13,6 @@ namespace FinanceOS.UI
         int MissedThresholdDays,
         IReadOnlyList<DropdownOption> Accounts,
         int? DefaultCurrentAccountId,
-        string DatabasePath);
+        string DatabasePath,
+        AppTheme Theme);
 }

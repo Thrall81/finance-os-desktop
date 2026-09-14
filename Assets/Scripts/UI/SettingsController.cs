@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using FinanceOS.App;
+using FinanceOS.Domain;
 using UnityEngine;
 using UnityEngine.UIElements;
 
@@ -15,16 +16,24 @@ namespace FinanceOS.UI
     /// </summary>
     public sealed class SettingsController
     {
+        private static readonly (AppTheme Theme, string Text)[] ThemeOptions =
+        {
+            (AppTheme.Light, "Clair"),
+            (AppTheme.Dark, "Sombre"),
+        };
+
         private readonly AppSettingsService _settings;
         private readonly AccountService _accounts;
         private readonly BackupService _backup;
         private readonly string _databasePath;
+        private readonly Action<AppTheme>? _onThemeChanged;
 
         private readonly Label _currencyValueLabel;
         private readonly TextField _horizonField;
         private readonly TextField _lowBalanceField;
         private readonly TextField _missedThresholdField;
         private readonly DropdownField _defaultAccountField;
+        private readonly DropdownField _themeField;
         private readonly Label _errorLabel;
         private readonly Label _savedLabel;
         private readonly Button _saveButton;
@@ -37,18 +46,21 @@ namespace FinanceOS.UI
         private IReadOnlyList<DropdownOption> _accountOptions = Array.Empty<DropdownOption>();
 
         public SettingsController(
-            VisualElement root, AppSettingsService settings, AccountService accounts, BackupService backup, string databasePath)
+            VisualElement root, AppSettingsService settings, AccountService accounts, BackupService backup, string databasePath,
+            Action<AppTheme>? onThemeChanged = null)
         {
             _settings = settings;
             _accounts = accounts;
             _backup = backup;
             _databasePath = databasePath;
+            _onThemeChanged = onThemeChanged;
 
             _currencyValueLabel = root.Q<Label>("currency-value");
             _horizonField = root.Q<TextField>("horizon-field");
             _lowBalanceField = root.Q<TextField>("low-balance-field");
             _missedThresholdField = root.Q<TextField>("missed-threshold-field");
             _defaultAccountField = root.Q<DropdownField>("default-account-field");
+            _themeField = root.Q<DropdownField>("theme-field");
             _errorLabel = root.Q<Label>("settings-error");
             _savedLabel = root.Q<Label>("settings-saved-label");
             _saveButton = root.Q<Button>("save-button");
@@ -58,6 +70,8 @@ namespace FinanceOS.UI
             _backupButton = root.Q<Button>("backup-button");
             _backupResultLabel = root.Q<Label>("backup-result-label");
 
+            _themeField.choices = ThemeOptions.Select(o => o.Text).ToList();
+
             _saveButton.clicked += Save;
             _copyPathButton.clicked += CopyPathToClipboard;
             _backupButton.clicked += CreateBackup;
@@ -66,6 +80,11 @@ namespace FinanceOS.UI
             _lowBalanceField.RegisterValueChangedCallback(_ => HideSavedMessage());
             _missedThresholdField.RegisterValueChangedCallback(_ => HideSavedMessage());
             _defaultAccountField.RegisterValueChangedCallback(_ => HideSavedMessage());
+            // Applied and persisted immediately on selection, unlike the rest of this form's
+            // fields — unlike a horizon/threshold number, a theme choice has instant visual
+            // feedback, so batching it behind "Enregistrer" would let a user pick dark, close the
+            // app without saving, and have it silently revert to light on the next launch.
+            _themeField.RegisterValueChangedCallback(_ => OnThemeFieldChanged());
 
             Refresh();
         }
@@ -91,7 +110,22 @@ namespace FinanceOS.UI
 
             _databasePathLabel.text = viewModel.DatabasePath;
 
+            _themeField.SetValueWithoutNotify(ThemeOptions.First(o => o.Theme == viewModel.Theme).Text);
+
             HideError();
+        }
+
+        // Public only so UISmokeTest.cs can trigger it directly after a SetValueWithoutNotify,
+        // same "public purely for testability" reasoning as TransactionsController.OnFilterChanged
+        // — a VisualTreeAsset instantiated without a panel never dispatches the ChangeEvent a real
+        // .value assignment would send, so RegisterValueChangedCallback never fires here either.
+        public void OnThemeFieldChanged()
+        {
+            var index = ThemeOptions.ToList().FindIndex(o => o.Text == _themeField.value);
+            var theme = ThemeOptions[index < 0 ? 0 : index].Theme;
+
+            _settings.UpdateTheme(theme);
+            _onThemeChanged?.Invoke(theme);
         }
 
         private void Save()
