@@ -25,11 +25,11 @@
         <ui:Button name="filters-reset-button" text="Réinitialiser" class="secondary-button" />
       </ui:VisualElement>
       <ui:VisualElement class="filters-row">
-        <ui:VisualElement class="filter-group">
+        <ui:VisualElement class="filter-group filter-group-wide">
           <ui:Label text="Compte" class="form-label" />
           <ui:DropdownField name="filter-account" class="form-field" />
         </ui:VisualElement>
-        <ui:VisualElement class="filter-group">
+        <ui:VisualElement class="filter-group filter-group-wide">
           <ui:Label text="Catégorie" class="form-label" />
           <ui:DropdownField name="filter-category" class="form-field" />
         </ui:VisualElement>
