@@ -94,6 +94,7 @@ namespace FinanceOS.UI
             _accountNameField = root.Q<TextField>("account-name-field");
             _accountTypeField = root.Q<DropdownField>("account-type-field");
             _accountBalanceField = root.Q<TextField>("account-balance-field");
+            NumericInputFilter.RestrictToDecimal(_accountBalanceField, allowNegative: true);
             _accountErrorLabel = root.Q<Label>("account-error");
             _accountAddButton = root.Q<Button>("account-add-button");
             _accountList = root.Q<VisualElement>("account-list");
@@ -105,6 +106,7 @@ namespace FinanceOS.UI
             _operationNameField = root.Q<TextField>("operation-name-field");
             _operationTypeField = root.Q<DropdownField>("operation-type-field");
             _operationAmountField = root.Q<TextField>("operation-amount-field");
+            NumericInputFilter.RestrictToDecimal(_operationAmountField);
             _operationAccountField = root.Q<DropdownField>("operation-account-field");
             _operationErrorLabel = root.Q<Label>("operation-error");
             _operationAddButton = root.Q<Button>("operation-add-button");

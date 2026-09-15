@@ -114,6 +114,7 @@ namespace FinanceOS.UI
             _destinationAccountLabel = root.Q<Label>("form-destination-account-label");
             _destinationAccountField = root.Q<DropdownField>("form-destination-account");
             _amountField = root.Q<TextField>("form-amount");
+            NumericInputFilter.RestrictToDecimal(_amountField);
             _frequencyRow = root.Q<VisualElement>("form-frequency-row");
             _frequencyField = root.Q<DropdownField>("form-frequency");
             _startDateRow = root.Q<VisualElement>("form-start-date-row");
@@ -122,6 +123,7 @@ namespace FinanceOS.UI
             _startDateReadonlyLabel = root.Q<Label>("form-start-date-readonly");
             _dayOfMonthRow = root.Q<VisualElement>("form-day-of-month-row");
             _dayOfMonthField = root.Q<TextField>("form-day-of-month");
+            NumericInputFilter.RestrictToInteger(_dayOfMonthField);
             _categoryRow = root.Q<VisualElement>("form-category-row");
             _categoryField = root.Q<DropdownField>("form-category");
             _counterpartyRow = root.Q<VisualElement>("form-counterparty-row");

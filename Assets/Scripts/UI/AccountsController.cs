@@ -70,6 +70,7 @@ namespace FinanceOS.UI
             _nameField = root.Q<TextField>("form-name");
             _typeField = root.Q<DropdownField>("form-type");
             _balanceField = root.Q<TextField>("form-balance");
+            NumericInputFilter.RestrictToDecimal(_balanceField, allowNegative: true);
             _balanceRow = root.Q<VisualElement>("form-balance-row");
             _institutionField = root.Q<TextField>("form-institution");
             _institutionRow = root.Q<VisualElement>("form-institution-row");
@@ -88,6 +89,7 @@ namespace FinanceOS.UI
             _balanceHistorySection.style.display = DisplayStyle.None;
             _balanceHistoryDateField = root.Q<TextField>("balance-history-date");
             _balanceHistoryAmountField = root.Q<TextField>("balance-history-amount");
+            NumericInputFilter.RestrictToDecimal(_balanceHistoryAmountField, allowNegative: true);
             _balanceHistorySubmitButton = root.Q<Button>("balance-history-submit-button");
             _balanceHistoryErrorLabel = root.Q<Label>("balance-history-error");
             _balanceHistoryEmptyLabel = root.Q<Label>("balance-history-empty");

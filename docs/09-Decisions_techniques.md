@@ -54,6 +54,7 @@ Journal des décisions structurantes, dans le même format que l'ancien projet (
 | ADR-138 | Fenêtre standard (pas plein écran exclusif) + bouton Quitter dans la barre latérale | ACCEPTED |
 | ADR-139 | Vérification et téléchargement automatiques de mise à jour ; installation toujours soumise à confirmation | ACCEPTED |
 | ADR-140 | Édition étendue des opérations récurrentes (type, fréquence, jour du mois, catégorie, tiers) ; correction fusionnée type+comptes, un seul vidage/régénération par sauvegarde | ACCEPTED |
+| ADR-141 | Verrouillage des saisies numériques (lettres bloquées dans les champs montant/entier) ; datepicker reporté à une prochaine mise à jour | ACCEPTED |
 
 ---
 
@@ -728,3 +729,21 @@ Chaque alerte porte `IsSevere` : dépassement de budget (danger/rust, cohérent 
 **Conséquence négative assumée, pas corrigée dans ce passage** : `UpdateSkipWarning` (l'avertissement de saut de premier cycle, ADR-120) reste explicitement limité à la création (`if (_editingOperationId is not null) return;`) — l'étendre à l'édition serait un vrai gain maintenant que la fréquence/le jour du mois y sont éditables aussi (le même piège qu'ADR-120 avait trouvé en création reste possible en édition), mais n'a pas été demandé et aurait élargi encore le périmètre de ce passage. À revoir si un incident similaire se reproduit en édition.
 
 **Documents concernés** : `07-Interface.md` §3/§9/§10, `Assets/Scripts/UI/README.md`.
+
+---
+
+# 43. ADR-141 — Verrouillage des saisies numériques ; datepicker reporté
+
+**Contexte** : troisième retour terrain du même jour — les champs montant/entier (`TextField` partout, jamais de contrôle numérique natif Unity à cause du formatage `MoneyFormat` déjà en place) acceptent n'importe quel caractère tapé, lettres comprises, jusqu'à l'échec de parsing à la soumission. Demande explicite couplée à un datepicker pour les champs date — scindée en deux, l'utilisateur ayant lui-même invité à reporter ce qui serait trop conséquent pour la session du jour.
+
+**Décision** : traiter les deux demandes séparément plutôt que comme un seul lot.
+1. **Verrouillage numérique — fait maintenant.** `NumericInputFilter` (nouveau, `FinanceOS.UI`) — `RestrictToInteger(field, allowNegative)`/`RestrictToDecimal(field, allowNegative)`, posés sur les 15 `TextField` numériques de l'app (montants de création/édition, filtres min/max, soldes de compte, seuils et horizon des Paramètres, jour du mois).
+2. **Datepicker — reporté.** Aucun contrôle calendrier natif à réutiliser dans UI Toolkit runtime (contrairement aux champs numériques) ; un composant popup complet (grille de mois, navigation, positionnement, fermeture au clic extérieur) est une ampleur de travail comparable à un des graphiques `Painter2D` déjà construits — jugé disproportionné pour la même session que la fonctionnalité ci-dessus et l'extension de l'édition des opérations récurrentes (ADR-140). Les champs date restent des `TextField` au format jj/mm/aaaa (`DateFormat.TryParseInput`), non touchés par ce passage.
+
+**Mécanisme choisi, pas une interception de touche** : `NumericInputFilter` corrige la valeur à chaque `RegisterValueChangedCallback` (revert vers une version assainie via `SetValueWithoutNotify`) plutôt que d'intercepter les `KeyDownEvent` caractère par caractère — aucune API bas niveau fiable pour bloquer une frappe avant insertion n'est documentée de façon certaine pour UI Toolkit dans cet environnement, alors que la correction post-frappe est le patron portable et documenté (Editor comme Runtime). En pratique, la lettre apparaît et disparaît en un seul cycle de rafraîchissement — fonctionnellement indistinguable d'un blocage pour un usage réel, sans parier sur une API non confirmée.
+
+**Séparation entier/décimal, plus un drapeau `allowNegative`** : `RestrictToInteger` (jour du mois, horizon de prévision, seuil « Manquée ») n'autorise que des chiffres (+ signe `-` en tête si `allowNegative`) ; `RestrictToDecimal` (tous les montants) autorise en plus un unique séparateur décimal, `,` ou `.` — exactement ce qu'accepte déjà `MoneyFormat.TryParseEurosToMinor`, pas une règle inventée séparément. `allowNegative` n'est activé que pour les deux champs de solde de compte (`AccountsController._balanceField`/`_balanceHistoryAmountField`, `OnboardingController._accountBalanceField`) — un compte dette/crédit a un solde légitimement négatif ; tous les autres montants de l'app (opérations, transactions, allocations budgétaires, filtres, simulation) sont vérifiés comme des magnitudes positives à la soumission (`magnitude <= 0` rejeté), donc le signe négatif y est bloqué à la saisie même, pas seulement à la validation.
+
+**Ce qui reste vérifiable en batchmode, et ce qui ne l'est pas** : la logique de nettoyage elle-même (`NumericInputFilter.Sanitize`, rendue `public` uniquement pour ça) est testée directement dans `UISmokeTest.cs` avec des cas positifs et négatifs (lettres retirées, deuxième séparateur décimal ignoré, espaces de groupement retirés, signe négatif accepté/rejeté selon la position et le drapeau). Le comportement réel au clavier — la frappe elle-même — ne peut pas être simulé ici (même limitation que tout le reste de l'interaction dans ce projet, ADR-113) ; à confirmer par l'utilisateur en usage réel.
+
+**Documents concernés** : `07-Interface.md`, `Assets/Scripts/UI/README.md`.

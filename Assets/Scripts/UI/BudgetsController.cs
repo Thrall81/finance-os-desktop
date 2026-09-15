@@ -122,6 +122,7 @@ namespace FinanceOS.UI
             _categoryReadonlyRow = root.Q<VisualElement>("allocation-form-category-readonly-row");
             _categoryReadonlyLabel = root.Q<Label>("allocation-form-category-readonly");
             _plannedField = root.Q<TextField>("allocation-form-planned");
+            NumericInputFilter.RestrictToDecimal(_plannedField);
             _errorLabel = root.Q<Label>("allocation-form-error");
             _removeButton = root.Q<Button>("allocation-form-remove-button");
             _cancelButton = root.Q<Button>("allocation-form-cancel-button");

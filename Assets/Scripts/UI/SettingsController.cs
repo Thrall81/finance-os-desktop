@@ -58,8 +58,11 @@ namespace FinanceOS.UI
 
             _currencyValueLabel = root.Q<Label>("currency-value");
             _horizonField = root.Q<TextField>("horizon-field");
+            NumericInputFilter.RestrictToInteger(_horizonField);
             _lowBalanceField = root.Q<TextField>("low-balance-field");
+            NumericInputFilter.RestrictToDecimal(_lowBalanceField);
             _missedThresholdField = root.Q<TextField>("missed-threshold-field");
+            NumericInputFilter.RestrictToInteger(_missedThresholdField);
             _defaultAccountField = root.Q<DropdownField>("default-account-field");
             _themeField = root.Q<DropdownField>("theme-field");
             _errorLabel = root.Q<Label>("settings-error");

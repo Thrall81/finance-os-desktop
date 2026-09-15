@@ -35,6 +35,7 @@ namespace FinanceOS.EditorTools
             CheckMoneyFormat();
             CheckMoneyParse();
             CheckDateFormat();
+            CheckNumericInputFilter();
 
             var tempPath = Path.Combine(Path.GetTempPath(), $"financeos-ui-smoke-{Guid.NewGuid():N}.db");
             RunAgainstDatabase(tempPath);
@@ -76,6 +77,27 @@ namespace FinanceOS.EditorTools
             Check(DateFormat.Long(new DateTime(2026, 8, 27)) == "27 août 2026", "long date");
             Check(DateFormat.RelativeToToday(new DateTime(2026, 9, 8), new DateTime(2026, 9, 13)) == "il y a 5 jours", "relative past date");
             Check(DateFormat.RelativeToToday(new DateTime(2026, 9, 13), new DateTime(2026, 9, 13)) == "aujourd'hui", "relative today");
+        }
+
+        // ADR-141: the actual keystroke NumericInputFilter would normally run from can't be
+        // simulated in batchmode (no live panel, same limitation as every other interaction —
+        // e.g. ADR-113) — Sanitize is public specifically so its logic is still directly testable.
+        private static void CheckNumericInputFilter()
+        {
+            Check(NumericInputFilter.Sanitize("123abc", allowDecimalSeparator: false, allowNegative: false) == "123",
+                "letters are stripped from an integer field");
+            Check(NumericInputFilter.Sanitize("12,50", allowDecimalSeparator: true, allowNegative: false) == "12,50",
+                "comma decimal separator is kept on a money field");
+            Check(NumericInputFilter.Sanitize("12.50.30", allowDecimalSeparator: true, allowNegative: false) == "12.5030",
+                "a second decimal separator is dropped, not just the extra digits");
+            Check(NumericInputFilter.Sanitize("1 234,56", allowDecimalSeparator: true, allowNegative: false) == "1234,56",
+                "spaces (thousands grouping) are stripped, matching what MoneyFormat.TryParseEurosToMinor already tolerates");
+            Check(NumericInputFilter.Sanitize("-45", allowDecimalSeparator: false, allowNegative: true) == "-45",
+                "a leading minus is kept when negative values are allowed");
+            Check(NumericInputFilter.Sanitize("4-5", allowDecimalSeparator: false, allowNegative: true) == "45",
+                "a minus anywhere but the very start is dropped, not just tolerated");
+            Check(NumericInputFilter.Sanitize("-45", allowDecimalSeparator: false, allowNegative: false) == "45",
+                "a leading minus is dropped entirely on a field that never expects a negative value");
         }
 
         private static void RunAgainstDatabase(string tempPath)

@@ -114,7 +114,9 @@ namespace FinanceOS.UI
             _filterDateFromField = root.Q<TextField>("filter-date-from");
             _filterDateToField = root.Q<TextField>("filter-date-to");
             _filterAmountMinField = root.Q<TextField>("filter-amount-min");
+            NumericInputFilter.RestrictToDecimal(_filterAmountMinField);
             _filterAmountMaxField = root.Q<TextField>("filter-amount-max");
+            NumericInputFilter.RestrictToDecimal(_filterAmountMaxField);
             _filterTextField = root.Q<TextField>("filter-text");
             _filterResetButton = root.Q<Button>("filters-reset-button");
             _newTransactionButton = root.Q<Button>("new-transaction-button");
@@ -140,6 +142,7 @@ namespace FinanceOS.UI
             _dateReadonlyLabel = root.Q<Label>("form-date-readonly");
             _amountRow = root.Q<VisualElement>("form-amount-row");
             _amountField = root.Q<TextField>("form-amount");
+            NumericInputFilter.RestrictToDecimal(_amountField);
             _amountReadonlyRow = root.Q<VisualElement>("form-amount-readonly-row");
             _amountReadonlyLabel = root.Q<Label>("form-amount-readonly");
             _labelRow = root.Q<VisualElement>("form-label-row");

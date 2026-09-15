@@ -111,6 +111,7 @@ namespace FinanceOS.UI
             _confirmFormTitle = root.Q<Label>("confirm-form-title");
             _confirmDateField = root.Q<TextField>("confirm-date");
             _confirmAmountField = root.Q<TextField>("confirm-amount");
+            NumericInputFilter.RestrictToDecimal(_confirmAmountField);
             _confirmErrorLabel = root.Q<Label>("confirm-error");
             _confirmCancelButton = root.Q<Button>("confirm-cancel-button");
             _confirmSubmitButton = root.Q<Button>("confirm-submit-button");
@@ -127,6 +128,7 @@ namespace FinanceOS.UI
             _occurrenceLabelField = root.Q<TextField>("occurrence-label");
             _occurrenceTypeField = root.Q<DropdownField>("occurrence-type");
             _occurrenceAmountField = root.Q<TextField>("occurrence-amount");
+            NumericInputFilter.RestrictToDecimal(_occurrenceAmountField);
             _occurrenceDateField = root.Q<TextField>("occurrence-date");
             _occurrenceCategoryField = root.Q<DropdownField>("occurrence-category");
             _occurrenceCounterpartyField = root.Q<TextField>("occurrence-counterparty");
@@ -160,6 +162,7 @@ namespace FinanceOS.UI
             _simulationLabelField = root.Q<TextField>("simulation-label");
             _simulationTypeField = root.Q<DropdownField>("simulation-type");
             _simulationAmountField = root.Q<TextField>("simulation-amount");
+            NumericInputFilter.RestrictToDecimal(_simulationAmountField);
             _simulationDateField = root.Q<TextField>("simulation-date");
             _simulationCategoryField = root.Q<DropdownField>("simulation-category");
             _simulationErrorLabel = root.Q<Label>("simulation-error");
