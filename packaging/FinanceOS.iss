@@ -7,7 +7,7 @@
 ;   2. ISCC.exe packaging\FinanceOS.iss
 ; Output: packaging\Output\FinanceOS-Setup-<version>.exe (gitignored, rebuilt from source each time)
 
-#define AppVersion "1.0.2"
+#define AppVersion "1.0.3"
 
 [Setup]
 AppId={{3330EEC9-D1D8-44DB-B2E5-10E37473E979}}
