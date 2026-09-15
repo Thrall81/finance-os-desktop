@@ -540,6 +540,15 @@
     align-items: center;
 }
 
+/* Unity's Toggle control never had a project rule at all (unlike every other text element,
+   which already flows through --color-ink-* tokens) — its label defaulted to Unity's built-in
+   runtime theme color, readable by coincidence on the light background but invisible against
+   the dark one. Same root cause as ADR-135's forgotten .primary-button white text: grep for
+   controls with no explicit color rule whenever checking a new theme, not just hardcoded hex. */
+.unity-toggle__text {
+    color: var(--color-ink-900);
+}
+
 .field-suggested > .unity-base-field__input {
     background-color: var(--color-gold-soft);
 }
