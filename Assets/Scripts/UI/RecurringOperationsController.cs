@@ -9,10 +9,11 @@ namespace FinanceOS.UI
 {
     /// <summary>
     /// Binds RecurringOperations.uxml: list, creation (expense/income/savings transfer/internal
-    /// transfer), and — in edit mode — only what RecurringOperationService actually exposes post-
-    /// creation: the expected amount and active/suspended state. Name, type, accounts, frequency,
-    /// start date, day-of-month, category and counterparty are creation-only, shown read-only
-    /// when editing. See docs/07-Interface.md §3/§9/§10.
+    /// transfer), and — in edit mode — everything except name and start date (type, accounts,
+    /// expected amount, frequency, day-of-month, category, counterparty — see
+    /// RecurringOperationService.UpdateOperation, ADR-140). Start date stays read-only because
+    /// it's immutable in Domain by design; name has simply never had a reported need to change.
+    /// See docs/07-Interface.md §3/§9/§10.
     /// </summary>
     public sealed class RecurringOperationsController
     {
@@ -48,8 +49,6 @@ namespace FinanceOS.UI
         private readonly TextField _nameField;
         private readonly VisualElement _typeRow;
         private readonly DropdownField _typeField;
-        private readonly VisualElement _typeReadonlyRow;
-        private readonly Label _typeReadonlyLabel;
         private readonly VisualElement _sourceAccountRow;
         private readonly Label _sourceAccountLabel;
         private readonly DropdownField _sourceAccountField;
@@ -59,8 +58,6 @@ namespace FinanceOS.UI
         private readonly TextField _amountField;
         private readonly VisualElement _frequencyRow;
         private readonly DropdownField _frequencyField;
-        private readonly VisualElement _frequencyReadonlyRow;
-        private readonly Label _frequencyReadonlyLabel;
         private readonly VisualElement _startDateRow;
         private readonly TextField _startDateField;
         private readonly VisualElement _startDateReadonlyRow;
@@ -69,12 +66,8 @@ namespace FinanceOS.UI
         private readonly TextField _dayOfMonthField;
         private readonly VisualElement _categoryRow;
         private readonly DropdownField _categoryField;
-        private readonly VisualElement _categoryReadonlyRow;
-        private readonly Label _categoryReadonlyLabel;
         private readonly VisualElement _counterpartyRow;
         private readonly TextField _counterpartyField;
-        private readonly VisualElement _counterpartyReadonlyRow;
-        private readonly Label _counterpartyReadonlyLabel;
         private readonly Label _skipWarningLabel;
         private readonly Label _errorLabel;
         private readonly Button _deleteButton;
@@ -114,8 +107,6 @@ namespace FinanceOS.UI
             _nameField = root.Q<TextField>("form-name");
             _typeRow = root.Q<VisualElement>("form-type-row");
             _typeField = root.Q<DropdownField>("form-type");
-            _typeReadonlyRow = root.Q<VisualElement>("form-type-readonly-row");
-            _typeReadonlyLabel = root.Q<Label>("form-type-readonly");
             _sourceAccountRow = root.Q<VisualElement>("form-source-account-row");
             _sourceAccountLabel = root.Q<Label>("form-source-account-label");
             _sourceAccountField = root.Q<DropdownField>("form-source-account");
@@ -125,8 +116,6 @@ namespace FinanceOS.UI
             _amountField = root.Q<TextField>("form-amount");
             _frequencyRow = root.Q<VisualElement>("form-frequency-row");
             _frequencyField = root.Q<DropdownField>("form-frequency");
-            _frequencyReadonlyRow = root.Q<VisualElement>("form-frequency-readonly-row");
-            _frequencyReadonlyLabel = root.Q<Label>("form-frequency-readonly");
             _startDateRow = root.Q<VisualElement>("form-start-date-row");
             _startDateField = root.Q<TextField>("form-start-date");
             _startDateReadonlyRow = root.Q<VisualElement>("form-start-date-readonly-row");
@@ -135,12 +124,8 @@ namespace FinanceOS.UI
             _dayOfMonthField = root.Q<TextField>("form-day-of-month");
             _categoryRow = root.Q<VisualElement>("form-category-row");
             _categoryField = root.Q<DropdownField>("form-category");
-            _categoryReadonlyRow = root.Q<VisualElement>("form-category-readonly-row");
-            _categoryReadonlyLabel = root.Q<Label>("form-category-readonly");
             _counterpartyRow = root.Q<VisualElement>("form-counterparty-row");
             _counterpartyField = root.Q<TextField>("form-counterparty");
-            _counterpartyReadonlyRow = root.Q<VisualElement>("form-counterparty-readonly-row");
-            _counterpartyReadonlyLabel = root.Q<Label>("form-counterparty-readonly");
             _skipWarningLabel = root.Q<Label>("form-skip-warning");
             _errorLabel = root.Q<Label>("form-error");
             _deleteButton = root.Q<Button>("form-delete-button");
@@ -247,7 +232,6 @@ namespace FinanceOS.UI
             _nameField.SetValueWithoutNotify(string.Empty);
 
             _typeRow.style.display = DisplayStyle.Flex;
-            _typeReadonlyRow.style.display = DisplayStyle.None;
             _typeField.SetValueWithoutNotify(TypeOptions[0].Text);
 
             SetChoices(_sourceAccountField, _creatableAccounts);
@@ -256,7 +240,6 @@ namespace FinanceOS.UI
             _amountField.SetValueWithoutNotify(string.Empty);
 
             _frequencyRow.style.display = DisplayStyle.Flex;
-            _frequencyReadonlyRow.style.display = DisplayStyle.None;
             _frequencyField.SetValueWithoutNotify(FrequencyOptions[1].Text);
 
             _startDateRow.style.display = DisplayStyle.Flex;
@@ -267,11 +250,9 @@ namespace FinanceOS.UI
             _dayOfMonthField.SetValueWithoutNotify(string.Empty);
 
             _categoryRow.style.display = DisplayStyle.Flex;
-            _categoryReadonlyRow.style.display = DisplayStyle.None;
             RebuildCategoryChoices();
 
             _counterpartyRow.style.display = DisplayStyle.Flex;
-            _counterpartyReadonlyRow.style.display = DisplayStyle.None;
             _counterpartyField.SetValueWithoutNotify(string.Empty);
 
             _deleteButton.style.display = DisplayStyle.None;
@@ -297,14 +278,14 @@ namespace FinanceOS.UI
 
             _nameRow.style.display = DisplayStyle.None;
 
-            _typeRow.style.display = DisplayStyle.None;
-            _typeReadonlyRow.style.display = DisplayStyle.Flex;
-            _typeReadonlyLabel.text = row.TypeText;
+            // Type, accounts, frequency, day-of-month, category and counterparty are all
+            // editable in edit mode too — only name and start date stay fixed after creation
+            // (start date is immutable in Domain by design; renaming has no reported need yet).
+            // See RecurringOperationService.UpdateOperation, ADR-140 (extends ADR-137's
+            // account-only correction to the operation's other fields).
+            _typeRow.style.display = DisplayStyle.Flex;
+            _typeField.SetValueWithoutNotify(row.TypeText);
 
-            // Unlike the other creation-only fields below, the account(s) stay editable here — a
-            // wrong account picked at creation (e.g. during onboarding's minimal form) is a real,
-            // reported mistake with no other fix short of deleting and recreating the whole
-            // operation. See RecurringOperationService.ChangeAccounts, ADR-137.
             SetChoices(_sourceAccountField, _creatableAccounts);
             SelectAccount(_sourceAccountField, row.SourceAccountId);
             SetChoices(_destinationAccountField, _creatableAccounts);
@@ -313,23 +294,22 @@ namespace FinanceOS.UI
 
             _amountField.SetValueWithoutNotify(RawAmountText(row.AmountText));
 
-            _frequencyRow.style.display = DisplayStyle.None;
-            _frequencyReadonlyRow.style.display = DisplayStyle.Flex;
-            _frequencyReadonlyLabel.text = row.FrequencyText;
+            _frequencyRow.style.display = DisplayStyle.Flex;
+            _frequencyField.SetValueWithoutNotify(row.FrequencyText);
 
             _startDateRow.style.display = DisplayStyle.None;
             _startDateReadonlyRow.style.display = DisplayStyle.Flex;
             _startDateReadonlyLabel.text = row.StartDateText;
 
-            _dayOfMonthRow.style.display = DisplayStyle.None;
+            _dayOfMonthRow.style.display = DisplayStyle.Flex;
+            _dayOfMonthField.SetValueWithoutNotify(row.ExpectedDayOfMonth?.ToString() ?? string.Empty);
 
-            _categoryRow.style.display = DisplayStyle.None;
-            _categoryReadonlyRow.style.display = DisplayStyle.Flex;
-            _categoryReadonlyLabel.text = row.CategoryText;
+            _categoryRow.style.display = DisplayStyle.Flex;
+            RebuildCategoryChoices();
+            SelectCategory(row.CategoryId);
 
-            _counterpartyRow.style.display = DisplayStyle.None;
-            _counterpartyReadonlyRow.style.display = DisplayStyle.Flex;
-            _counterpartyReadonlyLabel.text = row.CounterpartyText;
+            _counterpartyRow.style.display = DisplayStyle.Flex;
+            _counterpartyField.SetValueWithoutNotify(row.CounterpartyText == "—" ? string.Empty : row.CounterpartyText);
 
             _deleteButton.style.display = DisplayStyle.Flex;
             _toggleActiveButton.style.display = DisplayStyle.Flex;
@@ -385,48 +365,25 @@ namespace FinanceOS.UI
 
         private void SubmitEdit(int id)
         {
-            if (!MoneyFormat.TryParseEurosToMinor(_amountField.value, out var magnitude) || magnitude <= 0)
+            if (!TryGatherOperationFields(
+                    out var type, out var magnitude, out var frequency, out var dayOfMonth,
+                    out var sourceAccountId, out var destinationAccountId, out var categoryId, out var counterpartyId))
             {
-                ShowError("Le montant doit être un nombre positif, ex. 45,90.");
                 return;
             }
 
-            var typeIndex = TypeOptions.ToList().FindIndex(o => o.Text == _typeReadonlyLabel.text);
-            var type = TypeOptions[typeIndex < 0 ? 0 : typeIndex].Type;
-            var (needsSource, needsDestination) = AccountRequirementsFor(type);
-
-            int? sourceAccountId = null;
-            if (needsSource)
+            try
             {
-                if (_sourceAccountField.index < 0 || _sourceAccountField.index >= _creatableAccounts.Count)
-                {
-                    ShowError("Choisissez un compte.");
-                    return;
-                }
-
-                sourceAccountId = _creatableAccounts[_sourceAccountField.index].Id;
+                _operations.UpdateOperation(
+                    id, type, sourceAccountId, destinationAccountId, magnitude, frequency, dayOfMonth,
+                    categoryId, counterpartyId);
             }
-
-            int? destinationAccountId = null;
-            if (needsDestination)
+            catch (ArgumentException ex)
             {
-                if (_destinationAccountField.index < 0 || _destinationAccountField.index >= _creatableAccounts.Count)
-                {
-                    ShowError("Choisissez un compte.");
-                    return;
-                }
-
-                destinationAccountId = _creatableAccounts[_destinationAccountField.index].Id;
-            }
-
-            if (sourceAccountId is not null && destinationAccountId is not null && sourceAccountId == destinationAccountId)
-            {
-                ShowError("Le compte destination doit être différent du compte source.");
+                ShowError(ex.Message);
                 return;
             }
 
-            _operations.UpdateExpectedAmount(id, magnitude);
-            _operations.ChangeAccounts(id, sourceAccountId, destinationAccountId);
             _operations.GenerateUpcomingOccurrences(DateTime.Now, _settings.Get().ForecastHorizonDays);
 
             CloseForm();
@@ -442,72 +399,18 @@ namespace FinanceOS.UI
                 return;
             }
 
-            if (!MoneyFormat.TryParseEurosToMinor(_amountField.value, out var magnitude) || magnitude <= 0)
-            {
-                ShowError("Le montant doit être un nombre positif, ex. 45,90.");
-                return;
-            }
-
             if (!DateFormat.TryParseInput(_startDateField.value, out var startDate))
             {
                 ShowError("La date de début doit être au format jj/mm/aaaa.");
                 return;
             }
 
-            int? dayOfMonth = null;
-            if (!string.IsNullOrWhiteSpace(_dayOfMonthField.value))
+            if (!TryGatherOperationFields(
+                    out var type, out var magnitude, out var frequency, out var dayOfMonth,
+                    out var sourceAccountId, out var destinationAccountId, out var categoryId, out var counterpartyId))
             {
-                if (!int.TryParse(_dayOfMonthField.value, out var parsedDay) || parsedDay is < 1 or > 31)
-                {
-                    ShowError("Le jour du mois doit être un nombre entre 1 et 31.");
-                    return;
-                }
-
-                dayOfMonth = parsedDay;
-            }
-
-            var typeIndex = TypeOptions.ToList().FindIndex(o => o.Text == _typeField.value);
-            var type = TypeOptions[typeIndex < 0 ? 0 : typeIndex].Type;
-            var frequencyIndex = FrequencyOptions.ToList().FindIndex(o => o.Text == _frequencyField.value);
-            var frequency = FrequencyOptions[frequencyIndex < 0 ? 0 : frequencyIndex].Frequency;
-
-            var (needsSource, needsDestination) = AccountRequirementsFor(type);
-
-            int? sourceAccountId = null;
-            if (needsSource)
-            {
-                if (_sourceAccountField.index < 0 || _sourceAccountField.index >= _creatableAccounts.Count)
-                {
-                    ShowError("Choisissez un compte.");
-                    return;
-                }
-
-                sourceAccountId = _creatableAccounts[_sourceAccountField.index].Id;
-            }
-
-            int? destinationAccountId = null;
-            if (needsDestination)
-            {
-                if (_destinationAccountField.index < 0 || _destinationAccountField.index >= _creatableAccounts.Count)
-                {
-                    ShowError("Choisissez un compte.");
-                    return;
-                }
-
-                destinationAccountId = _creatableAccounts[_destinationAccountField.index].Id;
-            }
-
-            if (sourceAccountId is not null && destinationAccountId is not null && sourceAccountId == destinationAccountId)
-            {
-                ShowError("Le compte destination doit être différent du compte source.");
                 return;
             }
-
-            var categoryId = _categoryField.index <= 0 ? (int?)null : _categoryOptions[_categoryField.index - 1].Id;
-            var counterpartyName = _counterpartyField.value?.Trim();
-            var counterpartyId = string.IsNullOrEmpty(counterpartyName)
-                ? (int?)null
-                : _counterparties.FindOrCreateByName(counterpartyName).Id;
 
             try
             {
@@ -525,6 +428,95 @@ namespace FinanceOS.UI
 
             CloseForm();
             Refresh();
+        }
+
+        /// <summary>Reads and validates every field shared by creation and editing (everything
+        /// except name/start date, which only creation gathers itself). Extracted once both forms
+        /// needed the exact same type/frequency/day-of-month/accounts/category/counterparty
+        /// parsing — see ADR-140. Returns false (and shows the relevant error) on the first
+        /// invalid field.</summary>
+        private bool TryGatherOperationFields(
+            out RecurringOperationType type,
+            out long expectedAmountMinor,
+            out RecurringFrequency frequency,
+            out int? dayOfMonth,
+            out int? sourceAccountId,
+            out int? destinationAccountId,
+            out int? categoryId,
+            out int? counterpartyId)
+        {
+            type = default;
+            expectedAmountMinor = 0;
+            frequency = default;
+            dayOfMonth = null;
+            sourceAccountId = null;
+            destinationAccountId = null;
+            categoryId = null;
+            counterpartyId = null;
+
+            if (!MoneyFormat.TryParseEurosToMinor(_amountField.value, out var magnitude) || magnitude <= 0)
+            {
+                ShowError("Le montant doit être un nombre positif, ex. 45,90.");
+                return false;
+            }
+
+            expectedAmountMinor = magnitude;
+
+            var typeIndex = TypeOptions.ToList().FindIndex(o => o.Text == _typeField.value);
+            type = TypeOptions[typeIndex < 0 ? 0 : typeIndex].Type;
+
+            var frequencyIndex = FrequencyOptions.ToList().FindIndex(o => o.Text == _frequencyField.value);
+            frequency = FrequencyOptions[frequencyIndex < 0 ? 0 : frequencyIndex].Frequency;
+
+            if (!string.IsNullOrWhiteSpace(_dayOfMonthField.value))
+            {
+                if (!int.TryParse(_dayOfMonthField.value, out var parsedDay) || parsedDay is < 1 or > 31)
+                {
+                    ShowError("Le jour du mois doit être un nombre entre 1 et 31.");
+                    return false;
+                }
+
+                dayOfMonth = parsedDay;
+            }
+
+            var (needsSource, needsDestination) = AccountRequirementsFor(type);
+
+            if (needsSource)
+            {
+                if (_sourceAccountField.index < 0 || _sourceAccountField.index >= _creatableAccounts.Count)
+                {
+                    ShowError("Choisissez un compte.");
+                    return false;
+                }
+
+                sourceAccountId = _creatableAccounts[_sourceAccountField.index].Id;
+            }
+
+            if (needsDestination)
+            {
+                if (_destinationAccountField.index < 0 || _destinationAccountField.index >= _creatableAccounts.Count)
+                {
+                    ShowError("Choisissez un compte.");
+                    return false;
+                }
+
+                destinationAccountId = _creatableAccounts[_destinationAccountField.index].Id;
+            }
+
+            if (sourceAccountId is not null && destinationAccountId is not null && sourceAccountId == destinationAccountId)
+            {
+                ShowError("Le compte destination doit être différent du compte source.");
+                return false;
+            }
+
+            categoryId = _categoryField.index <= 0 ? (int?)null : _categoryOptions[_categoryField.index - 1].Id;
+
+            var counterpartyName = _counterpartyField.value?.Trim();
+            counterpartyId = string.IsNullOrEmpty(counterpartyName)
+                ? (int?)null
+                : _counterparties.FindOrCreateByName(counterpartyName).Id;
+
+            return true;
         }
 
         private void DeleteOperation()
@@ -652,6 +644,23 @@ namespace FinanceOS.UI
             choices.AddRange(_categoryOptions.Select(c => c.Name));
             _categoryField.choices = choices;
             _categoryField.SetValueWithoutNotify(choices[0]);
+        }
+
+        /// <summary>Overrides RebuildCategoryChoices's own "Aucune" default with the category this
+        /// row actually has — used only in edit mode, same role as <see cref="SelectAccount"/>.
+        /// The +1 offset accounts for "Aucune" always being choice 0.</summary>
+        private void SelectCategory(int? categoryId)
+        {
+            if (categoryId is not int id)
+            {
+                return;
+            }
+
+            var index = _categoryOptions.ToList().FindIndex(o => o.Id == id);
+            if (index >= 0)
+            {
+                _categoryField.SetValueWithoutNotify(_categoryField.choices[index + 1]);
+            }
         }
 
         /// <summary>Strips the currency symbol/sign back out of an already-formatted amount so it

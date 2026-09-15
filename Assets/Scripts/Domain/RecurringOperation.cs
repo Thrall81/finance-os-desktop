@@ -10,7 +10,7 @@ namespace FinanceOS.Domain
     {
         public int Id { get; private set; }
         public string Name { get; private set; }
-        public RecurringOperationType Type { get; }
+        public RecurringOperationType Type { get; private set; }
         public int? SourceAccountId { get; private set; }
         public int? DestinationAccountId { get; private set; }
         public int? CategoryId { get; private set; }
@@ -183,17 +183,52 @@ namespace FinanceOS.Domain
             return type == RecurringOperationType.Income ? magnitude : -magnitude;
         }
 
-        /// <summary>Corrects a source/destination account chosen wrongly at creation — a real,
-        /// reachable mistake (e.g. picking the wrong account during onboarding's minimal form)
-        /// that previously had no fix short of deleting and recreating the whole operation.
+        /// <summary>Corrects the type and/or account(s) chosen at creation in one atomic,
+        /// validated step — e.g. a wrong source account (the original ADR-137 mistake) or a wrong
+        /// Dépense/Revenu selection. Validating the final (type, accounts) combination together,
+        /// rather than as two separate calls, avoids a transient state where the old accounts
+        /// don't satisfy the new type (or vice versa). Also re-normalizes the amount's sign for
+        /// the new type, since Dépense/Revenu store opposite signs for the same typed magnitude.
         /// Callers must also clear and regenerate this operation's still-pending occurrences
-        /// (RecurringOperationService.ChangeAccounts) — the ones already generated have the old
-        /// account baked in and won't update just because this field did.</summary>
-        public void ChangeAccounts(int? sourceAccountId, int? destinationAccountId, DateTimeOffset? now = null)
+        /// (RecurringOperationService.UpdateOperation) — the ones already generated have the old
+        /// type/accounts/amount-sign baked in and won't update just because these fields did.</summary>
+        public void ChangeType(RecurringOperationType type, int? sourceAccountId, int? destinationAccountId, DateTimeOffset? now = null)
         {
-            ValidateAccounts(Type, sourceAccountId, destinationAccountId);
+            ValidateAccounts(type, sourceAccountId, destinationAccountId);
+            Type = type;
             SourceAccountId = sourceAccountId;
             DestinationAccountId = destinationAccountId;
+            ExpectedAmountMinor = NormalizeAmountSign(type, ExpectedAmountMinor);
+            Touch(now);
+        }
+
+        /// <summary>Corrects the frequency and/or day-of-month chosen at creation. Interval value
+        /// stays untouched — no screen exposes editing it, same restraint as start date (below).
+        /// Callers must also clear and regenerate this operation's still-pending occurrences
+        /// (RecurringOperationService.UpdateOperation) — their dates were computed from the old
+        /// schedule.</summary>
+        public void ChangeSchedule(RecurringFrequency frequency, int? expectedDayOfMonth, DateTimeOffset? now = null)
+        {
+            Frequency = frequency;
+            ExpectedDayOfMonth = expectedDayOfMonth;
+            Touch(now);
+        }
+
+        /// <summary>Reassigns the category, or clears it (null). Callers must also clear and
+        /// regenerate this operation's still-pending occurrences (RecurringOperationService.
+        /// UpdateOperation) — each already-generated occurrence carries its own copy of the
+        /// category, taken from this operation at generation time.</summary>
+        public void AssignCategory(int? categoryId, DateTimeOffset? now = null)
+        {
+            CategoryId = categoryId;
+            Touch(now);
+        }
+
+        /// <summary>Reassigns the counterparty (tiers), or clears it (null). Same "already-
+        /// generated occurrences carry their own copy" caveat as <see cref="AssignCategory"/>.</summary>
+        public void AssignCounterparty(int? counterpartyId, DateTimeOffset? now = null)
+        {
+            CounterpartyId = counterpartyId;
             Touch(now);
         }
 

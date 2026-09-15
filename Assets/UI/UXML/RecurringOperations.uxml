@@ -21,10 +21,6 @@
         <ui:Label text="Type" class="form-label" />
         <ui:DropdownField name="form-type" class="form-field" />
       </ui:VisualElement>
-      <ui:VisualElement name="form-type-readonly-row" class="form-row" style="display: none;">
-        <ui:Label text="Type" class="form-label" />
-        <ui:Label name="form-type-readonly" text="—" class="form-readonly-value" />
-      </ui:VisualElement>
 
       <ui:VisualElement name="form-source-account-row" class="form-row">
         <ui:Label name="form-source-account-label" text="Compte" class="form-label" />
@@ -44,10 +40,6 @@
       <ui:VisualElement name="form-frequency-row" class="form-row">
         <ui:Label text="Fréquence" class="form-label" />
         <ui:DropdownField name="form-frequency" class="form-field" />
-      </ui:VisualElement>
-      <ui:VisualElement name="form-frequency-readonly-row" class="form-row" style="display: none;">
-        <ui:Label text="Fréquence" class="form-label" />
-        <ui:Label name="form-frequency-readonly" text="—" class="form-readonly-value" />
       </ui:VisualElement>
 
       <ui:VisualElement name="form-start-date-row" class="form-row">
@@ -69,18 +61,10 @@
         <ui:Label text="Catégorie" class="form-label" />
         <ui:DropdownField name="form-category" class="form-field" />
       </ui:VisualElement>
-      <ui:VisualElement name="form-category-readonly-row" class="form-row" style="display: none;">
-        <ui:Label text="Catégorie" class="form-label" />
-        <ui:Label name="form-category-readonly" text="—" class="form-readonly-value" />
-      </ui:VisualElement>
 
       <ui:VisualElement name="form-counterparty-row" class="form-row">
         <ui:Label text="Tiers (facultatif)" class="form-label" />
         <ui:TextField name="form-counterparty" class="form-field" />
-      </ui:VisualElement>
-      <ui:VisualElement name="form-counterparty-readonly-row" class="form-row" style="display: none;">
-        <ui:Label text="Tiers" class="form-label" />
-        <ui:Label name="form-counterparty-readonly" text="—" class="form-readonly-value" />
       </ui:VisualElement>
 
       <ui:VisualElement class="form-actions">

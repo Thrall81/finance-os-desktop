@@ -53,6 +53,7 @@ Journal des décisions structurantes, dans le même format que l'ancien projet (
 | ADR-137 | Correction du compte d'une opération récurrente après création ; occurrences en attente régénérées | ACCEPTED |
 | ADR-138 | Fenêtre standard (pas plein écran exclusif) + bouton Quitter dans la barre latérale | ACCEPTED |
 | ADR-139 | Vérification et téléchargement automatiques de mise à jour ; installation toujours soumise à confirmation | ACCEPTED |
+| ADR-140 | Édition étendue des opérations récurrentes (type, fréquence, jour du mois, catégorie, tiers) ; correction fusionnée type+comptes, un seul vidage/régénération par sauvegarde | ACCEPTED |
 
 ---
 
@@ -707,3 +708,23 @@ Chaque alerte porte `IsSevere` : dépassement de budget (danger/rust, cohérent 
 **Affichage de version** : `Application.version` (lit `PlayerSettings.bundleVersion`) affiché dans une nouvelle carte « À propos » de Paramètres — lu une seule fois à la construction du contrôleur plutôt qu'à chaque `Refresh()`, puisqu'il ne change jamais en cours de session, contrairement au reste de cet écran.
 
 **Documents concernés** : `08-Confidentialite_et_donnees.md` §1, `04-Stack_technique.md` §7/§9, `01-Perimetre.md` §2.11.
+
+---
+
+# 42. ADR-140 — Édition étendue des opérations récurrentes
+
+**Contexte** : deuxième vrai retour terrain sur cet écran après ADR-137 (compte seul) — l'utilisateur, en éditant une opération réelle (« Facture Electricité »), a constaté que le type, la fréquence, la catégorie et le tiers restaient tous en lecture seule, sans pouvoir demander concrètement à quoi correspondait « Tiers » (réponse : le nom libre optionnel du bénéficiaire/émetteur, `01-Perimetre.md` §2.5 — pas une fiche complexe).
+
+**Décision** : tous les champs deviennent modifiables en édition, sauf le nom et la date de début. La date de début reste immuable dans `RecurringOperation` par conception (`{ get; }`, pas de `private set`) ; le nom n'a simplement jamais eu de besoin remonté — aucun des deux n'a été retiré du périmètre pour une raison technique bloquante, juste laissé de côté.
+
+**`RecurringOperation.Type` était littéralement immuable** (`{ get; }`), pas seulement restreint côté UI — passé à `{ get; private set; }`. `ChangeAccounts(sourceAccountId, destinationAccountId)` est remplacé par `ChangeType(type, sourceAccountId, destinationAccountId)` : valide la combinaison (type, comptes) **finale** en un seul appel plutôt qu'en deux étapes séparées (type puis comptes, ou l'inverse), ce qui aurait pu échouer transitoirement si les anciens comptes ne satisfont pas le nouveau type ou vice versa. Re-normalise aussi le signe du montant attendu pour le nouveau type (`NormalizeAmountSign` : `Math.Abs` puis re-signe selon le type — idempotent, donc sans risque d'ordre avec `UpdateExpectedAmount` appelé juste après dans le même passage).
+
+**Bug latent trouvé en vérifiant le repository avant d'écrire le nouveau code, même silhouette qu'ADR-137** : le `UPDATE` SQL de `RecurringOperationRepository` n'a jamais inclus la colonne `type` — inoffensif tant que `Type` était immuable (rien n'essayait jamais de le persister), aurait silencieusement empêché tout changement de type de survivre à un redémarrage sinon. Corrigé dans le même passage, avec une assertion de non-régression dédiée dans `AppSmokeTest.cs` (relit l'opération après un changement de type et vérifie que `Type` a bien changé).
+
+**Un seul vidage/régénération par sauvegarde, pas un par champ** : type, comptes, montant, fréquence, jour du mois, catégorie et tiers sont tous gravés dans chaque `ForecastOccurrence` déjà générée au moment de sa création (`ForecastOccurrenceGenerator` lit l'opération telle qu'elle est à cet instant) — un changement sur n'importe lequel de ces champs rend donc les occurrences encore `planned`/`missed` obsolètes, pas seulement un changement de compte comme ADR-137 l'avait d'abord isolé. Plutôt que d'exposer sept méthodes de service qui videraient chacune séparément (et régénéreraient donc plusieurs fois pour une seule sauvegarde), `RecurringOperationService.UpdateOperation` (remplace `ChangeAccounts`/`UpdateExpectedAmount` côté service) applique toutes les mutations Domain d'abord, persiste, puis ne vide qu'une seule fois.
+
+**Refactorisation côté UI** : `RecurringOperationsController.SubmitCreate`/`SubmitEdit` partageaient déjà presque exactement la même lecture/validation de champs (type, montant, fréquence, jour du mois, comptes, catégorie, tiers) — extraite en `TryGatherOperationFields`, appelée par les deux. Les lignes « lecture seule » Type/Fréquence/Catégorie/Tiers (`form-type-readonly-row`, etc.) ne sont plus jamais affichées une fois tous ces champs éditables des deux côtés (création et édition) — supprimées du C# et de l'UXML plutôt que laissées mortes, conformément à la convention du projet de ne pas garder de code silencieusement inutilisé. Seule la ligne de lecture seule de la date de début reste, encore réellement utilisée en édition.
+
+**Conséquence négative assumée, pas corrigée dans ce passage** : `UpdateSkipWarning` (l'avertissement de saut de premier cycle, ADR-120) reste explicitement limité à la création (`if (_editingOperationId is not null) return;`) — l'étendre à l'édition serait un vrai gain maintenant que la fréquence/le jour du mois y sont éditables aussi (le même piège qu'ADR-120 avait trouvé en création reste possible en édition), mais n'a pas été demandé et aurait élargi encore le périmètre de ce passage. À revoir si un incident similaire se reproduit en édition.
+
+**Documents concernés** : `07-Interface.md` §3/§9/§10, `Assets/Scripts/UI/README.md`.

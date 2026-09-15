@@ -552,6 +552,9 @@ namespace FinanceOS.EditorTools
             var wrongAccountUiPath = Path.Combine(Path.GetTempPath(), $"financeos-ui-smoke-wrong-account-{Guid.NewGuid():N}.db");
             using (var wrongAccountApp = new AppContainer(wrongAccountUiPath))
             {
+                wrongAccountApp.Categories.SeedDefaultCategoriesIfEmpty();
+                var wrongAccountHousing = wrongAccountApp.Categories.ListActive().First(c => c.Name == "Logement");
+
                 var rightAccount = wrongAccountApp.Accounts.CreateAccount("Compte courant", AccountType.Current, "EUR", 100_000);
                 var wrongAccount = wrongAccountApp.Accounts.CreateAccount("Livret A", AccountType.Savings, "EUR", 50_000);
 
@@ -574,11 +577,31 @@ namespace FinanceOS.EditorTools
                 Check(wrongAccountRoot.Q<DropdownField>("form-source-account").value == "Livret A",
                     "the account dropdown opens pre-selected to the operation's current (wrong) account");
 
+                // ADR-140: type, frequency, day-of-month, category and counterparty are all
+                // editable rows now too, not read-only labels — and each opens pre-filled from
+                // the operation's own current values, same as the account fields above.
+                Check(wrongAccountRoot.Q<VisualElement>("form-type-row").style.display == DisplayStyle.Flex, "type row is editable in edit mode");
+                Check(wrongAccountRoot.Q<DropdownField>("form-type").value == "Dépense", "type dropdown opens pre-selected to the operation's current type");
+                Check(wrongAccountRoot.Q<VisualElement>("form-frequency-row").style.display == DisplayStyle.Flex, "frequency row is editable in edit mode");
+                Check(wrongAccountRoot.Q<DropdownField>("form-frequency").value == "Mensuelle", "frequency dropdown opens pre-selected to the operation's current frequency");
+                Check(wrongAccountRoot.Q<VisualElement>("form-day-of-month-row").style.display == DisplayStyle.Flex, "day-of-month row is editable in edit mode");
+                Check(wrongAccountRoot.Q<TextField>("form-day-of-month").value == "1", "day-of-month field opens pre-filled with the operation's current value");
+                Check(wrongAccountRoot.Q<VisualElement>("form-category-row").style.display == DisplayStyle.Flex, "category row is editable in edit mode");
+                Check(wrongAccountRoot.Q<DropdownField>("form-category").value == "Aucune", "category dropdown opens on Aucune when the operation has no category");
+                Check(wrongAccountRoot.Q<VisualElement>("form-counterparty-row").style.display == DisplayStyle.Flex, "counterparty row is editable in edit mode");
+                Check(wrongAccountRoot.Q<TextField>("form-counterparty").value == string.Empty, "counterparty field opens empty when the operation has no counterparty");
+
                 wrongAccountRoot.Q<DropdownField>("form-source-account").SetValueWithoutNotify("Compte courant");
+                wrongAccountRoot.Q<DropdownField>("form-frequency").SetValueWithoutNotify("Trimestrielle");
+                wrongAccountRoot.Q<DropdownField>("form-category").SetValueWithoutNotify("Logement");
+                wrongAccountRoot.Q<TextField>("form-counterparty").SetValueWithoutNotify("Bailleur Test");
                 wrongAccountController.SubmitForm();
 
-                Check(wrongAccountApp.RecurringOperations.FindById(operation.Id)!.SourceAccountId == rightAccount.Id,
-                    "submitting the edit form with a different account persists the correction");
+                var corrected = wrongAccountApp.RecurringOperations.FindById(operation.Id)!;
+                Check(corrected.SourceAccountId == rightAccount.Id, "submitting the edit form with a different account persists the correction");
+                Check(corrected.Frequency == RecurringFrequency.Quarterly, "submitting the edit form with a different frequency persists the correction");
+                Check(corrected.CategoryId == wrongAccountHousing.Id, "submitting the edit form with a category persists it");
+                Check(corrected.CounterpartyId is not null, "submitting the edit form with a counterparty name creates and persists it");
                 Check(wrongAccountApp.ForecastOccurrences.ListForAccount(wrongAccount.Id, new DateTime(2026, 9, 1), new DateTime(2026, 9, 30)).Count == 0,
                     "the operation's occurrence no longer sits on the old account after the UI-driven correction");
             }

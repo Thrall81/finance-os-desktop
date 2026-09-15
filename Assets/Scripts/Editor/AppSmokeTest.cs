@@ -173,7 +173,7 @@ namespace FinanceOS.EditorTools
             var decemberOccurrences = app.ForecastOccurrences.ListForAccount(current.Id, new DateTime(2026, 12, 1), new DateTime(2026, 12, 31));
             Check(decemberOccurrences.Count == 1 && decemberOccurrences[0].Id == oneOffOccurrence.Id, "the one-off occurrence appears when listing its account for its period");
 
-            // A dedicated recurring operation, not `rent` above — ChangeAccounts deletes and
+            // A dedicated recurring operation, not `rent` above — UpdateOperation deletes and
             // regenerates this operation's own pending occurrences, which would otherwise
             // entangle with the October/November missed-occurrence assertions already made
             // against `rent` earlier in this file.
@@ -186,13 +186,15 @@ namespace FinanceOS.EditorTools
                 .Where(o => o.RecurringOperationId == wrongAccountOperation.Id).ToList();
             Check(onWrongAccount.Count == 3, "three monthly occurrences generated on the (wrong) account first");
 
-            app.RecurringOperations.ChangeAccounts(wrongAccountOperation.Id, current.Id, null);
+            app.RecurringOperations.UpdateOperation(
+                wrongAccountOperation.Id, RecurringOperationType.Expense, current.Id, null,
+                1_000, RecurringFrequency.Monthly, 1, categoryId: null, counterpartyId: null);
             Check(app.RecurringOperations.FindById(wrongAccountOperation.Id)!.SourceAccountId == current.Id,
                 "the corrected account is persisted on the recurring operation itself");
 
             var stillOnWrongAccount = app.ForecastOccurrences.ListForAccount(savings.Id, new DateTime(2026, 9, 1), new DateTime(2026, 11, 30))
                 .Where(o => o.RecurringOperationId == wrongAccountOperation.Id).ToList();
-            Check(stillOnWrongAccount.Count == 0, "ChangeAccounts wipes the old pending occurrences, not just the operation's own field");
+            Check(stillOnWrongAccount.Count == 0, "UpdateOperation wipes the old pending occurrences, not just the operation's own fields");
 
             app.RecurringOperations.GenerateOccurrences(wrongAccountOperation.Id, new DateTime(2026, 9, 1), new DateTime(2026, 11, 30));
             var regeneratedOnRightAccount = app.ForecastOccurrences.ListForAccount(current.Id, new DateTime(2026, 9, 1), new DateTime(2026, 11, 30))
@@ -202,7 +204,9 @@ namespace FinanceOS.EditorTools
             var invalidAccountChangeBlocked = false;
             try
             {
-                app.RecurringOperations.ChangeAccounts(wrongAccountOperation.Id, null, null);
+                app.RecurringOperations.UpdateOperation(
+                    wrongAccountOperation.Id, RecurringOperationType.Expense, null, null,
+                    1_000, RecurringFrequency.Monthly, 1, categoryId: null, counterpartyId: null);
             }
             catch (ArgumentException)
             {
@@ -210,6 +214,42 @@ namespace FinanceOS.EditorTools
             }
 
             Check(invalidAccountChangeBlocked, "an expense still requires a source account after the change — same validation as creation");
+
+            // Category, counterparty and frequency are editable too (ADR-140) — each is baked
+            // into an already-generated occurrence, so changing any of them must also wipe and
+            // regenerate pending occurrences, same as the account correction above.
+            var testCounterparty = app.Counterparties.FindOrCreateByName("Bailleur Test");
+            app.RecurringOperations.UpdateOperation(
+                wrongAccountOperation.Id, RecurringOperationType.Expense, current.Id, null,
+                1_000, RecurringFrequency.Quarterly, 1, categoryId: housing.Id, counterpartyId: testCounterparty.Id);
+
+            var afterScheduleChange = app.RecurringOperations.FindById(wrongAccountOperation.Id)!;
+            Check(afterScheduleChange.Frequency == RecurringFrequency.Quarterly, "frequency change is persisted");
+            Check(afterScheduleChange.CategoryId == housing.Id, "category change is persisted");
+            Check(afterScheduleChange.CounterpartyId == testCounterparty.Id, "counterparty change is persisted");
+
+            var stillOnOldSchedule = app.ForecastOccurrences.ListForAccount(current.Id, new DateTime(2026, 9, 1), new DateTime(2026, 11, 30))
+                .Where(o => o.RecurringOperationId == wrongAccountOperation.Id).ToList();
+            Check(stillOnOldSchedule.Count == 0, "changing the schedule/category/counterparty wipes pending occurrences too, not just accounts");
+
+            var quarterlyOccurrences = app.RecurringOperations.GenerateOccurrences(wrongAccountOperation.Id, new DateTime(2026, 9, 1), new DateTime(2026, 11, 30));
+            Check(quarterlyOccurrences.Count == 1, "quarterly frequency produces only the September occurrence over the same Sept-Nov window that produced three monthly ones");
+            Check(quarterlyOccurrences[0].CategoryId == housing.Id, "a regenerated occurrence carries the operation's new category, not the old (null) one");
+            Check(quarterlyOccurrences[0].CounterpartyId == testCounterparty.Id, "a regenerated occurrence carries the operation's new counterparty");
+
+            // Type change: Dépense → Revenu flips the stored amount sign and moves the account
+            // from source to destination — exercises the repository's own `type` column, which
+            // never appeared in its UPDATE statement before this pass (a latent bug, harmless
+            // only because Type used to be immutable — same shape as ADR-137's original
+            // account-columns gap).
+            app.RecurringOperations.UpdateOperation(
+                wrongAccountOperation.Id, RecurringOperationType.Income, null, current.Id,
+                1_000, RecurringFrequency.Quarterly, 1, categoryId: housing.Id, counterpartyId: testCounterparty.Id);
+
+            var afterTypeChange = app.RecurringOperations.FindById(wrongAccountOperation.Id)!;
+            Check(afterTypeChange.Type == RecurringOperationType.Income, "type change is actually persisted by the repository, not silently dropped");
+            Check(afterTypeChange.ExpectedAmountMinor == 1_000, "an income's expected amount is stored positive — the sign flipped by the type change");
+            Check(afterTypeChange.DestinationAccountId == current.Id, "the account moved from source to destination to match the new type");
 
             var settings = app.Settings.Get();
             Check(settings.ForecastHorizonDays == 90, "default forecast horizon");
