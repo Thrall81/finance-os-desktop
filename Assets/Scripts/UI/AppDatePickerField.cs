@@ -85,6 +85,15 @@ namespace FinanceOS.UI
                 });
 
                 popover.Show();
+
+                // A real z-order bug found via the UI Toolkit Debugger, on the user's own
+                // hypothesis: PopoverVisualElement lands as the FIRST child of the panel root,
+                // ahead of UIDocumentRootElement (this whole app's own tree) — in UI Toolkit,
+                // draw order follows child order, so the entire app was painting over the popover,
+                // not the other way around, even though the popover had correct content and
+                // styling by this point. Explicitly moving it to the end of its parent's children
+                // (the standard meaning of BringToFront) puts it back on top.
+                popover.view?.BringToFront();
             };
         }
     }
