@@ -57,6 +57,7 @@ Journal des décisions structurantes, dans le même format que l'ancien projet (
 | ADR-141 | Verrouillage des saisies numériques (lettres bloquées dans les champs montant/entier) ; datepicker reporté à une prochaine mise à jour | ACCEPTED |
 | ADR-142 | Correction d'un compte/opération pendant l'onboarding ; séparation visuelle Ajouter/Valider ; bouton "Nouveau X" dupliqué près des listes ; espacement des cartes uniformisé ; scrollbar amincie et thémée ; popup de changelog reportée | ACCEPTED |
 | ADR-143 | Comparaison avant/après explicite dans le résultat de la simulation « Et si ? », conforme à `06-Moteur_de_prevision.md` §9 | ACCEPTED |
+| ADR-144 | Les sélecteurs de compte pour affecter un mouvement/une opération s'ouvrent présélectionnés sur le compte par défaut (Paramètres), pas le premier de la liste ; les filtres « Tous les comptes » restent neutres | ACCEPTED |
 
 ---
 
@@ -783,3 +784,17 @@ Chaque alerte porte `IsSevere` : dépassement de budget (danger/rust, cohérent 
 **Couverture de test** : `AppSmokeTest.cs` avait déjà un scénario `GetForecast`/`Simulate` sur le même compte et la même fenêtre (achat simulé de 850,00 €) — une seule assertion ajoutée confirme que l'écart entre les deux égale exactement le montant simulé, ce qui valide directement le calcul que les nouvelles étiquettes affichent. `RunSimulation` reste privée et non testée par clic, cohérent avec le choix déjà établi pour cet écran (ADR-133) — seule la logique pure (`ForecastService`) est vérifiée.
 
 **Documents concernés** : `06-Moteur_de_prevision.md` §9 (aucun changement — le code s'aligne maintenant sur ce texte), `Assets/Scripts/UI/README.md`.
+
+---
+
+# 46. ADR-144 — Les sélecteurs de compte préfèrent le compte par défaut
+
+**Contexte** : demande directe de l'utilisateur — tous les sélecteurs de choix de compte devraient s'ouvrir sur le compte par défaut plutôt que sur le premier de la liste. `DashboardViewModelBuilder`/`ForecastsViewModelBuilder` résolvaient déjà `AppSettings.DefaultCurrentAccountId` (avec repli sur le premier compte de type Courant, puis le premier compte actif) pour décider **de quel compte** parlent ces deux écrans — mais aucun sélecteur de formulaire (« sur quel compte affecter ce mouvement/cette opération ») ne réutilisait cette préférence : `RecurringOperationsController`/`TransactionsController` ouvraient leurs menus déroulants compte source/destination sur le premier choix de la liste, sans jamais consulter le réglage.
+
+**Décision** : `SetChoices` (dupliqué dans les deux contrôleurs, comme le reste des petits utilitaires de ce projet) accepte désormais un `preferredAccountId` optionnel — présélectionne ce compte s'il figure parmi les choix, sinon retombe sur le premier comme avant. Appliqué uniquement aux formulaires de **création** (`RecurringOperationsController.OpenCreateForm`, `TransactionsController.OpenCreateForm`) — les formulaires d'édition préselectionnent déjà le compte réel de la ligne éditée via `SelectAccount`, qui doit continuer à primer sur la préférence globale. `TransactionsController` n'avait jusqu'ici aucune dépendance à `AppSettingsService` — ajoutée comme nouveau paramètre de constructeur (`AppBootstrap.cs` et les quatre sites de construction de `UISmokeTest.cs` mis à jour en conséquence).
+
+**Exclusions délibérées, pas oubliées** :
+- Le filtre « Compte » de Transactions (`filter-account`) garde son propre comportement (préserve la sélection déjà faite, retombe sur « Tous les comptes » au premier chargement) — un filtre par défaut sur un seul compte masquerait silencieusement les mouvements des autres comptes à la première ouverture de l'écran, l'inverse de ce qu'un filtre neutre doit faire.
+- `OnboardingController.operation-account-field` n'a pas été touché — au moment où ce champ compte, le réglage compte par défaut est presque toujours encore `null` (l'utilisateur n'a pas encore visité Paramètres lors du tout premier lancement), donc le gain réel aurait été marginal face au coût de brancher une nouvelle dépendance `AppSettingsService` dans `OnboardingController` (constructeur, `AppBootstrap`, plusieurs sites `UISmokeTest.cs`).
+
+**Documents concernés** : `Assets/Scripts/UI/README.md`.

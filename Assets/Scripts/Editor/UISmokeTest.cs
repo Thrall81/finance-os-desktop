@@ -349,7 +349,7 @@ namespace FinanceOS.EditorTools
             var transactionsRoot = transactionsTree.Instantiate();
             var transactionsController = new TransactionsController(
                 transactionsRoot, app.Accounts, app.Categories, app.Counterparties, app.Transactions,
-                app.InternalTransfers, app.TransferDetection);
+                app.InternalTransfers, app.TransferDetection, app.Settings);
 
             var listView = transactionsRoot.Q<MultiColumnListView>("transactions-list-view");
             Check(listView.itemsSource.Count == 1, "transactions controller renders the one seeded transaction");
@@ -415,7 +415,7 @@ namespace FinanceOS.EditorTools
                 var transferRoot = transferTree.Instantiate();
                 var transferController = new TransactionsController(
                     transferRoot, transferApp.Accounts, transferApp.Categories, transferApp.Counterparties,
-                    transferApp.Transactions, transferApp.InternalTransfers, transferApp.TransferDetection);
+                    transferApp.Transactions, transferApp.InternalTransfers, transferApp.TransferDetection, transferApp.Settings);
 
                 Check(transferRoot.Q<Label>("transfer-suggestions-count").text == "1", "one suggested transfer pair is counted");
                 Check(transferRoot.Q<Label>("transfer-suggestions-empty").style.display == DisplayStyle.None, "suggestions empty-state hidden when a candidate exists");
@@ -942,6 +942,22 @@ namespace FinanceOS.EditorTools
             Check(updatedSettingsViewModel.ForecastHorizonDays == 45, "forecast horizon reflects the update");
             Check(updatedSettingsViewModel.DefaultCurrentAccountId == newSavings.Id, "default account reflects the update");
 
+            // Every account-choice dropdown that assigns an account to something new (not a
+            // filter, where "Tous les comptes" is the correct neutral default) should now open
+            // preselected to the user's configured default account instead of just the first
+            // choice in the list. Refresh first — newSavings ("Livret Perso") was created before
+            // transactionsController's last Refresh(), so its own _creatableAccounts cache would
+            // otherwise still be stale.
+            transactionsController.Refresh();
+            transactionsController.OpenCreateForm();
+            Check(transactionsRoot.Q<DropdownField>("form-account").value == "Livret Perso",
+                "the transaction form's account field opens preselected to the default account, not just the first one");
+
+            recurringOperationsController.Refresh();
+            recurringOperationsController.OpenCreateForm();
+            Check(recurringOperationsRoot.Q<DropdownField>("form-source-account").value == "Livret Perso",
+                "the recurring-operation form's source-account field opens preselected to the default account");
+
             var settingsTree = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(SettingsUxmlPath);
             if (settingsTree == null)
             {
@@ -995,7 +1011,7 @@ namespace FinanceOS.EditorTools
                 var emptyTransactionsRoot = transactionsTree.Instantiate();
                 _ = new TransactionsController(
                     emptyTransactionsRoot, noAccountApp.Accounts, noAccountApp.Categories, noAccountApp.Counterparties,
-                    noAccountApp.Transactions, noAccountApp.InternalTransfers, noAccountApp.TransferDetection);
+                    noAccountApp.Transactions, noAccountApp.InternalTransfers, noAccountApp.TransferDetection, noAccountApp.Settings);
                 Check(emptyTransactionsRoot.Q<Label>("transactions-empty").style.display == DisplayStyle.Flex, "empty-state shown when no transactions exist");
                 Check(!emptyTransactionsRoot.Q<Button>("new-transaction-button").enabledSelf, "new-transaction button disabled with no account to post against");
                 Check(!emptyTransactionsRoot.Q<Button>("new-transaction-button-list").enabledSelf,

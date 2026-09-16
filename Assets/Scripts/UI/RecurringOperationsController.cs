@@ -230,7 +230,11 @@ namespace FinanceOS.UI
             OpenEditForm(_rows[index]);
         }
 
-        private void OpenCreateForm()
+        /// <summary>Public only so UISmokeTest.cs can reopen the create form directly to check the
+        /// default-account preselection after Paramètres' default account changes — its real
+        /// trigger (Button.clicked) can't be invoked from another assembly either, same reasoning
+        /// as OpenEditForm/SubmitForm.</summary>
+        public void OpenCreateForm()
         {
             _editingOperationId = null;
 
@@ -242,8 +246,9 @@ namespace FinanceOS.UI
             _typeRow.style.display = DisplayStyle.Flex;
             _typeField.SetValueWithoutNotify(TypeOptions[0].Text);
 
-            SetChoices(_sourceAccountField, _creatableAccounts);
-            SetChoices(_destinationAccountField, _creatableAccounts);
+            var defaultAccountId = _settings.Get().DefaultCurrentAccountId;
+            SetChoices(_sourceAccountField, _creatableAccounts, defaultAccountId);
+            SetChoices(_destinationAccountField, _creatableAccounts, defaultAccountId);
 
             _amountField.SetValueWithoutNotify(string.Empty);
 
@@ -621,11 +626,16 @@ namespace FinanceOS.UI
             Refresh();
         }
 
-        private static void SetChoices(DropdownField field, IReadOnlyList<DropdownOption> options)
+        /// <summary>Populates a dropdown's choices and preselects <paramref name="preferredAccountId"/>
+        /// (the user's default account, Paramètres) when it's among the options — falls back to the
+        /// first choice otherwise, same as before this had a preference at all.</summary>
+        private static void SetChoices(DropdownField field, IReadOnlyList<DropdownOption> options, int? preferredAccountId = null)
         {
             var choices = options.Select(o => o.Name).ToList();
             field.choices = choices;
-            field.SetValueWithoutNotify(choices.Count > 0 ? choices[0] : string.Empty);
+
+            var preferredIndex = preferredAccountId is int id ? options.ToList().FindIndex(o => o.Id == id) : -1;
+            field.SetValueWithoutNotify(preferredIndex >= 0 ? choices[preferredIndex] : choices.Count > 0 ? choices[0] : string.Empty);
         }
 
         /// <summary>Overrides SetChoices's own "select the first choice" default with the

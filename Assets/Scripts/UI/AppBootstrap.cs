@@ -185,7 +185,8 @@ namespace FinanceOS.UI
             _shell.SetContent(content);
             _transactionsController = new TransactionsController(
                 content, Container.Accounts, Container.Categories, Container.Counterparties,
-                Container.Transactions, Container.InternalTransfers, Container.TransferDetection, IsDarkTheme);
+                Container.Transactions, Container.InternalTransfers, Container.TransferDetection,
+                Container.Settings, IsDarkTheme);
             ClearOtherControllers(keepTransactions: true);
             _shell.SetActive(ShellScreen.Transactions);
         }

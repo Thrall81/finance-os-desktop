@@ -22,6 +22,7 @@ namespace FinanceOS.UI
         private readonly TransactionService _transactions;
         private readonly InternalTransferService _internalTransfers;
         private readonly TransferDetectionService _transferDetection;
+        private readonly AppSettingsService _settings;
 
         private readonly DropdownField _filterAccountField;
         private readonly DropdownField _filterCategoryField;
@@ -101,6 +102,7 @@ namespace FinanceOS.UI
             TransactionService transactions,
             InternalTransferService internalTransfers,
             TransferDetectionService transferDetection,
+            AppSettingsService settings,
             bool isDarkTheme = false)
         {
             _accounts = accounts;
@@ -109,6 +111,7 @@ namespace FinanceOS.UI
             _transactions = transactions;
             _internalTransfers = internalTransfers;
             _transferDetection = transferDetection;
+            _settings = settings;
 
             _filterAccountField = root.Q<DropdownField>("filter-account");
             _filterCategoryField = root.Q<DropdownField>("filter-category");
@@ -413,7 +416,11 @@ namespace FinanceOS.UI
             OpenEditForm(_rows[index]);
         }
 
-        private void OpenCreateForm()
+        /// <summary>Public only so UISmokeTest.cs can reopen the create form directly to check the
+        /// default-account preselection after Paramètres' default account changes — its real
+        /// trigger (Button.clicked) can't be invoked from another assembly either, same reasoning
+        /// as OpenEditForm/SubmitForm.</summary>
+        public void OpenCreateForm()
         {
             _editingTransactionId = null;
             _categoryManuallySet = false;
@@ -425,8 +432,9 @@ namespace FinanceOS.UI
 
             _accountRow.style.display = DisplayStyle.Flex;
             _accountReadonlyRow.style.display = DisplayStyle.None;
-            SetChoices(_accountField, _creatableAccounts);
-            SetChoices(_destinationAccountField, _creatableAccounts);
+            var defaultAccountId = _settings.Get().DefaultCurrentAccountId;
+            SetChoices(_accountField, _creatableAccounts, defaultAccountId);
+            SetChoices(_destinationAccountField, _creatableAccounts, defaultAccountId);
 
             _dateRow.style.display = DisplayStyle.Flex;
             _dateReadonlyRow.style.display = DisplayStyle.None;
@@ -672,11 +680,16 @@ namespace FinanceOS.UI
             return string.IsNullOrEmpty(trimmed) ? null : _counterparties.FindOrCreateByName(trimmed).Id;
         }
 
-        private static void SetChoices(DropdownField field, IReadOnlyList<DropdownOption> options)
+        /// <summary>Populates a dropdown's choices and preselects <paramref name="preferredAccountId"/>
+        /// (the user's default account, Paramètres) when it's among the options — falls back to the
+        /// first choice otherwise, same as before this had a preference at all.</summary>
+        private static void SetChoices(DropdownField field, IReadOnlyList<DropdownOption> options, int? preferredAccountId = null)
         {
             var choices = options.Select(o => o.Name).ToList();
             field.choices = choices;
-            field.SetValueWithoutNotify(choices.Count > 0 ? choices[0] : string.Empty);
+
+            var preferredIndex = preferredAccountId is int id ? options.ToList().FindIndex(o => o.Id == id) : -1;
+            field.SetValueWithoutNotify(preferredIndex >= 0 ? choices[preferredIndex] : choices.Count > 0 ? choices[0] : string.Empty);
         }
 
         private void RebuildCategoryChoices()
