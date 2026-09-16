@@ -66,6 +66,14 @@ namespace FinanceOS.UI
                 var picker = new DatePicker { value = new Date(getCurrentValue()) };
                 picker.AddToClassList("appui--medium");
                 picker.AddToClassList(isDarkTheme ? "appui--dark" : "appui--light");
+                // A real, evidenced cause of the "grid exploded into one tall column" symptom —
+                // found by reading DayPicker.uss directly: .appui-date-picker-pane__days-container
+                // only gets flex-direction: row (wrapping into proper 7-day weeks) under an
+                // ancestor .appui--ltr class. App UI's own Panel applies this context class
+                // automatically (alongside the theme/scale ones); without a Panel, it never gets
+                // added unless done by hand, same as appui--dark/appui--medium above. French is a
+                // left-to-right language, so this is always correct here, not just a quick fix.
+                picker.AddToClassList("appui--ltr");
 
                 var popover = Popover.Build(trigger, picker).SetPlacement(PopoverPlacement.BottomStart);
                 if (appUiThemeStyleSheet is not null && popover.view is not null)
