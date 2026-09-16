@@ -85,7 +85,21 @@ namespace FinanceOS.UI
                     });
 
                     popover.Show();
-                    Debug.Log($"[AppDatePickerField] Show() returned, view.worldBound={popover.view?.worldBound}, view.resolvedStyle.display={popover.view?.resolvedStyle.display}");
+                    Debug.Log($"[AppDatePickerField] Show() returned, view.worldBound={popover.view?.worldBound}, "
+                        + $"view.resolvedStyle.display={popover.view?.resolvedStyle.display}, view.childCount={popover.view?.childCount}, "
+                        + $"picker.worldBound={picker.worldBound}, picker.childCount={picker.childCount}, "
+                        + $"picker.resolvedStyle=(w={picker.resolvedStyle.width},h={picker.resolvedStyle.height})");
+
+                    // worldBound can legitimately still be NaN right after Show() if the layout
+                    // pass hasn't run yet — checking again a few frames later tells us whether
+                    // this is transient (fine) or a persistent, genuine layout failure (not fine).
+                    trigger.schedule.Execute(() =>
+                    {
+                        Debug.Log($"[AppDatePickerField] 200ms later: view.worldBound={popover.view?.worldBound}, "
+                            + $"picker.worldBound={picker.worldBound}, picker.childCount={picker.childCount}, "
+                            + $"picker.resolvedStyle=(w={picker.resolvedStyle.width},h={picker.resolvedStyle.height}), "
+                            + $"picker.panel={picker.panel}");
+                    }).ExecuteLater(200);
                 }
                 catch (Exception ex)
                 {
