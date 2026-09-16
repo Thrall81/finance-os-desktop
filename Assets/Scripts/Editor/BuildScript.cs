@@ -21,7 +21,7 @@ namespace FinanceOS.EditorTools
         {
             PlayerSettings.companyName = "Florent Barbaouat";
             PlayerSettings.productName = "Finance OS";
-            PlayerSettings.bundleVersion = "1.0.4";
+            PlayerSettings.bundleVersion = "1.0.5";
             PlayerSettings.SetScriptingBackend(NamedBuildTarget.Standalone, ScriptingImplementation.IL2CPP);
 
             // A new Unity project defaults to exclusive/borderless fullscreen with no window
