@@ -97,7 +97,8 @@ namespace FinanceOS.UI
             CategoryService categories,
             CounterpartyService counterparties,
             RecurringOperationService operations,
-            AppSettingsService settings)
+            AppSettingsService settings,
+            StyleSheet? appUiThemeStyleSheet = null)
         {
             _accounts = accounts;
             _categories = categories;
@@ -129,7 +130,7 @@ namespace FinanceOS.UI
             AppDatePickerField.Attach(
                 _startDateField, () => _startDateValue,
                 selected => { _startDateValue = selected; UpdateSkipWarning(); },
-                settings.Get().Theme == AppTheme.Dark);
+                settings.Get().Theme == AppTheme.Dark, appUiThemeStyleSheet);
             _startDateReadonlyRow = root.Q<VisualElement>("form-start-date-readonly-row");
             _startDateReadonlyLabel = root.Q<Label>("form-start-date-readonly");
             _dayOfMonthRow = root.Q<VisualElement>("form-day-of-month-row");

@@ -158,6 +158,7 @@ MonoBehaviour:
   CategoriesAsset: {fileID: 9197481963319205126, guid: 037d7e1051f41a24daba9e19391804d3, type: 3}
   SettingsAsset: {fileID: 9197481963319205126, guid: f23c0205482c5154589ceba83e4bcac1, type: 3}
   OnboardingAsset: {fileID: 9197481963319205126, guid: bf1a0256f2b920749bec572226ec3e28, type: 3}
+  AppUiThemeStyleSheet: {fileID: -4733365628477956816, guid: 3c3937ea58c441ab93fc1e0f7ec5fa46, type: 3}
 --- !u!114 &130698396
 MonoBehaviour:
   m_ObjectHideFlags: 0

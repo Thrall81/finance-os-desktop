@@ -28,6 +28,8 @@ namespace FinanceOS.EditorTools
         private const string CategoriesUxmlPath = "Assets/UI/UXML/Categories.uxml";
         private const string SettingsUxmlPath = "Assets/UI/UXML/Settings.uxml";
         private const string OnboardingUxmlPath = "Assets/UI/UXML/Onboarding.uxml";
+        private const string AppUiThemeStyleSheetPath =
+            "Packages/com.unity.dt.app-ui/PackageResources/Styles/Themes/App UI.tss";
 
         [MenuItem("Finance OS/Wire Shell Into Main Scene")]
         public static void WireShellIntoMainScene()
@@ -51,6 +53,7 @@ namespace FinanceOS.EditorTools
             var categoriesTree = LoadRequired<VisualTreeAsset>(CategoriesUxmlPath);
             var settingsTree = LoadRequired<VisualTreeAsset>(SettingsUxmlPath);
             var onboardingTree = LoadRequired<VisualTreeAsset>(OnboardingUxmlPath);
+            var appUiThemeStyleSheet = LoadRequired<StyleSheet>(AppUiThemeStyleSheetPath);
 
             var bootstrap = Object.FindFirstObjectByType<AppBootstrap>(FindObjectsInactive.Include);
             var uiObject = bootstrap != null ? bootstrap.gameObject : new GameObject("UI");
@@ -79,6 +82,7 @@ namespace FinanceOS.EditorTools
             appBootstrap.CategoriesAsset = categoriesTree;
             appBootstrap.SettingsAsset = settingsTree;
             appBootstrap.OnboardingAsset = onboardingTree;
+            appBootstrap.AppUiThemeStyleSheet = appUiThemeStyleSheet;
 
             EditorSceneManager.MarkSceneDirty(scene);
             EditorSceneManager.SaveScene(scene);

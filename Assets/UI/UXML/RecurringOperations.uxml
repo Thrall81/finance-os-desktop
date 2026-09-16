@@ -1,13 +1,13 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="False">
   <Style src="../USS/theme.uss" />
-  <!-- ADR-145 (essai) : styles App UI nécessaires au DatePicker (com.unity.dt.app-ui) utilisé
-       pour "Date de début", référencés directement plutôt que via PanelSettings pour ne pas
-       risquer le thème du reste de l'app. Le vrai chemin/schéma ("project:/Packages/...") et le
-       bon fichier à charger (le .tss combiné, qui importe déjà le thème par défaut, les globals,
-       App UI.uss et chaque variante clair/sombre/petit/medium/grand) viennent du FAQ officiel du
-       package (Documentation~/faq.md) — pas devinés : un premier essai avec "/Packages/..." (sans
-       le schéma) ne chargeait rien, silencieusement, ce qui a rendu tout le calendrier invisible. -->
-  <Style src="project:/Packages/com.unity.dt.app-ui/PackageResources/Styles/Themes/App UI.tss" />
+  <!-- ADR-145 (essai) : App UI.tss n'est PAS référencé ici via <Style src>, contrairement à
+       theme.uss — un Popover App UI (le calendrier de "Date de début") s'ajoute comme frère de
+       tout cet arbre UXML, à la racine du panel (Popup.GetRootPopupLayer), pas comme descendant ;
+       une feuille de style scopée ici ne l'atteindrait jamais, confirmé via le UI Toolkit Debugger
+       (structure du calendrier correcte, mais aucune background-color résolue nulle part dedans).
+       App UI.tss est appliqué directement sur l'élément racine du popover en C#
+       (AppDatePickerField.Attach), via un StyleSheet câblé par SceneWiringTools sur
+       AppBootstrap.AppUiThemeStyleSheet. -->
   <ui:ScrollView name="recurring-operations-root" class="page" mode="Vertical">
     <ui:VisualElement class="page-header accounts-header">
       <ui:VisualElement>

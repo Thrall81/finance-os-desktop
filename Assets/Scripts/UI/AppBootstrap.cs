@@ -25,6 +25,13 @@ namespace FinanceOS.UI
         public VisualTreeAsset? SettingsAsset;
         public VisualTreeAsset? OnboardingAsset;
 
+        /// <summary>ADR-145 (essai) : App UI.tss, référencé directement plutôt que via un
+        /// &lt;Style src&gt; dans une UXML d'écran — un Popover App UI s'ajoute au panel root
+        /// (voir Popup.GetRootPopupLayer), pas comme descendant de l'écran qui l'ouvre, donc une
+        /// feuille de style scopée à l'UXML de cet écran ne l'atteint jamais. Appliqué directement
+        /// sur l'élément du calendrier en C# (AppDatePickerField) à la place.</summary>
+        public StyleSheet? AppUiThemeStyleSheet;
+
         public static AppContainer? Container { get; private set; }
 
         private static bool IsDarkTheme => Container?.Settings.Get().Theme == AppTheme.Dark;
@@ -202,7 +209,7 @@ namespace FinanceOS.UI
             _shell.SetContent(content);
             _recurringOperationsController = new RecurringOperationsController(
                 content, Container.Accounts, Container.Categories, Container.Counterparties,
-                Container.RecurringOperations, Container.Settings);
+                Container.RecurringOperations, Container.Settings, AppUiThemeStyleSheet);
             ClearOtherControllers(keepRecurringOperations: true);
             _shell.SetActive(ShellScreen.RecurringOperations);
         }

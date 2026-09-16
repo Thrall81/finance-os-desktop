@@ -1,7 +1,6 @@
 using System;
 using Unity.AppUI.Core;
 using Unity.AppUI.UI;
-using UnityEngine;
 using UnityEngine.UIElements;
 using Button = UnityEngine.UIElements.Button;
 
@@ -30,8 +29,20 @@ namespace FinanceOS.UI
         /// <paramref name="isDarkTheme"/> picks which App UI theme context class
         /// (<c>appui--dark</c>/<c>appui--light</c>) the popover's content carries — the Popover is
         /// appended to the panel's own root, not under <c>.shell-root</c>, so it never inherits this
-        /// app's own <c>.theme-dark</c> toggle and needs its theme applied directly.</summary>
-        public static void Attach(Button trigger, Func<DateTime> getCurrentValue, Action<DateTime> onChanged, bool isDarkTheme)
+        /// app's own <c>.theme-dark</c> toggle and needs its theme applied directly.
+        /// <paramref name="appUiThemeStyleSheet"/> (App UI.tss, wired via AppBootstrap/
+        /// SceneWiringTools) is added directly to the popover's own root element for the same
+        /// reason: a real bug found via the UI Toolkit Debugger, not guessed — the Popover is a
+        /// sibling of this screen's own UXML tree at the panel root, not a descendant of it, so a
+        /// stylesheet referenced via a UXML <c>&lt;Style src&gt;</c> (this project's usual pattern)
+        /// never reaches it no matter how correct its path is. Every element inside the popover had
+        /// its full expected structure (DatePicker/YearPicker/MonthPicker/DayPicker, right classes)
+        /// but no background-color ever resolved — confirming the stylesheet, not the structure or
+        /// sizing, was the actual blocker. Null is accepted (renders unstyled) so a caller that
+        /// hasn't wired the asset yet doesn't hard-fail.</summary>
+        public static void Attach(
+            Button trigger, Func<DateTime> getCurrentValue, Action<DateTime> onChanged, bool isDarkTheme,
+            StyleSheet? appUiThemeStyleSheet)
         {
             // A real bug caught by the user clicking the trigger repeatedly, not anticipated:
             // every click built and showed a brand-new Popover with no guard against one already
@@ -43,69 +54,37 @@ namespace FinanceOS.UI
             // its dismiss animation — has actually finished closing, not just when Dismiss() is
             // called) is what makes it safe to track "is one already live" rather than guessing
             // when it's truly gone.
-            Popover currentPopover = null;
+            Popover? currentPopover = null;
 
             trigger.clicked += () =>
             {
-                // TEMPORARY diagnostic logging (ADR-145 essai) — two real fixes (re-entrancy,
-                // stylesheet path) haven't resolved "nothing visible happens, no console error"
-                // reported from real testing. Logging every stage so the next report pinpoints
-                // exactly where it actually stops, instead of guessing a third blind fix. Remove
-                // once the calendar is confirmed visible.
-                Debug.Log("[AppDatePickerField] click received");
-
                 if (currentPopover is not null)
                 {
-                    Debug.Log("[AppDatePickerField] ignored — a popover is already tracked as open");
                     return;
                 }
 
-                try
+                var picker = new DatePicker { value = new Date(getCurrentValue()) };
+                picker.AddToClassList("appui--medium");
+                picker.AddToClassList(isDarkTheme ? "appui--dark" : "appui--light");
+
+                var popover = Popover.Build(trigger, picker).SetPlacement(PopoverPlacement.BottomStart);
+                if (appUiThemeStyleSheet is not null && popover.view is not null)
                 {
-                    var picker = new DatePicker { value = new Date(getCurrentValue()) };
-                    picker.AddToClassList("appui--medium");
-                    picker.AddToClassList(isDarkTheme ? "appui--dark" : "appui--light");
-                    Debug.Log("[AppDatePickerField] DatePicker constructed");
-
-                    var popover = Popover.Build(trigger, picker).SetPlacement(PopoverPlacement.BottomStart);
-                    Debug.Log($"[AppDatePickerField] Popover built, rootView={popover.rootView}, view.panel={popover.view?.panel}");
-                    currentPopover = popover;
-                    popover.dismissed += (_, reason) =>
-                    {
-                        Debug.Log($"[AppDatePickerField] dismissed, reason={reason}");
-                        currentPopover = null;
-                    };
-
-                    picker.RegisterValueChangedCallback(evt =>
-                    {
-                        DateTime selected = evt.newValue;
-                        trigger.text = DateFormat.ForInput(selected);
-                        onChanged(selected);
-                        popover.Dismiss();
-                    });
-
-                    popover.Show();
-                    Debug.Log($"[AppDatePickerField] Show() returned, view.worldBound={popover.view?.worldBound}, "
-                        + $"view.resolvedStyle.display={popover.view?.resolvedStyle.display}, view.childCount={popover.view?.childCount}, "
-                        + $"picker.worldBound={picker.worldBound}, picker.childCount={picker.childCount}, "
-                        + $"picker.resolvedStyle=(w={picker.resolvedStyle.width},h={picker.resolvedStyle.height})");
-
-                    // worldBound can legitimately still be NaN right after Show() if the layout
-                    // pass hasn't run yet — checking again a few frames later tells us whether
-                    // this is transient (fine) or a persistent, genuine layout failure (not fine).
-                    trigger.schedule.Execute(() =>
-                    {
-                        Debug.Log($"[AppDatePickerField] 200ms later: view.worldBound={popover.view?.worldBound}, "
-                            + $"picker.worldBound={picker.worldBound}, picker.childCount={picker.childCount}, "
-                            + $"picker.resolvedStyle=(w={picker.resolvedStyle.width},h={picker.resolvedStyle.height}), "
-                            + $"picker.panel={picker.panel}");
-                    }).ExecuteLater(200);
+                    popover.view.styleSheets.Add(appUiThemeStyleSheet);
                 }
-                catch (Exception ex)
+
+                currentPopover = popover;
+                popover.dismissed += (_, _) => currentPopover = null;
+
+                picker.RegisterValueChangedCallback(evt =>
                 {
-                    Debug.LogError($"[AppDatePickerField] exception while opening the picker: {ex}");
-                    currentPopover = null;
-                }
+                    DateTime selected = evt.newValue;
+                    trigger.text = DateFormat.ForInput(selected);
+                    onChanged(selected);
+                    popover.Dismiss();
+                });
+
+                popover.Show();
             };
         }
     }
