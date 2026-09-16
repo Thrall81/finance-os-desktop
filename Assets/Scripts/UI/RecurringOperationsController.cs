@@ -42,6 +42,7 @@ namespace FinanceOS.UI
         private readonly AppSettingsService _settings;
 
         private readonly Button _newOperationButton;
+        private readonly Button _newOperationButtonList;
 
         private readonly VisualElement _formCard;
         private readonly Label _formTitle;
@@ -100,6 +101,7 @@ namespace FinanceOS.UI
             _settings = settings;
 
             _newOperationButton = root.Q<Button>("new-operation-button");
+            _newOperationButtonList = root.Q<Button>("new-operation-button-list");
 
             _formCard = root.Q<VisualElement>("operation-form-card");
             _formTitle = root.Q<Label>("form-title");
@@ -145,6 +147,9 @@ namespace FinanceOS.UI
             SetupColumns();
 
             _newOperationButton.clicked += OpenCreateForm;
+            // Same action duplicated next to the list itself — see AccountsController's
+            // identical wiring and ADR-142 for why.
+            _newOperationButtonList.clicked += OpenCreateForm;
             _cancelButton.clicked += CloseForm;
             _submitButton.clicked += SubmitForm;
             _deleteButton.clicked += DeleteOperation;
@@ -204,6 +209,7 @@ namespace FinanceOS.UI
             _rows = viewModel.Operations.ToList();
 
             _newOperationButton.SetEnabled(_creatableAccounts.Count > 0);
+            _newOperationButtonList.SetEnabled(_creatableAccounts.Count > 0);
 
             var hasRows = _rows.Count > 0;
             _emptyLabel.style.display = hasRows ? DisplayStyle.None : DisplayStyle.Flex;

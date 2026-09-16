@@ -80,6 +80,7 @@
     <ui:VisualElement name="operations-card" class="card">
       <ui:VisualElement class="card-header">
         <ui:Label text="Opérations" class="card-title" />
+        <ui:Button name="new-operation-button-list" text="+ Nouvelle opération" class="secondary-button" />
       </ui:VisualElement>
       <ui:Label name="operations-empty" text="Aucune opération récurrente pour l'instant." class="empty-state" />
       <ui:MultiColumnListView name="operations-list-view" class="transactions-table" style="display: none;" />

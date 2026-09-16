@@ -137,6 +137,7 @@
     <ui:VisualElement name="transactions-card" class="card">
       <ui:VisualElement class="card-header">
         <ui:Label text="Mouvements" class="card-title" />
+        <ui:Button name="new-transaction-button-list" text="+ Nouvelle transaction" class="secondary-button" />
       </ui:VisualElement>
       <ui:Label name="transactions-empty" text="Aucune transaction pour l'instant." class="empty-state" />
       <ui:MultiColumnListView name="transactions-list-view" class="transactions-table" style="display: none;" />

@@ -145,9 +145,49 @@
     flex-grow: 1;
 }
 
+/* Padding lives on the ScrollView element itself, so the vertical scroller (a sibling of the
+   content inside the same padded box, not outside it) eats into the right-hand gutter — the
+   visual gap on the right ends up wider than the left's clean 28px by roughly the scrollbar's own
+   width. Approximated here by trimming the right padding rather than restructuring every screen's
+   UXML with an extra wrapper; the scrollbar itself is also narrowed below (ADR-142) so the
+   approximation needs less precision to look right. Still an approximation — needs a real
+   screenshot to fine-tune further, same as every other visual change this project makes. */
 .page {
     flex-grow: 1;
-    padding: 24px 28px;
+    padding: 24px 16px 24px 28px;
+}
+
+/* A visible, boxy scrollbar (Unity's default runtime theme) reads as heavy against this app's
+   otherwise flat, borderless-until-hovered aesthetic, and its low/high step-buttons are dated —
+   restyled to a slim, theme-aware, mostly-invisible-until-needed thumb instead. Scoped under
+   .unity-scroll-view__vertical-scroller (not the bare Unity class names) so this can't
+   accidentally restyle a Slider used for something else, if one is ever added. Class names
+   confirmed against Unity's own ScrollView/Scroller/Slider manual pages, not guessed — same
+   discipline as ADR-116 after DLL-grepping and blind introspection both failed there. */
+.unity-scroll-view__vertical-scroller {
+    width: 10px;
+}
+
+.unity-scroll-view__vertical-scroller .unity-scroller__low-button,
+.unity-scroll-view__vertical-scroller .unity-scroller__high-button {
+    display: none;
+}
+
+.unity-scroll-view__vertical-scroller .unity-base-slider__tracker {
+    background-color: rgba(0, 0, 0, 0);
+    border-width: 0;
+}
+
+.unity-scroll-view__vertical-scroller .unity-base-slider__dragger {
+    background-color: var(--color-border);
+    border-width: 0;
+    border-radius: 4px;
+    width: 6px;
+    left: 2px;
+}
+
+.unity-scroll-view__vertical-scroller .unity-base-slider__dragger:hover {
+    background-color: var(--color-ink-400);
 }
 
 .page-header {
@@ -210,12 +250,18 @@
     -unity-font-definition: url("../../Fonts/IBMPlexMono-Regular.ttf");
 }
 
+/* margin-bottom here, not per-screen: consecutive top-level .card sections had no gap at all
+   between them (only .kpi-row's own margin-bottom gave any visible spacing above the first card),
+   so screens read as unevenly spaced depending on which section happened to sit next to which —
+   real user feedback, not a guess. .form-card (below) still wins this property for a form's own
+   card via source order, so create/edit forms keep their own distinct spacing. */
 .card {
     background-color: var(--color-surface);
     border-width: 1px;
     border-color: var(--color-border);
     border-radius: 12px;
     padding: 16px 18px;
+    margin-bottom: 24px;
 }
 
 .card-header {
@@ -449,6 +495,24 @@
     flex-direction: row;
     justify-content: flex-end;
     margin-top: 8px;
+}
+
+/* Onboarding-only: a real reported point of confusion — "Ajouter ce compte"/"Ajouter" (the
+   expected immediate action after filling the form) and "Précédent"/"Suivant" (step navigation)
+   sat close enough together, especially with an empty list between them adding no visible gap,
+   that testers routinely clicked the navigation button by reflex instead. A border-top plus real
+   margin makes the navigation row read as a clearly separate group regardless of list content. */
+.onboarding-nav-actions {
+    margin-top: 24px;
+    padding-top: 16px;
+    border-top-width: 1px;
+    border-top-color: var(--color-border);
+}
+
+.onboarding-row-remove {
+    margin: 0 0 0 12px;
+    padding: 4px 10px;
+    font-size: 11px;
 }
 
 .form-actions > Button {

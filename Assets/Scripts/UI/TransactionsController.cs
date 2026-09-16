@@ -32,6 +32,7 @@ namespace FinanceOS.UI
         private readonly TextField _filterTextField;
         private readonly Button _filterResetButton;
         private readonly Button _newTransactionButton;
+        private readonly Button _newTransactionButtonList;
 
         private readonly Label _transferSuggestionsCountLabel;
         private readonly Label _transferSuggestionsEmptyLabel;
@@ -120,6 +121,7 @@ namespace FinanceOS.UI
             _filterTextField = root.Q<TextField>("filter-text");
             _filterResetButton = root.Q<Button>("filters-reset-button");
             _newTransactionButton = root.Q<Button>("new-transaction-button");
+            _newTransactionButtonList = root.Q<Button>("new-transaction-button-list");
 
             _transferSuggestionsCountLabel = root.Q<Label>("transfer-suggestions-count");
             _transferSuggestionsEmptyLabel = root.Q<Label>("transfer-suggestions-empty");
@@ -178,6 +180,9 @@ namespace FinanceOS.UI
             _filterTextField.RegisterValueChangedCallback(_ => OnFilterChanged());
             _filterResetButton.clicked += ResetFilters;
             _newTransactionButton.clicked += OpenCreateForm;
+            // Same action duplicated next to the list itself — see AccountsController's
+            // identical wiring and ADR-142 for why.
+            _newTransactionButtonList.clicked += OpenCreateForm;
             _cancelButton.clicked += CloseForm;
             _submitButton.clicked += SubmitForm;
             _deleteButton.clicked += DeleteTransaction;
@@ -249,6 +254,7 @@ namespace FinanceOS.UI
             RebuildFilterChoices(viewModel.AccountFilterOptions);
             RebuildFilterCategoryChoices(viewModel.Categories);
             _newTransactionButton.SetEnabled(_creatableAccounts.Count > 0);
+            _newTransactionButtonList.SetEnabled(_creatableAccounts.Count > 0);
 
             var hasRows = _rows.Count > 0;
             _emptyLabel.style.display = hasRows ? DisplayStyle.None : DisplayStyle.Flex;

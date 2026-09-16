@@ -166,13 +166,13 @@ namespace FinanceOS.UI
             _accountList.Clear();
             foreach (var row in viewModel.Accounts)
             {
-                _accountList.Add(BuildAccountRow(row));
+                _accountList.Add(BuildAccountRow(row, onRemove: () => RemoveAccount(row.Id)));
             }
 
             _operationList.Clear();
             foreach (var row in viewModel.Operations)
             {
-                _operationList.Add(BuildOperationRow(row));
+                _operationList.Add(BuildOperationRow(row, onRemove: () => RemoveOperation(row.Id)));
             }
 
             var accountChoices = _accountOptions.Select(o => o.Name).ToList();
@@ -182,10 +182,13 @@ namespace FinanceOS.UI
                 _operationAccountField.SetValueWithoutNotify(accountChoices[0]);
             }
 
+            // Recap rows stay read-only, deliberately — this step is a final review before
+            // "Terminer", not another place to edit; a mistake spotted here sends the user back a
+            // step via "Précédent" instead.
             _recapAccountList.Clear();
             foreach (var row in viewModel.Accounts)
             {
-                _recapAccountList.Add(BuildAccountRow(row));
+                _recapAccountList.Add(BuildAccountRow(row, onRemove: null));
             }
 
             var hasOperations = viewModel.Operations.Count > 0;
@@ -193,7 +196,7 @@ namespace FinanceOS.UI
             _recapOperationList.Clear();
             foreach (var row in viewModel.Operations)
             {
-                _recapOperationList.Add(BuildOperationRow(row));
+                _recapOperationList.Add(BuildOperationRow(row, onRemove: null));
             }
 
             _recurringNextButton.text = hasOperations ? "Suivant" : "Passer";
@@ -280,11 +283,35 @@ namespace FinanceOS.UI
 
         public void Finish() => _onFinished();
 
-        private static VisualElement BuildAccountRow(OnboardingAccountRowViewModel row) => BuildRow(row.Name, row.TypeText, row.BalanceText);
+        /// <summary>Removes a mistakenly-added account from the onboarding list — archives it
+        /// (AccountService has no hard delete anywhere in this app) rather than truly deleting it,
+        /// since a recurring operation added after going back a step (étape 3 → "Précédent") could
+        /// already reference it; a real delete would risk a dangling account reference. Filtered
+        /// out of every onboarding list by OnboardingViewModelBuilder using ListActive, so it's
+        /// indistinguishable from "removed" for the rest of this flow. See ADR-142.</summary>
+        public void RemoveAccount(int accountId)
+        {
+            _accounts.Archive(accountId);
+            Refresh();
+        }
 
-        private static VisualElement BuildOperationRow(OnboardingOperationRowViewModel row) => BuildRow(row.Name, row.TypeText, row.AmountText);
+        /// <summary>Removes a mistakenly-added recurring operation — a real delete
+        /// (RecurringOperationService.Delete), safe here specifically because nothing generates
+        /// forecast occurrences during onboarding itself (only AppBootstrap.Awake, on a later
+        /// launch, or Finish's own transition do), so no occurrence can exist yet to block it.</summary>
+        public void RemoveOperation(int operationId)
+        {
+            _operations.Delete(operationId);
+            Refresh();
+        }
 
-        private static VisualElement BuildRow(string name, string metaText, string valueText)
+        private static VisualElement BuildAccountRow(OnboardingAccountRowViewModel row, Action? onRemove) =>
+            BuildRow(row.Name, row.TypeText, row.BalanceText, onRemove);
+
+        private static VisualElement BuildOperationRow(OnboardingOperationRowViewModel row, Action? onRemove) =>
+            BuildRow(row.Name, row.TypeText, row.AmountText, onRemove);
+
+        private static VisualElement BuildRow(string name, string metaText, string valueText, Action? onRemove)
         {
             var element = new VisualElement();
             element.AddToClassList("verification-row");
@@ -302,6 +329,15 @@ namespace FinanceOS.UI
 
             element.Add(textColumn);
             element.Add(valueLabel);
+
+            if (onRemove is not null)
+            {
+                var removeButton = new Button(onRemove) { text = "Retirer" };
+                removeButton.AddToClassList("secondary-button");
+                removeButton.AddToClassList("onboarding-row-remove");
+                element.Add(removeButton);
+            }
+
             return element;
         }
 

@@ -45,6 +45,7 @@
     <ui:VisualElement name="categories-card" class="card">
       <ui:VisualElement class="card-header">
         <ui:Label text="Toutes les catégories" class="card-title" />
+        <ui:Button name="new-category-button-list" text="+ Nouvelle catégorie" class="secondary-button" />
       </ui:VisualElement>
       <ui:Label name="categories-empty" text="Aucune catégorie pour l'instant." class="empty-state" />
       <ui:MultiColumnListView name="categories-list-view" class="transactions-table" style="display: none;" />

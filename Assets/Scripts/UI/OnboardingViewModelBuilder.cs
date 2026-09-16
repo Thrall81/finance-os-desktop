@@ -13,8 +13,16 @@ namespace FinanceOS.UI
     {
         public static OnboardingViewModel Build(AccountService accounts, RecurringOperationService operations)
         {
-            var accountRows = accounts.ListAll()
+            // ListActive, not ListAll: an account removed mid-onboarding (ADR-142) is archived,
+            // not hard-deleted (no delete path exists for accounts anywhere in this app — a
+            // recurring operation added after going back a step could already reference it, so a
+            // real delete would risk a dangling reference). Filtering to active accounts here is
+            // what makes "removed" actually look removed throughout the whole onboarding flow.
+            var activeAccounts = accounts.ListActive();
+
+            var accountRows = activeAccounts
                 .Select(a => new OnboardingAccountRowViewModel(
+                    a.Id,
                     a.Name,
                     AccountsViewModelBuilder.TypeText(a.Type),
                     MoneyFormat.Format(a.OfficialBalanceMinor, a.Currency)))
@@ -22,12 +30,13 @@ namespace FinanceOS.UI
 
             var operationRows = operations.ListAll()
                 .Select(o => new OnboardingOperationRowViewModel(
+                    o.Id,
                     o.Name,
                     o.Type == RecurringOperationType.Income ? "Revenu" : "Dépense",
                     MoneyFormat.Format(o.ExpectedAmountMinor, forceSign: true)))
                 .ToList();
 
-            var accountOptions = accounts.ListAll()
+            var accountOptions = activeAccounts
                 .Select(a => new DropdownOption(a.Id, a.Name))
                 .ToList();
 

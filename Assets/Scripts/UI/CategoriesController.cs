@@ -30,6 +30,7 @@ namespace FinanceOS.UI
         private readonly CategoryService _categories;
 
         private readonly Button _newCategoryButton;
+        private readonly Button _newCategoryButtonList;
         private readonly VisualElement _formCard;
         private readonly Label _formTitle;
         private readonly TextField _nameField;
@@ -59,6 +60,7 @@ namespace FinanceOS.UI
             _categories = categories;
 
             _newCategoryButton = root.Q<Button>("new-category-button");
+            _newCategoryButtonList = root.Q<Button>("new-category-button-list");
             _formCard = root.Q<VisualElement>("category-form-card");
             _formTitle = root.Q<Label>("form-title");
             _nameField = root.Q<TextField>("form-name");
@@ -82,6 +84,9 @@ namespace FinanceOS.UI
             SetupColumns();
 
             _newCategoryButton.clicked += OpenCreateForm;
+            // Same action duplicated next to the list itself — see AccountsController's
+            // identical wiring and ADR-142 for why.
+            _newCategoryButtonList.clicked += OpenCreateForm;
             _cancelButton.clicked += CloseForm;
             _submitButton.clicked += SubmitForm;
             _archiveButton.clicked += ToggleArchive;

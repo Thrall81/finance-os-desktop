@@ -70,6 +70,7 @@
     <ui:VisualElement name="accounts-card" class="card">
       <ui:VisualElement class="card-header">
         <ui:Label text="Tous les comptes" class="card-title" />
+        <ui:Button name="new-account-button-list" text="+ Nouveau compte" class="secondary-button" />
       </ui:VisualElement>
       <ui:Label name="accounts-empty" text="Aucun compte pour l'instant." class="empty-state" />
       <ui:VisualElement name="accounts-list" class="list" />

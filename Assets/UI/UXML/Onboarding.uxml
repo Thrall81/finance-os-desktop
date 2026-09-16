@@ -34,12 +34,12 @@
       </ui:VisualElement>
       <ui:Label name="account-error" text="" class="form-error" style="display: none;" />
       <ui:VisualElement class="form-actions">
-        <ui:Button name="account-add-button" text="Ajouter ce compte" class="secondary-button" />
+        <ui:Button name="account-add-button" text="+ Ajouter ce compte" class="secondary-button" />
       </ui:VisualElement>
 
       <ui:VisualElement name="account-list" class="list" />
 
-      <ui:VisualElement class="form-actions">
+      <ui:VisualElement class="form-actions onboarding-nav-actions">
         <ui:Button name="account-back-button" text="Précédent" class="secondary-button" />
         <ui:Button name="account-next-button" text="Suivant" class="primary-button" />
       </ui:VisualElement>
@@ -68,12 +68,12 @@
       </ui:VisualElement>
       <ui:Label name="operation-error" text="" class="form-error" style="display: none;" />
       <ui:VisualElement class="form-actions">
-        <ui:Button name="operation-add-button" text="Ajouter" class="secondary-button" />
+        <ui:Button name="operation-add-button" text="+ Ajouter" class="secondary-button" />
       </ui:VisualElement>
 
       <ui:VisualElement name="operation-list" class="list" />
 
-      <ui:VisualElement class="form-actions">
+      <ui:VisualElement class="form-actions onboarding-nav-actions">
         <ui:Button name="recurring-back-button" text="Précédent" class="secondary-button" />
         <ui:Button name="recurring-next-button" text="Passer" class="primary-button" />
       </ui:VisualElement>

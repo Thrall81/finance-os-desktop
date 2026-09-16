@@ -33,6 +33,7 @@ namespace FinanceOS.UI
         private readonly AccountService _accounts;
 
         private readonly Button _newAccountButton;
+        private readonly Button _newAccountButtonList;
         private readonly VisualElement _formCard;
         private readonly Label _formTitle;
         private readonly TextField _nameField;
@@ -65,6 +66,7 @@ namespace FinanceOS.UI
             _accounts = accounts;
 
             _newAccountButton = root.Q<Button>("new-account-button");
+            _newAccountButtonList = root.Q<Button>("new-account-button-list");
             _formCard = root.Q<VisualElement>("account-form-card");
             _formTitle = root.Q<Label>("form-title");
             _nameField = root.Q<TextField>("form-name");
@@ -99,6 +101,10 @@ namespace FinanceOS.UI
             _liquidityField.choices = LiquidityOptions.Select(o => o.Text).ToList();
 
             _newAccountButton.clicked += OpenCreateForm;
+            // Same action duplicated next to the list itself, not just at the top of the page —
+            // real user feedback: testers saw the top button but reached for one near the list by
+            // reflex instead. See docs/09-Decisions_techniques.md ADR-142.
+            _newAccountButtonList.clicked += OpenCreateForm;
             _cancelButton.clicked += CloseForm;
             _submitButton.clicked += SubmitForm;
             _archiveButton.clicked += ToggleArchive;

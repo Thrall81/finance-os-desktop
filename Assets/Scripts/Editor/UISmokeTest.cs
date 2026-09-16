@@ -922,6 +922,7 @@ namespace FinanceOS.EditorTools
 
             var categoriesListView = categoriesRoot.Q<MultiColumnListView>("categories-list-view");
             Check(categoriesListView.itemsSource.Count == 11, "categories controller renders every category, including the new subcategory");
+            Check(categoriesRoot.Q<Button>("new-category-button-list") is not null, "the list-adjacent new-category button exists (ADR-142)");
             Check(categoriesListView.columns.Count == 4, "four category columns configured");
             Check(categoriesRoot.Q<Label>("categories-empty").style.display == DisplayStyle.None, "empty-state hidden when categories exist");
 
@@ -989,6 +990,7 @@ namespace FinanceOS.EditorTools
                 _ = new AccountsController(emptyAccountsRoot, noAccountApp.Accounts);
                 Check(emptyAccountsRoot.Q<VisualElement>("accounts-list").childCount == 0, "no accounts renders an empty list");
                 Check(emptyAccountsRoot.Q<Label>("accounts-empty").style.display == DisplayStyle.Flex, "empty-state shown when no accounts exist");
+                Check(emptyAccountsRoot.Q<Button>("new-account-button-list") is not null, "the list-adjacent new-account button exists (ADR-142)");
 
                 var emptyTransactionsRoot = transactionsTree.Instantiate();
                 _ = new TransactionsController(
@@ -996,6 +998,8 @@ namespace FinanceOS.EditorTools
                     noAccountApp.Transactions, noAccountApp.InternalTransfers, noAccountApp.TransferDetection);
                 Check(emptyTransactionsRoot.Q<Label>("transactions-empty").style.display == DisplayStyle.Flex, "empty-state shown when no transactions exist");
                 Check(!emptyTransactionsRoot.Q<Button>("new-transaction-button").enabledSelf, "new-transaction button disabled with no account to post against");
+                Check(!emptyTransactionsRoot.Q<Button>("new-transaction-button-list").enabledSelf,
+                    "the list-adjacent new-transaction button (ADR-142) mirrors the same disabled state");
 
                 var emptyRecurringOperationsRoot = recurringOperationsTree.Instantiate();
                 _ = new RecurringOperationsController(
@@ -1003,6 +1007,8 @@ namespace FinanceOS.EditorTools
                     noAccountApp.RecurringOperations, noAccountApp.Settings);
                 Check(emptyRecurringOperationsRoot.Q<Label>("operations-empty").style.display == DisplayStyle.Flex, "empty-state shown when no operations exist");
                 Check(!emptyRecurringOperationsRoot.Q<Button>("new-operation-button").enabledSelf, "new-operation button disabled with no account to post against");
+                Check(!emptyRecurringOperationsRoot.Q<Button>("new-operation-button-list").enabledSelf,
+                    "the list-adjacent new-operation button (ADR-142) mirrors the same disabled state");
 
                 var emptyForecastsRoot = forecastsTree.Instantiate();
                 _ = new ForecastsController(emptyForecastsRoot, noAccountApp);
@@ -1072,6 +1078,23 @@ namespace FinanceOS.EditorTools
                 Check(onboardingRoot.Q<VisualElement>("account-list").childCount == 1, "the newly added account is rendered in the step's own list");
                 Check(string.IsNullOrEmpty(onboardingRoot.Q<TextField>("account-name-field").value), "name field clears after a successful add, ready for another account");
 
+                // ADR-142: a mistakenly-added account can now be removed before finishing —
+                // add a second one, confirm it renders, remove it, confirm it's gone and the
+                // original survives untouched (every assertion below this point still expects
+                // exactly one account, unchanged from before this block).
+                onboardingRoot.Q<TextField>("account-name-field").value = "Compte à retirer";
+                onboardingRoot.Q<DropdownField>("account-type-field").value = "Courant";
+                onboardingRoot.Q<TextField>("account-balance-field").value = "10";
+                onboardingController.AddAccount();
+                Check(onboardingApp.Accounts.ListAll().Count == 2, "a second account was persisted");
+                Check(onboardingRoot.Q<VisualElement>("account-list").childCount == 2, "both accounts render in the step's own list");
+
+                var accountToRemove = onboardingApp.Accounts.ListAll().First(a => a.Name == "Compte à retirer");
+                onboardingController.RemoveAccount(accountToRemove.Id);
+                Check(onboardingApp.Accounts.FindById(accountToRemove.Id)!.IsArchived,
+                    "removing an account archives it rather than deleting it — no hard-delete path exists for accounts anywhere in this app");
+                Check(onboardingRoot.Q<VisualElement>("account-list").childCount == 1, "the removed account no longer renders in the step's own list");
+
                 onboardingController.TryAdvanceFromAccountStep();
                 Check(onboardingRoot.Q<Label>("account-next-error").style.display == DisplayStyle.None, "no error once an account exists");
                 Check(onboardingRoot.Q<VisualElement>("step-recurring").style.display == DisplayStyle.Flex, "advances to the recurring-operations step now that an account exists");
@@ -1090,6 +1113,21 @@ namespace FinanceOS.EditorTools
                 Check(createdOperation.ExpectedAmountMinor == 250_000, "operation amount carried through (2500,00 €)");
                 Check(createdOperation.Frequency == RecurringFrequency.Monthly, "onboarding always creates monthly operations — no frequency field to keep the form minimal");
                 Check(onboardingRoot.Q<Button>("recurring-next-button").text == "Suivant", "the advance button relabels to 'Suivant' once something has been added");
+
+                // Same removal coverage for a mistakenly-added recurring operation — a real
+                // delete this time (RecurringOperationService.Delete), safe here since no
+                // occurrence is ever generated during onboarding itself.
+                onboardingRoot.Q<TextField>("operation-name-field").value = "Opération à retirer";
+                onboardingRoot.Q<DropdownField>("operation-type-field").value = "Dépense";
+                onboardingRoot.Q<TextField>("operation-amount-field").value = "50";
+                onboardingController.AddOperation();
+                Check(onboardingApp.RecurringOperations.ListAll().Count == 2, "a second operation was persisted");
+                Check(onboardingRoot.Q<VisualElement>("operation-list").childCount == 2, "both operations render in the step's own list");
+
+                var operationToRemove = onboardingApp.RecurringOperations.ListAll().First(o => o.Name == "Opération à retirer");
+                onboardingController.RemoveOperation(operationToRemove.Id);
+                Check(onboardingApp.RecurringOperations.FindById(operationToRemove.Id) is null, "removing an operation actually deletes it");
+                Check(onboardingRoot.Q<VisualElement>("operation-list").childCount == 1, "the removed operation no longer renders in the step's own list");
 
                 onboardingController.GoToStep(3);
                 Check(onboardingRoot.Q<Label>("step-indicator").text == "Étape 4 sur 4", "step indicator reaches the last step");
