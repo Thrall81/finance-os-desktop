@@ -32,13 +32,32 @@ namespace FinanceOS.UI
         /// app's own <c>.theme-dark</c> toggle and needs its theme applied directly.</summary>
         public static void Attach(Button trigger, Func<DateTime> getCurrentValue, Action<DateTime> onChanged, bool isDarkTheme)
         {
+            // A real bug caught by the user clicking the trigger repeatedly, not anticipated:
+            // every click built and showed a brand-new Popover with no guard against one already
+            // being open (or mid-dismiss animation) — each additional popover kept tracking its
+            // own anchor position against `trigger` every layout pass, and enough of them piling
+            // up made UI Toolkit's layout solver give up ("Layout update is struggling to process
+            // current layout... consider simplifying to avoid recursive layout") and the calendar
+            // itself render empty/broken. `AnchorPopup.dismissed` (fires once the popup — including
+            // its dismiss animation — has actually finished closing, not just when Dismiss() is
+            // called) is what makes it safe to track "is one already live" rather than guessing
+            // when it's truly gone.
+            Popover currentPopover = null;
+
             trigger.clicked += () =>
             {
+                if (currentPopover is not null)
+                {
+                    return;
+                }
+
                 var picker = new DatePicker { value = new Date(getCurrentValue()) };
                 picker.AddToClassList("appui--medium");
                 picker.AddToClassList(isDarkTheme ? "appui--dark" : "appui--light");
 
                 var popover = Popover.Build(trigger, picker).SetPlacement(PopoverPlacement.BottomStart);
+                currentPopover = popover;
+                popover.dismissed += (_, _) => currentPopover = null;
 
                 picker.RegisterValueChangedCallback(evt =>
                 {
