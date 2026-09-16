@@ -163,11 +163,13 @@
             <ui:VisualElement class="kpi-card">
               <ui:Label text="Solde prévu (fin d'horizon)" class="kpi-label" />
               <ui:Label name="simulation-result-projected" text="—" class="kpi-value" />
+              <ui:Label name="simulation-result-projected-before" text="—" class="kpi-context" />
             </ui:VisualElement>
             <ui:VisualElement class="kpi-card">
               <ui:Label text="Point bas prévisionnel" class="kpi-label" />
               <ui:Label name="simulation-result-lowest" text="—" class="kpi-value" />
               <ui:Label name="simulation-result-lowest-date" text="—" class="kpi-context" />
+              <ui:Label name="simulation-result-lowest-before" text="—" class="kpi-context" />
             </ui:VisualElement>
           </ui:VisualElement>
           <ui:VisualElement class="form-actions">

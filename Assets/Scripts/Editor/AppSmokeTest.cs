@@ -101,6 +101,8 @@ namespace FinanceOS.EditorTools
             Check(simulated.ClosingBalanceMinor == -20_000, "simulation reflects the extra purchase without persisting it");
             Check(app.Forecast.GetForecast(current.Id, new DateTime(2026, 9, 1), new DateTime(2026, 9, 30), new DateTime(2026, 9, 13))
                 .ClosingBalanceMinor == 65_000, "simulation left no trace in the real forecast");
+            Check(simulated.ClosingBalanceMinor - forecast.ClosingBalanceMinor == -85_000,
+                "the avant/après delta (ForecastsController's simulation result) equals exactly the simulated amount");
 
             var budget = app.Budget.GetOrCreate(2026, 9);
             app.Budget.UpsertAllocation(budget.Id, housing.Id, 70_000);

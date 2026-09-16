@@ -56,6 +56,7 @@ Journal des décisions structurantes, dans le même format que l'ancien projet (
 | ADR-140 | Édition étendue des opérations récurrentes (type, fréquence, jour du mois, catégorie, tiers) ; correction fusionnée type+comptes, un seul vidage/régénération par sauvegarde | ACCEPTED |
 | ADR-141 | Verrouillage des saisies numériques (lettres bloquées dans les champs montant/entier) ; datepicker reporté à une prochaine mise à jour | ACCEPTED |
 | ADR-142 | Correction d'un compte/opération pendant l'onboarding ; séparation visuelle Ajouter/Valider ; bouton "Nouveau X" dupliqué près des listes ; espacement des cartes uniformisé ; scrollbar amincie et thémée ; popup de changelog reportée | ACCEPTED |
+| ADR-143 | Comparaison avant/après explicite dans le résultat de la simulation « Et si ? », conforme à `06-Moteur_de_prevision.md` §9 | ACCEPTED |
 
 ---
 
@@ -770,3 +771,15 @@ Chaque alerte porte `IsSevere` : dépassement de budget (danger/rust, cohérent 
 **Ce qui reste hors périmètre de ce passage, documenté plutôt que silencieux** : la popup de changelog post-mise-à-jour et l'accès au changelog à la demande (reportés, voir contexte ci-dessus). Le rendu réel des points 2, 3, 4, 5 et 6 ne peut pas être confirmé depuis cet environnement (même limitation ADR-112 que tout changement visuel de ce projet) — seule la structure/logique est vérifiée en batchmode (`UISmokeTest.cs` : retrait d'un compte/d'une opération, existence et parité d'état des boutons dupliqués).
 
 **Documents concernés** : `07-Interface.md` §4, `Assets/Scripts/UI/README.md`.
+
+---
+
+# 45. ADR-143 — Comparaison avant/après dans la simulation « Et si ? »
+
+**Contexte** : l'utilisateur a demandé une explication du fonctionnement de la section Simulation de l'écran Prévisions pour vérifier sa cohérence avec ce qui était prévu. En relisant `06-Moteur_de_prevision.md` §9 (« comparaison avant/après sur le solde de fin de période et le point bas ») face au code réel, un vrai écart a été trouvé, pas supposé : `ForecastsController.RunSimulation` n'appelait que `ForecastService.Simulate` (le scénario « après ») et n'affichait jamais de chiffre « avant » à côté — la comparaison n'existait que si l'utilisateur remontait lui-même aux KPI de synthèse déjà affichés plus haut sur le même écran, pas comme un résultat de simulation autonome. Signalé explicitement avant de choisir : corriger le code pour respecter la doc, ou corriger la doc pour refléter le code. L'utilisateur a choisi le premier.
+
+**Décision** : `RunSimulation` appelle désormais aussi `ForecastService.GetForecast` (le calcul « avant », sans le mouvement simulé) sur exactement la même fenêtre que `Simulate` (aujourd'hui → aujourd'hui + horizon de prévision réglé dans Paramètres), recalculé à chaque clic sur « Simuler » plutôt que réutilisé depuis le dernier rendu de l'écran — garantit que la base de comparaison reste correcte même si le compte sélectionné ou les réglages ont changé depuis le chargement de la page, au prix d'un second appel en mémoire, sans coût réel puisque rien n'est persisté ni l'un ni l'autre. Chaque carte KPI du résultat de simulation gagne une ligne `.kpi-context` supplémentaire (« Avant : *montant* (écart : ±*montant*) ») sous la valeur « après » déjà affichée — réutilise le patron déjà établi (grande valeur + contexte en petit) plutôt que d'inventer une nouvelle disposition.
+
+**Couverture de test** : `AppSmokeTest.cs` avait déjà un scénario `GetForecast`/`Simulate` sur le même compte et la même fenêtre (achat simulé de 850,00 €) — une seule assertion ajoutée confirme que l'écart entre les deux égale exactement le montant simulé, ce qui valide directement le calcul que les nouvelles étiquettes affichent. `RunSimulation` reste privée et non testée par clic, cohérent avec le choix déjà établi pour cet écran (ADR-133) — seule la logique pure (`ForecastService`) est vérifiée.
+
+**Documents concernés** : `06-Moteur_de_prevision.md` §9 (aucun changement — le code s'aligne maintenant sur ce texte), `Assets/Scripts/UI/README.md`.

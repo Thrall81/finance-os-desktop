@@ -73,8 +73,10 @@ namespace FinanceOS.UI
         private readonly Button _simulationRunButton;
         private readonly VisualElement _simulationResultCard;
         private readonly Label _simulationResultProjectedLabel;
+        private readonly Label _simulationResultProjectedBeforeLabel;
         private readonly Label _simulationResultLowestLabel;
         private readonly Label _simulationResultLowestDateLabel;
+        private readonly Label _simulationResultLowestBeforeLabel;
         private readonly Button _simulationResetButton;
 
         private IReadOnlyList<DropdownOption> _accountOptions = Array.Empty<DropdownOption>();
@@ -169,8 +171,10 @@ namespace FinanceOS.UI
             _simulationRunButton = root.Q<Button>("simulation-run-button");
             _simulationResultCard = root.Q<VisualElement>("simulation-result-card");
             _simulationResultProjectedLabel = root.Q<Label>("simulation-result-projected");
+            _simulationResultProjectedBeforeLabel = root.Q<Label>("simulation-result-projected-before");
             _simulationResultLowestLabel = root.Q<Label>("simulation-result-lowest");
             _simulationResultLowestDateLabel = root.Q<Label>("simulation-result-lowest-date");
+            _simulationResultLowestBeforeLabel = root.Q<Label>("simulation-result-lowest-before");
             _simulationResetButton = root.Q<Button>("simulation-reset-button");
 
             _simulationTypeField.choices = SimulationTypeOptions.ToList();
@@ -530,15 +534,28 @@ namespace FinanceOS.UI
 
             var today = DateTime.Now;
             var horizonDays = _app.Settings.Get().ForecastHorizonDays;
-            var result = _app.Forecast.Simulate(
-                accountId, today, today.AddDays(horizonDays), today, label, date, signedAmount, categoryId);
+            var horizonEnd = today.AddDays(horizonDays);
+
+            // docs/06-Moteur_de_prevision.md §9 promises an avant/après comparison — the first
+            // version of this screen only ever computed and showed the "après" (with-scenario)
+            // figures. Recomputed fresh here (not reused from whatever the screen last rendered)
+            // so the baseline is always correct even if the user switched account/settings since
+            // the page loaded — both calls are cheap, in-memory, no persistence either way.
+            var before = _app.Forecast.GetForecast(accountId, today, horizonEnd, today);
+            var after = _app.Forecast.Simulate(accountId, today, horizonEnd, today, label, date, signedAmount, categoryId);
 
             var account = _app.Accounts.FindById(accountId);
             var currency = account?.Currency ?? "EUR";
 
-            _simulationResultProjectedLabel.text = MoneyFormat.Format(result.ClosingBalanceMinor, currency);
-            _simulationResultLowestLabel.text = MoneyFormat.Format(result.LowestBalanceMinor, currency);
-            _simulationResultLowestDateLabel.text = DateFormat.Short(result.LowestBalanceDate);
+            _simulationResultProjectedLabel.text = MoneyFormat.Format(after.ClosingBalanceMinor, currency);
+            _simulationResultProjectedBeforeLabel.text =
+                $"Avant : {MoneyFormat.Format(before.ClosingBalanceMinor, currency)} (écart : {MoneyFormat.Format(after.ClosingBalanceMinor - before.ClosingBalanceMinor, currency, forceSign: true)})";
+
+            _simulationResultLowestLabel.text = MoneyFormat.Format(after.LowestBalanceMinor, currency);
+            _simulationResultLowestDateLabel.text = DateFormat.Short(after.LowestBalanceDate);
+            _simulationResultLowestBeforeLabel.text =
+                $"Avant : {MoneyFormat.Format(before.LowestBalanceMinor, currency)} (écart : {MoneyFormat.Format(after.LowestBalanceMinor - before.LowestBalanceMinor, currency, forceSign: true)})";
+
             HideSimulationError();
 
             _simulationResultCard.style.display = DisplayStyle.Flex;
