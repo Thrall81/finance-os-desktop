@@ -60,9 +60,14 @@ namespace FinanceOS.UI
         private readonly VisualElement _frequencyRow;
         private readonly DropdownField _frequencyField;
         private readonly VisualElement _startDateRow;
-        private readonly TextField _startDateField;
+        private readonly Button _startDateField;
         private readonly VisualElement _startDateReadonlyRow;
         private readonly Label _startDateReadonlyLabel;
+
+        /// <summary>ADR-145 (essai) : source de vérité pour la date de début désormais choisie via
+        /// le DatePicker App UI (Button.text n'est qu'un affichage, pas une valeur analysable comme
+        /// l'était le TextField qu'il remplace) — toujours valide, plus besoin de TryParseInput.</summary>
+        private DateTime _startDateValue;
         private readonly VisualElement _dayOfMonthRow;
         private readonly TextField _dayOfMonthField;
         private readonly VisualElement _categoryRow;
@@ -120,7 +125,11 @@ namespace FinanceOS.UI
             _frequencyRow = root.Q<VisualElement>("form-frequency-row");
             _frequencyField = root.Q<DropdownField>("form-frequency");
             _startDateRow = root.Q<VisualElement>("form-start-date-row");
-            _startDateField = root.Q<TextField>("form-start-date");
+            _startDateField = root.Q<Button>("form-start-date");
+            AppDatePickerField.Attach(
+                _startDateField, () => _startDateValue,
+                selected => { _startDateValue = selected; UpdateSkipWarning(); },
+                settings.Get().Theme == AppTheme.Dark);
             _startDateReadonlyRow = root.Q<VisualElement>("form-start-date-readonly-row");
             _startDateReadonlyLabel = root.Q<Label>("form-start-date-readonly");
             _dayOfMonthRow = root.Q<VisualElement>("form-day-of-month-row");
@@ -155,7 +164,6 @@ namespace FinanceOS.UI
             _deleteButton.clicked += DeleteOperation;
             _toggleActiveButton.clicked += ToggleActive;
             _typeField.RegisterValueChangedCallback(evt => ApplyTypeVisibility(evt.newValue));
-            _startDateField.RegisterValueChangedCallback(_ => UpdateSkipWarning());
             _dayOfMonthField.RegisterValueChangedCallback(_ => UpdateSkipWarning());
             _frequencyField.RegisterValueChangedCallback(_ => UpdateSkipWarning());
             _listView.selectionChanged += _ => OnRowSelected();
@@ -257,7 +265,8 @@ namespace FinanceOS.UI
 
             _startDateRow.style.display = DisplayStyle.Flex;
             _startDateReadonlyRow.style.display = DisplayStyle.None;
-            _startDateField.SetValueWithoutNotify(DateFormat.ForInput(DateTime.Now));
+            _startDateValue = DateTime.Now;
+            _startDateField.text = DateFormat.ForInput(_startDateValue);
 
             _dayOfMonthRow.style.display = DisplayStyle.Flex;
             _dayOfMonthField.SetValueWithoutNotify(string.Empty);
@@ -412,11 +421,7 @@ namespace FinanceOS.UI
                 return;
             }
 
-            if (!DateFormat.TryParseInput(_startDateField.value, out var startDate))
-            {
-                ShowError("La date de début doit être au format jj/mm/aaaa.");
-                return;
-            }
+            var startDate = _startDateValue;
 
             if (!TryGatherOperationFields(
                     out var type, out var magnitude, out var frequency, out var dayOfMonth,
@@ -565,11 +570,7 @@ namespace FinanceOS.UI
                 return;
             }
 
-            if (!DateFormat.TryParseInput(_startDateField.value, out var startDate))
-            {
-                HideSkipWarning();
-                return;
-            }
+            var startDate = _startDateValue;
 
             int? dayOfMonth = null;
             if (!string.IsNullOrWhiteSpace(_dayOfMonthField.value))

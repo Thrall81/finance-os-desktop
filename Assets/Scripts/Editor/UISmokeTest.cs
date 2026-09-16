@@ -958,6 +958,12 @@ namespace FinanceOS.EditorTools
             Check(recurringOperationsRoot.Q<DropdownField>("form-source-account").value == "Livret Perso",
                 "the recurring-operation form's source-account field opens preselected to the default account");
 
+            // ADR-145 (essai) : la date de début est maintenant un Button (déclenche le DatePicker
+            // App UI au clic, non simulable en batchmode) plutôt qu'un TextField — vérifie
+            // seulement qu'OpenCreateForm en fixe bien le texte à aujourd'hui, pas le placeholder.
+            Check(recurringOperationsRoot.Q<Button>("form-start-date").text != "jj/mm/aaaa",
+                "the start-date trigger shows today's date, not the placeholder, once the create form opens");
+
             var settingsTree = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(SettingsUxmlPath);
             if (settingsTree == null)
             {

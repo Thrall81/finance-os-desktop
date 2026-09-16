@@ -515,6 +515,22 @@
     font-size: 11px;
 }
 
+/* ADR-145 (essai) : un Button stylé pour ressembler à un champ de saisie, pas à un bouton — texte
+   aligné à gauche, fond/bordure repris des tokens existants — plutôt qu'un TextField, pour
+   garantir que le clic ouvrant le calendrier App UI se déclenche de façon fiable (Button.clicked
+   est éprouvé partout ailleurs dans ce projet ; un événement de clic générique sur un élément
+   arbitraire ne l'a jamais été ici, aucun panel réel pour le vérifier). */
+.date-field-trigger {
+    background-color: var(--color-surface);
+    border-width: 1px;
+    border-color: var(--color-border);
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-size: 13px;
+    color: var(--color-ink-900);
+    -unity-text-align: middle-left;
+}
+
 .form-actions > Button {
     margin-left: 8px;
 }
