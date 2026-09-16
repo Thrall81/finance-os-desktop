@@ -50,7 +50,7 @@
         <ui:Label text="Enregistre un solde observé (ex. relevé bancaire) à une date donnée. Seul le plus récent sert de point de départ aux prévisions ; les autres restent conservés comme historique." class="card-caption" />
         <ui:VisualElement class="form-row">
           <ui:Label text="Date" class="form-label" />
-          <ui:TextField name="balance-history-date" class="form-field" />
+          <ui:Button name="balance-history-date" text="jj/mm/aaaa" class="form-field date-field-trigger" />
         </ui:VisualElement>
         <ui:VisualElement class="form-row">
           <ui:Label text="Solde (€)" class="form-label" />

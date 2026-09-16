@@ -51,7 +51,8 @@ namespace FinanceOS.UI
         private readonly VisualElement _destinationAccountRow;
         private readonly DropdownField _destinationAccountField;
         private readonly VisualElement _dateRow;
-        private readonly TextField _dateField;
+        private readonly Button _dateField;
+        private DateTime _dateValue;
         private readonly VisualElement _dateReadonlyRow;
         private readonly Label _dateReadonlyLabel;
         private readonly VisualElement _amountRow;
@@ -103,6 +104,7 @@ namespace FinanceOS.UI
             InternalTransferService internalTransfers,
             TransferDetectionService transferDetection,
             AppSettingsService settings,
+            StyleSheet? appUiThemeStyleSheet = null,
             bool isDarkTheme = false)
         {
             _accounts = accounts;
@@ -142,7 +144,10 @@ namespace FinanceOS.UI
             _destinationAccountRow = root.Q<VisualElement>("form-destination-account-row");
             _destinationAccountField = root.Q<DropdownField>("form-destination-account");
             _dateRow = root.Q<VisualElement>("form-date-row");
-            _dateField = root.Q<TextField>("form-date");
+            _dateField = root.Q<Button>("form-date");
+            AppDatePickerField.Attach(
+                _dateField, () => _dateValue, selected => _dateValue = selected,
+                isDarkTheme, appUiThemeStyleSheet);
             _dateReadonlyRow = root.Q<VisualElement>("form-date-readonly-row");
             _dateReadonlyLabel = root.Q<Label>("form-date-readonly");
             _amountRow = root.Q<VisualElement>("form-amount-row");
@@ -438,7 +443,8 @@ namespace FinanceOS.UI
 
             _dateRow.style.display = DisplayStyle.Flex;
             _dateReadonlyRow.style.display = DisplayStyle.None;
-            _dateField.SetValueWithoutNotify(DateFormat.ForInput(DateTime.Now));
+            _dateValue = DateTime.Now;
+            _dateField.text = DateFormat.ForInput(_dateValue);
 
             _amountRow.style.display = DisplayStyle.Flex;
             _amountReadonlyRow.style.display = DisplayStyle.None;
@@ -572,11 +578,7 @@ namespace FinanceOS.UI
                 return;
             }
 
-            if (!DateFormat.TryParseInput(_dateField.value, out var date))
-            {
-                ShowError("La date doit être au format jj/mm/aaaa.");
-                return;
-            }
+            var date = _dateValue;
 
             var label = _labelField.value?.Trim() ?? string.Empty;
             if (string.IsNullOrEmpty(label))

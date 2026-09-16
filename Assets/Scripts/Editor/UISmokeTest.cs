@@ -224,7 +224,7 @@ namespace FinanceOS.EditorTools
             }
 
             var accountsRoot = accountsTree.Instantiate();
-            var accountsController = new AccountsController(accountsRoot, app.Accounts);
+            var accountsController = new AccountsController(accountsRoot, app.Accounts, app.Settings);
 
             var accountsList = accountsRoot.Q<VisualElement>("accounts-list");
             Check(accountsList.childCount == 2, "accounts controller renders one row per account on construction");
@@ -251,7 +251,7 @@ namespace FinanceOS.EditorTools
 
                 var balanceHistoryTree = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(AccountsUxmlPath);
                 var balanceHistoryRoot = balanceHistoryTree.Instantiate();
-                var balanceHistoryController = new AccountsController(balanceHistoryRoot, balanceHistoryApp.Accounts);
+                var balanceHistoryController = new AccountsController(balanceHistoryRoot, balanceHistoryApp.Accounts, balanceHistoryApp.Settings);
 
                 Check(balanceHistoryRoot.Q<VisualElement>("balance-history-section").style.display == DisplayStyle.None,
                     "balance-history section hidden before any account is opened for edit");
@@ -264,9 +264,14 @@ namespace FinanceOS.EditorTools
                     "balance-history empty-state shown with no recorded balance yet");
                 Check(balanceHistoryRoot.Q<VisualElement>("balance-history-list").childCount == 0, "no balance-history rows rendered yet");
 
-                var balanceHistoryDateField = balanceHistoryRoot.Q<TextField>("balance-history-date");
+                // balance-history-date is a Button (opens the App UI DatePicker, ADR-145) rather
+                // than a TextField now — its click can't be simulated without a live panel here,
+                // same limitation as every other button in this project, so this only checks that
+                // OpenEditForm seeded it with today's date rather than the placeholder, and lets
+                // SubmitBalanceHistory use that default rather than trying to pick a specific date.
+                Check(balanceHistoryRoot.Q<Button>("balance-history-date").text != "jj/mm/aaaa",
+                    "the balance-history date trigger shows today's date, not the placeholder, once the edit form opens");
                 var balanceHistoryAmountField = balanceHistoryRoot.Q<TextField>("balance-history-amount");
-                balanceHistoryDateField.SetValueWithoutNotify("10/09/2026");
                 balanceHistoryAmountField.SetValueWithoutNotify("1050,00");
                 balanceHistoryController.SubmitBalanceHistory();
 
@@ -1009,7 +1014,7 @@ namespace FinanceOS.EditorTools
                 Check(DashboardViewModelBuilder.Build(noAccountApp, today) is null, "no account yields a null view model, not a crash");
 
                 var emptyAccountsRoot = accountsTree.Instantiate();
-                _ = new AccountsController(emptyAccountsRoot, noAccountApp.Accounts);
+                _ = new AccountsController(emptyAccountsRoot, noAccountApp.Accounts, noAccountApp.Settings);
                 Check(emptyAccountsRoot.Q<VisualElement>("accounts-list").childCount == 0, "no accounts renders an empty list");
                 Check(emptyAccountsRoot.Q<Label>("accounts-empty").style.display == DisplayStyle.Flex, "empty-state shown when no accounts exist");
                 Check(emptyAccountsRoot.Q<Button>("new-account-button-list") is not null, "the list-adjacent new-account button exists (ADR-142)");

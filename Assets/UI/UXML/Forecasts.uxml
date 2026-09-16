@@ -56,7 +56,7 @@
         <ui:Label name="confirm-form-title" text="Confirmer l'opération" class="card-title" />
         <ui:VisualElement class="form-row">
           <ui:Label text="Date" class="form-label" />
-          <ui:TextField name="confirm-date" class="form-field" />
+          <ui:Button name="confirm-date" text="jj/mm/aaaa" class="form-field date-field-trigger" />
         </ui:VisualElement>
         <ui:VisualElement class="form-row">
           <ui:Label text="Montant (€)" class="form-label" />
@@ -94,7 +94,7 @@
         </ui:VisualElement>
         <ui:VisualElement class="form-row">
           <ui:Label text="Date" class="form-label" />
-          <ui:TextField name="occurrence-date" class="form-field" />
+          <ui:Button name="occurrence-date" text="jj/mm/aaaa" class="form-field date-field-trigger" />
         </ui:VisualElement>
         <ui:VisualElement class="form-row">
           <ui:Label text="Catégorie (facultatif)" class="form-label" />
@@ -145,7 +145,7 @@
         </ui:VisualElement>
         <ui:VisualElement class="form-row">
           <ui:Label text="Date" class="form-label" />
-          <ui:TextField name="simulation-date" class="form-field" />
+          <ui:Button name="simulation-date" text="jj/mm/aaaa" class="form-field date-field-trigger" />
         </ui:VisualElement>
         <ui:VisualElement class="form-row">
           <ui:Label text="Catégorie (facultatif)" class="form-label" />

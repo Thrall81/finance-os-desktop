@@ -176,7 +176,7 @@ namespace FinanceOS.UI
 
             var content = AccountsAsset.Instantiate();
             _shell.SetContent(content);
-            _accountsController = new AccountsController(content, Container.Accounts);
+            _accountsController = new AccountsController(content, Container.Accounts, Container.Settings, AppUiThemeStyleSheet);
             ClearOtherControllers(keepAccounts: true);
             _shell.SetActive(ShellScreen.Accounts);
         }
@@ -193,7 +193,7 @@ namespace FinanceOS.UI
             _transactionsController = new TransactionsController(
                 content, Container.Accounts, Container.Categories, Container.Counterparties,
                 Container.Transactions, Container.InternalTransfers, Container.TransferDetection,
-                Container.Settings, IsDarkTheme);
+                Container.Settings, AppUiThemeStyleSheet, IsDarkTheme);
             ClearOtherControllers(keepTransactions: true);
             _shell.SetActive(ShellScreen.Transactions);
         }
@@ -223,7 +223,7 @@ namespace FinanceOS.UI
 
             var content = ForecastsAsset.Instantiate();
             _shell.SetContent(content);
-            _forecastsController = new ForecastsController(content, Container);
+            _forecastsController = new ForecastsController(content, Container, AppUiThemeStyleSheet);
             ClearOtherControllers(keepForecasts: true);
             _shell.SetActive(ShellScreen.Forecasts);
         }

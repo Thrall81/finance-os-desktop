@@ -81,7 +81,7 @@
 
       <ui:VisualElement name="form-date-row" class="form-row">
         <ui:Label text="Date" class="form-label" />
-        <ui:TextField name="form-date" class="form-field" />
+        <ui:Button name="form-date" text="jj/mm/aaaa" class="form-field date-field-trigger" />
       </ui:VisualElement>
       <ui:VisualElement name="form-date-readonly-row" class="form-row" style="display: none;">
         <ui:Label text="Date" class="form-label" />

@@ -31,6 +31,7 @@ namespace FinanceOS.UI
         };
 
         private readonly AccountService _accounts;
+        private readonly AppSettingsService _settings;
 
         private readonly Button _newAccountButton;
         private readonly Button _newAccountButtonList;
@@ -51,7 +52,8 @@ namespace FinanceOS.UI
         private readonly VisualElement _list;
 
         private readonly VisualElement _balanceHistorySection;
-        private readonly TextField _balanceHistoryDateField;
+        private readonly Button _balanceHistoryDateField;
+        private DateTime _balanceHistoryDateValue;
         private readonly TextField _balanceHistoryAmountField;
         private readonly Button _balanceHistorySubmitButton;
         private readonly Label _balanceHistoryErrorLabel;
@@ -61,9 +63,12 @@ namespace FinanceOS.UI
         private int? _editingAccountId;
         private bool _liquidityManuallySet;
 
-        public AccountsController(VisualElement root, AccountService accounts)
+        public AccountsController(
+            VisualElement root, AccountService accounts, AppSettingsService settings,
+            StyleSheet? appUiThemeStyleSheet = null)
         {
             _accounts = accounts;
+            _settings = settings;
 
             _newAccountButton = root.Q<Button>("new-account-button");
             _newAccountButtonList = root.Q<Button>("new-account-button-list");
@@ -89,7 +94,11 @@ namespace FinanceOS.UI
             // a bare "style=display:none;" does not reliably populate .style.display outside a
             // live panel.
             _balanceHistorySection.style.display = DisplayStyle.None;
-            _balanceHistoryDateField = root.Q<TextField>("balance-history-date");
+            _balanceHistoryDateField = root.Q<Button>("balance-history-date");
+            AppDatePickerField.Attach(
+                _balanceHistoryDateField, () => _balanceHistoryDateValue,
+                selected => _balanceHistoryDateValue = selected,
+                settings.Get().Theme == AppTheme.Dark, appUiThemeStyleSheet);
             _balanceHistoryAmountField = root.Q<TextField>("balance-history-amount");
             NumericInputFilter.RestrictToDecimal(_balanceHistoryAmountField, allowNegative: true);
             _balanceHistorySubmitButton = root.Q<Button>("balance-history-submit-button");
@@ -202,7 +211,8 @@ namespace FinanceOS.UI
             HideError();
 
             _balanceHistorySection.style.display = DisplayStyle.Flex;
-            _balanceHistoryDateField.SetValueWithoutNotify(DateFormat.ForInput(DateTime.Now));
+            _balanceHistoryDateValue = DateTime.Now;
+            _balanceHistoryDateField.text = DateFormat.ForInput(_balanceHistoryDateValue);
             _balanceHistoryAmountField.SetValueWithoutNotify(string.Empty);
             HideBalanceHistoryError();
             RenderBalanceHistory(row.Id);
@@ -341,15 +351,9 @@ namespace FinanceOS.UI
                 return;
             }
 
-            if (!DateFormat.TryParseInput(_balanceHistoryDateField.value, out var date))
-            {
-                ShowBalanceHistoryError("La date doit être au format jj/mm/aaaa.");
-                return;
-            }
-
             try
             {
-                _accounts.RecordOfficialBalance(accountId, balanceMinor, date);
+                _accounts.RecordOfficialBalance(accountId, balanceMinor, _balanceHistoryDateValue);
             }
             catch (ArgumentException ex)
             {
@@ -358,7 +362,8 @@ namespace FinanceOS.UI
             }
 
             _balanceHistoryAmountField.SetValueWithoutNotify(string.Empty);
-            _balanceHistoryDateField.SetValueWithoutNotify(DateFormat.ForInput(DateTime.Now));
+            _balanceHistoryDateValue = DateTime.Now;
+            _balanceHistoryDateField.text = DateFormat.ForInput(_balanceHistoryDateValue);
             HideBalanceHistoryError();
             RenderBalanceHistory(accountId);
             // Also refreshes the account row behind the form — its displayed balance changes

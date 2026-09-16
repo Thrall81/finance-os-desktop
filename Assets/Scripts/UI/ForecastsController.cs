@@ -37,7 +37,8 @@ namespace FinanceOS.UI
 
         private readonly VisualElement _confirmFormCard;
         private readonly Label _confirmFormTitle;
-        private readonly TextField _confirmDateField;
+        private readonly Button _confirmDateField;
+        private DateTime _confirmDateValue;
         private readonly TextField _confirmAmountField;
         private readonly Label _confirmErrorLabel;
         private readonly Button _confirmCancelButton;
@@ -51,7 +52,8 @@ namespace FinanceOS.UI
         private readonly TextField _occurrenceLabelField;
         private readonly DropdownField _occurrenceTypeField;
         private readonly TextField _occurrenceAmountField;
-        private readonly TextField _occurrenceDateField;
+        private readonly Button _occurrenceDateField;
+        private DateTime _occurrenceDateValue;
         private readonly DropdownField _occurrenceCategoryField;
         private readonly TextField _occurrenceCounterpartyField;
         private readonly Label _occurrenceErrorLabel;
@@ -67,7 +69,8 @@ namespace FinanceOS.UI
         private readonly TextField _simulationLabelField;
         private readonly DropdownField _simulationTypeField;
         private readonly TextField _simulationAmountField;
-        private readonly TextField _simulationDateField;
+        private readonly Button _simulationDateField;
+        private DateTime _simulationDateValue;
         private readonly DropdownField _simulationCategoryField;
         private readonly Label _simulationErrorLabel;
         private readonly Button _simulationRunButton;
@@ -90,7 +93,7 @@ namespace FinanceOS.UI
         private bool _simulationExpanded;
         private bool _occurrenceFormExpanded;
 
-        public ForecastsController(VisualElement root, AppContainer app)
+        public ForecastsController(VisualElement root, AppContainer app, StyleSheet? appUiThemeStyleSheet = null)
         {
             _app = app;
             var isDarkTheme = app.Settings.Get().Theme == AppTheme.Dark;
@@ -111,7 +114,10 @@ namespace FinanceOS.UI
 
             _confirmFormCard = root.Q<VisualElement>("confirm-form-card");
             _confirmFormTitle = root.Q<Label>("confirm-form-title");
-            _confirmDateField = root.Q<TextField>("confirm-date");
+            _confirmDateField = root.Q<Button>("confirm-date");
+            AppDatePickerField.Attach(
+                _confirmDateField, () => _confirmDateValue, selected => _confirmDateValue = selected,
+                isDarkTheme, appUiThemeStyleSheet);
             _confirmAmountField = root.Q<TextField>("confirm-amount");
             NumericInputFilter.RestrictToDecimal(_confirmAmountField);
             _confirmErrorLabel = root.Q<Label>("confirm-error");
@@ -131,7 +137,10 @@ namespace FinanceOS.UI
             _occurrenceTypeField = root.Q<DropdownField>("occurrence-type");
             _occurrenceAmountField = root.Q<TextField>("occurrence-amount");
             NumericInputFilter.RestrictToDecimal(_occurrenceAmountField);
-            _occurrenceDateField = root.Q<TextField>("occurrence-date");
+            _occurrenceDateField = root.Q<Button>("occurrence-date");
+            AppDatePickerField.Attach(
+                _occurrenceDateField, () => _occurrenceDateValue, selected => _occurrenceDateValue = selected,
+                isDarkTheme, appUiThemeStyleSheet);
             _occurrenceCategoryField = root.Q<DropdownField>("occurrence-category");
             _occurrenceCounterpartyField = root.Q<TextField>("occurrence-counterparty");
             _occurrenceErrorLabel = root.Q<Label>("occurrence-error");
@@ -165,7 +174,10 @@ namespace FinanceOS.UI
             _simulationTypeField = root.Q<DropdownField>("simulation-type");
             _simulationAmountField = root.Q<TextField>("simulation-amount");
             NumericInputFilter.RestrictToDecimal(_simulationAmountField);
-            _simulationDateField = root.Q<TextField>("simulation-date");
+            _simulationDateField = root.Q<Button>("simulation-date");
+            AppDatePickerField.Attach(
+                _simulationDateField, () => _simulationDateValue, selected => _simulationDateValue = selected,
+                isDarkTheme, appUiThemeStyleSheet);
             _simulationCategoryField = root.Q<DropdownField>("simulation-category");
             _simulationErrorLabel = root.Q<Label>("simulation-error");
             _simulationRunButton = root.Q<Button>("simulation-run-button");
@@ -179,7 +191,8 @@ namespace FinanceOS.UI
 
             _simulationTypeField.choices = SimulationTypeOptions.ToList();
             _simulationTypeField.SetValueWithoutNotify(SimulationTypeOptions[0]);
-            _simulationDateField.SetValueWithoutNotify(DateFormat.ForInput(DateTime.Now));
+            _simulationDateValue = DateTime.Now;
+            _simulationDateField.text = DateFormat.ForInput(_simulationDateValue);
 
             SetupOccurrenceColumns();
             SetupTimelineColumns();
@@ -429,7 +442,8 @@ namespace FinanceOS.UI
             _confirmingIsNegative = row.ExpectedAmountMinor < 0;
 
             _confirmFormTitle.text = row.Label;
-            _confirmDateField.SetValueWithoutNotify(DateFormat.ForInput(row.ExpectedDate));
+            _confirmDateValue = row.ExpectedDate;
+            _confirmDateField.text = DateFormat.ForInput(_confirmDateValue);
             _confirmAmountField.SetValueWithoutNotify(PlainAmountText(Math.Abs(row.ExpectedAmountMinor)));
             HideConfirmError();
 
@@ -455,11 +469,7 @@ namespace FinanceOS.UI
                 return;
             }
 
-            if (!DateFormat.TryParseInput(_confirmDateField.value, out var date))
-            {
-                ShowConfirmError("La date doit être au format jj/mm/aaaa.");
-                return;
-            }
+            var date = _confirmDateValue;
 
             var signedAmount = _confirmingIsNegative ? -Math.Abs(magnitude) : Math.Abs(magnitude);
             _app.ForecastOccurrences.ConfirmAsTransaction(occurrenceId, date, signedAmount);
@@ -522,11 +532,7 @@ namespace FinanceOS.UI
                 return;
             }
 
-            if (!DateFormat.TryParseInput(_simulationDateField.value, out var date))
-            {
-                ShowSimulationError("La date doit être au format jj/mm/aaaa.");
-                return;
-            }
+            var date = _simulationDateValue;
 
             var signedAmount = _simulationTypeField.value == SimulationTypeOptions[0] ? -magnitude : magnitude;
             var categoryIndex = _simulationCategoryField.index;
@@ -571,7 +577,8 @@ namespace FinanceOS.UI
                 _occurrenceLabelField.SetValueWithoutNotify(string.Empty);
                 _occurrenceTypeField.SetValueWithoutNotify(OccurrenceTypeOptions[0]);
                 _occurrenceAmountField.SetValueWithoutNotify(string.Empty);
-                _occurrenceDateField.SetValueWithoutNotify(DateFormat.ForInput(DateTime.Now));
+                _occurrenceDateValue = DateTime.Now;
+                _occurrenceDateField.text = DateFormat.ForInput(_occurrenceDateValue);
                 _occurrenceCategoryField.SetValueWithoutNotify(_occurrenceCategoryField.choices.Count > 0 ? _occurrenceCategoryField.choices[0] : string.Empty);
                 _occurrenceCounterpartyField.SetValueWithoutNotify(string.Empty);
                 HideOccurrenceError();
@@ -608,11 +615,7 @@ namespace FinanceOS.UI
                 return;
             }
 
-            if (!DateFormat.TryParseInput(_occurrenceDateField.value, out var date))
-            {
-                ShowOccurrenceError("La date doit être au format jj/mm/aaaa.");
-                return;
-            }
+            var date = _occurrenceDateValue;
 
             var signedAmount = _occurrenceTypeField.value == OccurrenceTypeOptions[0] ? -magnitude : magnitude;
 
