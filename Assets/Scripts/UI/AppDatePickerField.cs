@@ -1,6 +1,7 @@
 using System;
 using Unity.AppUI.Core;
 using Unity.AppUI.UI;
+using UnityEngine;
 using UnityEngine.UIElements;
 using Button = UnityEngine.UIElements.Button;
 
@@ -46,28 +47,51 @@ namespace FinanceOS.UI
 
             trigger.clicked += () =>
             {
+                // TEMPORARY diagnostic logging (ADR-145 essai) — two real fixes (re-entrancy,
+                // stylesheet path) haven't resolved "nothing visible happens, no console error"
+                // reported from real testing. Logging every stage so the next report pinpoints
+                // exactly where it actually stops, instead of guessing a third blind fix. Remove
+                // once the calendar is confirmed visible.
+                Debug.Log("[AppDatePickerField] click received");
+
                 if (currentPopover is not null)
                 {
+                    Debug.Log("[AppDatePickerField] ignored — a popover is already tracked as open");
                     return;
                 }
 
-                var picker = new DatePicker { value = new Date(getCurrentValue()) };
-                picker.AddToClassList("appui--medium");
-                picker.AddToClassList(isDarkTheme ? "appui--dark" : "appui--light");
-
-                var popover = Popover.Build(trigger, picker).SetPlacement(PopoverPlacement.BottomStart);
-                currentPopover = popover;
-                popover.dismissed += (_, _) => currentPopover = null;
-
-                picker.RegisterValueChangedCallback(evt =>
+                try
                 {
-                    DateTime selected = evt.newValue;
-                    trigger.text = DateFormat.ForInput(selected);
-                    onChanged(selected);
-                    popover.Dismiss();
-                });
+                    var picker = new DatePicker { value = new Date(getCurrentValue()) };
+                    picker.AddToClassList("appui--medium");
+                    picker.AddToClassList(isDarkTheme ? "appui--dark" : "appui--light");
+                    Debug.Log("[AppDatePickerField] DatePicker constructed");
 
-                popover.Show();
+                    var popover = Popover.Build(trigger, picker).SetPlacement(PopoverPlacement.BottomStart);
+                    Debug.Log($"[AppDatePickerField] Popover built, rootView={popover.rootView}, view.panel={popover.view?.panel}");
+                    currentPopover = popover;
+                    popover.dismissed += (_, reason) =>
+                    {
+                        Debug.Log($"[AppDatePickerField] dismissed, reason={reason}");
+                        currentPopover = null;
+                    };
+
+                    picker.RegisterValueChangedCallback(evt =>
+                    {
+                        DateTime selected = evt.newValue;
+                        trigger.text = DateFormat.ForInput(selected);
+                        onChanged(selected);
+                        popover.Dismiss();
+                    });
+
+                    popover.Show();
+                    Debug.Log($"[AppDatePickerField] Show() returned, view.worldBound={popover.view?.worldBound}, view.resolvedStyle.display={popover.view?.resolvedStyle.display}");
+                }
+                catch (Exception ex)
+                {
+                    Debug.LogError($"[AppDatePickerField] exception while opening the picker: {ex}");
+                    currentPopover = null;
+                }
             };
         }
     }
