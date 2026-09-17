@@ -30,9 +30,10 @@ namespace FinanceOS.UI
 
         // Minimal on purpose (docs/07-Interface.md §4's "formulaire minimal") — épargne/virement
         // interne are real recurring-operation types but out of scope for "salaire, loyer, une ou
-        // deux factures", and asking for a day-of-month here would reopen the exact start-date/
-        // day-of-month mismatch trap ADR-120 fixed elsewhere; every operation created here starts
-        // today, so its day-of-month always matches its start date by construction.
+        // deux factures", and there is still no separate day-of-month field: whatever date the
+        // user picks below is the only date driving the schedule, so the exact start-date/
+        // day-of-month mismatch trap ADR-120 fixed elsewhere cannot occur here regardless of which
+        // date is chosen.
         private static readonly (RecurringOperationType Type, string Text)[] OperationTypeOptions =
         {
             (RecurringOperationType.Expense, "Dépense"),
@@ -41,6 +42,7 @@ namespace FinanceOS.UI
 
         private readonly AccountService _accounts;
         private readonly RecurringOperationService _operations;
+        private readonly CategoryService _categories;
         private readonly Action _onFinished;
 
         private readonly Label _stepIndicatorLabel;
@@ -64,11 +66,20 @@ namespace FinanceOS.UI
         private readonly DropdownField _operationTypeField;
         private readonly TextField _operationAmountField;
         private readonly DropdownField _operationAccountField;
+        private readonly Button _operationDateField;
+        private readonly DropdownField _operationCategoryField;
         private readonly Label _operationErrorLabel;
         private readonly Button _operationAddButton;
         private readonly VisualElement _operationList;
         private readonly Button _recurringBackButton;
         private readonly Button _recurringNextButton;
+
+        /// <summary>Source of truth for the operation's start date, chosen via the App UI
+        /// DatePicker (ADR-145) — previously hardcoded to today with no way to change it, which is
+        /// what made every onboarding operation look like it was "already due" the moment it was
+        /// added. Resets to today after each successful add, same as every other field in this
+        /// form.</summary>
+        private DateTime _operationDateValue;
 
         private readonly VisualElement _stepRecap;
         private readonly VisualElement _recapAccountList;
@@ -78,11 +89,15 @@ namespace FinanceOS.UI
         private readonly Button _recapFinishButton;
 
         private IReadOnlyList<DropdownOption> _accountOptions = Array.Empty<DropdownOption>();
+        private IReadOnlyList<DropdownOption> _categoryOptions = Array.Empty<DropdownOption>();
 
-        public OnboardingController(VisualElement root, AccountService accounts, RecurringOperationService operations, Action onFinished)
+        public OnboardingController(
+            VisualElement root, AccountService accounts, RecurringOperationService operations, CategoryService categories,
+            Action onFinished, bool isDarkTheme = false, StyleSheet? appUiThemeStyleSheet = null)
         {
             _accounts = accounts;
             _operations = operations;
+            _categories = categories;
             _onFinished = onFinished;
 
             _stepIndicatorLabel = root.Q<Label>("step-indicator");
@@ -108,6 +123,11 @@ namespace FinanceOS.UI
             _operationAmountField = root.Q<TextField>("operation-amount-field");
             NumericInputFilter.RestrictToDecimal(_operationAmountField);
             _operationAccountField = root.Q<DropdownField>("operation-account-field");
+            _operationDateField = root.Q<Button>("operation-date-field");
+            AppDatePickerField.Attach(
+                _operationDateField, () => _operationDateValue, selected => _operationDateValue = selected,
+                isDarkTheme, appUiThemeStyleSheet);
+            _operationCategoryField = root.Q<DropdownField>("operation-category-field");
             _operationErrorLabel = root.Q<Label>("operation-error");
             _operationAddButton = root.Q<Button>("operation-add-button");
             _operationList = root.Q<VisualElement>("operation-list");
@@ -125,6 +145,8 @@ namespace FinanceOS.UI
             _accountTypeField.SetValueWithoutNotify(AccountTypeOptions[0].Text);
             _operationTypeField.choices = OperationTypeOptions.Select(o => o.Text).ToList();
             _operationTypeField.SetValueWithoutNotify(OperationTypeOptions[0].Text);
+            _operationDateValue = DateTime.Now;
+            _operationDateField.text = DateFormat.ForInput(_operationDateValue);
 
             _welcomeNextButton.clicked += () => GoToStep(1);
             _accountAddButton.clicked += AddAccount;
@@ -160,7 +182,7 @@ namespace FinanceOS.UI
 
         private void Refresh()
         {
-            var viewModel = OnboardingViewModelBuilder.Build(_accounts, _operations);
+            var viewModel = OnboardingViewModelBuilder.Build(_accounts, _operations, _categories);
             _accountOptions = viewModel.AccountOptions;
 
             _accountList.Clear();
@@ -181,6 +203,12 @@ namespace FinanceOS.UI
             {
                 _operationAccountField.SetValueWithoutNotify(accountChoices[0]);
             }
+
+            _categoryOptions = viewModel.CategoryOptions;
+            var categoryChoices = new List<string> { "Aucune" };
+            categoryChoices.AddRange(_categoryOptions.Select(o => o.Name));
+            _operationCategoryField.choices = categoryChoices;
+            _operationCategoryField.SetValueWithoutNotify(categoryChoices[0]);
 
             // Recap rows stay read-only, deliberately — this step is a final review before
             // "Terminer", not another place to edit; a mistake spotted here sends the user back a
@@ -268,15 +296,18 @@ namespace FinanceOS.UI
             var typeIndex = OperationTypeOptions.ToList().FindIndex(o => o.Text == _operationTypeField.value);
             var type = OperationTypeOptions[typeIndex < 0 ? 0 : typeIndex].Type;
             var accountId = _accountOptions[_operationAccountField.index].Id;
-            var today = DateTime.Now;
+            var categoryId = _operationCategoryField.index <= 0 ? (int?)null : _categoryOptions[_operationCategoryField.index - 1].Id;
 
             _operations.Create(
-                name, type, magnitude, RecurringFrequency.Monthly, today,
+                name, type, magnitude, RecurringFrequency.Monthly, _operationDateValue,
                 sourceAccountId: type == RecurringOperationType.Expense ? accountId : null,
-                destinationAccountId: type == RecurringOperationType.Income ? accountId : null);
+                destinationAccountId: type == RecurringOperationType.Income ? accountId : null,
+                categoryId: categoryId);
 
             _operationNameField.SetValueWithoutNotify(string.Empty);
             _operationAmountField.SetValueWithoutNotify(string.Empty);
+            _operationDateValue = DateTime.Now;
+            _operationDateField.text = DateFormat.ForInput(_operationDateValue);
             HideOperationError();
             Refresh();
         }

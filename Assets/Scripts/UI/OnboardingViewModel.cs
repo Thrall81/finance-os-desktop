@@ -16,5 +16,6 @@ namespace FinanceOS.UI
     public sealed record OnboardingViewModel(
         IReadOnlyList<OnboardingAccountRowViewModel> Accounts,
         IReadOnlyList<OnboardingOperationRowViewModel> Operations,
-        IReadOnlyList<DropdownOption> AccountOptions);
+        IReadOnlyList<DropdownOption> AccountOptions,
+        IReadOnlyList<DropdownOption> CategoryOptions);
 }

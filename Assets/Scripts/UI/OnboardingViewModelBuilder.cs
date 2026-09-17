@@ -11,7 +11,7 @@ namespace FinanceOS.UI
     /// </summary>
     public static class OnboardingViewModelBuilder
     {
-        public static OnboardingViewModel Build(AccountService accounts, RecurringOperationService operations)
+        public static OnboardingViewModel Build(AccountService accounts, RecurringOperationService operations, CategoryService categories)
         {
             // ListActive, not ListAll: an account removed mid-onboarding (ADR-142) is archived,
             // not hard-deleted (no delete path exists for accounts anywhere in this app — a
@@ -40,7 +40,12 @@ namespace FinanceOS.UI
                 .Select(a => new DropdownOption(a.Id, a.Name))
                 .ToList();
 
-            return new OnboardingViewModel(accountRows, operationRows, accountOptions);
+            var categoryOptions = categories.ListActive()
+                .OrderBy(c => c.Name)
+                .Select(c => new DropdownOption(c.Id, c.Name))
+                .ToList();
+
+            return new OnboardingViewModel(accountRows, operationRows, accountOptions, categoryOptions);
         }
     }
 }

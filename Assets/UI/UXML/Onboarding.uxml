@@ -66,6 +66,14 @@
         <ui:Label text="Compte" class="form-label" />
         <ui:DropdownField name="operation-account-field" class="form-field" />
       </ui:VisualElement>
+      <ui:VisualElement class="form-row">
+        <ui:Label text="Date de début" class="form-label" />
+        <ui:Button name="operation-date-field" text="jj/mm/aaaa" class="form-field date-field-trigger" />
+      </ui:VisualElement>
+      <ui:VisualElement class="form-row">
+        <ui:Label text="Catégorie (facultatif)" class="form-label" />
+        <ui:DropdownField name="operation-category-field" class="form-field" />
+      </ui:VisualElement>
       <ui:Label name="operation-error" text="" class="form-error" style="display: none;" />
       <ui:VisualElement class="form-actions">
         <ui:Button name="operation-add-button" text="+ Ajouter" class="secondary-button" />

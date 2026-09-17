@@ -129,7 +129,9 @@ namespace FinanceOS.UI
             var content = OnboardingAsset.Instantiate();
             _shell.SetContent(content);
             _shell.SetSidebarVisible(false);
-            _onboardingController = new OnboardingController(content, Container.Accounts, Container.RecurringOperations, OnOnboardingFinished);
+            _onboardingController = new OnboardingController(
+                content, Container.Accounts, Container.RecurringOperations, Container.Categories, OnOnboardingFinished,
+                IsDarkTheme, AppUiThemeStyleSheet);
             ClearOtherControllers();
         }
 
