@@ -32,7 +32,7 @@ namespace FinanceOS.UI
             }
 
             var summary = budgets.GetSummary(budget.Id);
-            var overview = budgets.GetOverview(budget.Id);
+            var overview = budgets.GetOverview(year, month);
 
             var rows = summary
                 .Select(s => new BudgetAllocationRowViewModel(

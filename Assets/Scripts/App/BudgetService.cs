@@ -18,11 +18,14 @@ namespace FinanceOS.App
         long CommittedAmountMinor,
         long RemainingAmountMinor);
 
-    /// <summary>The month's two headline figures beyond the per-category breakdown — "reste à
-    /// vivre" (what's left across every Expense-category envelope, réel+engagé already
-    /// subtracted) and the savings rate (money moved into Savings-type categories over income),
-    /// both magnitudes/ratios derived only from data already in the summary/period, no new
-    /// concept invented beyond docs/01-Perimetre.md §2.9's own wording.
+    /// <summary>The month's headline figures beyond the per-category breakdown. "Reste à vivre"
+    /// (ADR-147, redefining ADR-115's original per-category-envelope version after direct user
+    /// feedback) = the month's net recurring operations (income and recurring expenses, signed)
+    /// minus the month's total budgeted amount across every category, regardless of type — what's
+    /// left once fixed commitments and already-budgeted spending are both accounted for.
+    /// Deliberately independent of a <see cref="Budget"/> row existing: with no budget for the
+    /// month, the deduction is simply 0, not a placeholder. Savings rate (money moved into
+    /// Savings-type categories over income) is unrelated and unchanged.
     /// <see cref="SavingsRatePercent"/> is 0 when there is no income to divide by.</summary>
     public sealed record BudgetOverview(
         long RemainingToLiveMinor,
@@ -145,16 +148,22 @@ namespace FinanceOS.App
         }
 
         /// <summary>"Reste à vivre" and the savings rate for the month — see
-        /// <see cref="BudgetOverview"/> for what each figure means and why.</summary>
-        public BudgetOverview GetOverview(int budgetId)
+        /// <see cref="BudgetOverview"/> for what each figure means and why. Takes a calendar month
+        /// directly rather than a <see cref="Budget"/> id (unlike <see cref="GetSummary"/>, which
+        /// needs an actual budget's allocations): reste à vivre's own definition no longer
+        /// requires a budget to exist for the month, only benefits from one if it does.</summary>
+        public BudgetOverview GetOverview(int year, int month)
         {
-            var budget = RequireBudget(budgetId);
-            var (monthStart, monthEnd) = MonthRange(budget);
+            var monthStart = new DateTime(year, month, 1);
+            var monthEnd = monthStart.AddMonths(1).AddDays(-1);
             var categoryTypes = _categories.ListAll().ToDictionary(c => c.Id, c => c.Type);
 
-            var remainingToLive = GetSummary(budgetId)
-                .Where(s => categoryTypes.TryGetValue(s.CategoryId, out var type) && type == CategoryType.Expense)
-                .Sum(s => s.RemainingAmountMinor);
+            var netRecurring = _occurrences.ListRecurringForPeriod(monthStart, monthEnd).Sum(o => o.ExpectedAmountMinor);
+
+            var budget = _budgets.FindByYearMonth(year, month);
+            var totalBudgeted = budget is null ? 0L : _allocations.ListForBudget(budget.Id).Sum(a => a.PlannedAmountMinor);
+
+            var remainingToLive = netRecurring - totalBudgeted;
 
             var income = SumForCategoryType(monthStart, monthEnd, categoryTypes, CategoryType.Income);
             var savings = SumForCategoryType(monthStart, monthEnd, categoryTypes, CategoryType.Savings);

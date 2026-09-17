@@ -120,7 +120,11 @@ namespace FinanceOS.EditorTools
             Check(viewModel!.VerificationQueue.Count == 1, "September's rent occurrence is due for verification");
             Check(Normalize(viewModel.AvailableBalanceText) == "1 748,60 €", "available balance formatted correctly");
             Check(viewModel.ChartSeries.Count > 0, "chart series is populated when an account exists");
-            Check(viewModel.RemainingToLiveText == "—", "reste à vivre falls back to a placeholder with no budget created yet for this month");
+            // ADR-147: reste à vivre no longer needs a budget to show a real figure — here it's
+            // just the net recurring operations for the month (September's rent occurrence alone,
+            // -65 000), nothing to deduct since no budget exists yet.
+            Check(Normalize(viewModel.RemainingToLiveText) == "−650,00 €",
+                "reste à vivre shows net recurring operations alone (the rent occurrence) with no budget created yet for this month");
             Check(viewModel.BudgetSummary.Count == 0, "budget summary is empty with no budget created yet for this month");
             Check(viewModel.Alerts.Count == 0, "no alerts yet — no budget to be over, and the balance is well above the low-balance threshold");
             Check(viewModel.UpcomingOperations.Count == 0, "no upcoming operations yet — the only occurrence so far (September's rent) is already overdue, not upcoming");
@@ -137,7 +141,7 @@ namespace FinanceOS.EditorTools
 
             Check(root.Q<Label>("account-name-label").text == "Compte courant", "account name bound");
             Check(Normalize(root.Q<Label>("kpi-available-value").text) == "1 748,60 €", "available balance bound");
-            Check(root.Q<Label>("kpi-remaining-value").text == "—", "reste à vivre placeholder bound");
+            Check(Normalize(root.Q<Label>("kpi-remaining-value").text) == "−650,00 €", "reste à vivre bound to the rendered label");
             Check(root.Q<Label>("verification-count").text == "1", "verification count bound");
             Check(root.Q<Label>("verification-empty").style.display == DisplayStyle.None, "empty-state hidden when queue is non-empty");
 
@@ -719,7 +723,12 @@ namespace FinanceOS.EditorTools
             Check(budgetsViewModel.Allocations.Count == 1, "one allocation appears in the view model");
             Check(budgetsViewModel.Allocations[0].CategoryName == "Logement", "category resolved by name");
             Check(budgetsViewModel.Overview is not null, "overview built once a budget exists");
-            Check(Normalize(budgetsViewModel.Overview!.RemainingToLiveText) == "−40,00 €", "reste à vivre is prévu − réel − engagé (70 000 − 9 000 − 65 000 minor), over budget here");
+            // ADR-147: reste à vivre = net recurring operations for September (rent -65 000 +
+            // salary +210 000 + "Épargne mensuelle" transfer -20 000 + "Abonnement avec
+            // historique" -500 = +124 500) minus the month's total budgeted amount across every
+            // category (just Logement's 70 000 here) = +54 500.
+            Check(Normalize(budgetsViewModel.Overview!.RemainingToLiveText) == "+545,00 €",
+                "reste à vivre = net recurring operations (124 500) minus total budgeted (70 000)");
             Check(budgetsViewModel.ChartGroups.Count == 1, "one bar group appears in the view model, matching the one allocation");
             Check(budgetsViewModel.ChartGroups[0].CategoryName == "Logement", "bar group resolved by category name");
             Check(budgetsViewModel.ChartGroups[0].PlannedMinor == 70_000, "bar group carries the raw planned amount, not display text");
@@ -731,7 +740,7 @@ namespace FinanceOS.EditorTools
             Check(budgetsViewModel.SavingsEvolution[0].SavingsMinor == 0, "no savings activity in April in this fixture");
 
             var dashboardViewModelWithBudget = DashboardViewModelBuilder.Build(app, today);
-            Check(Normalize(dashboardViewModelWithBudget!.RemainingToLiveText) == "−40,00 €", "dashboard reflects the same reste à vivre as the budget screen, once a budget exists");
+            Check(Normalize(dashboardViewModelWithBudget!.RemainingToLiveText) == "+545,00 €", "dashboard reflects the same reste à vivre as the budget screen");
             Check(dashboardViewModelWithBudget.BudgetSummary.Count == 1, "one row in the budget summary, matching the one allocation");
             Check(dashboardViewModelWithBudget.BudgetSummary[0].CategoryName == "Logement", "budget summary row resolved by category name");
             Check(Normalize(dashboardViewModelWithBudget.BudgetSummary[0].ActualText) == "90,00 €", "réel formatted correctly (9 000 minor)");

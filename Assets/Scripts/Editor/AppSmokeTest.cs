@@ -117,11 +117,24 @@ namespace FinanceOS.EditorTools
             app.Transactions.CreateManual(current.Id, 220_000, "EUR", new DateTime(2026, 9, 2), "Salaire", categoryId: revenus.Id);
             app.Transactions.CreateManual(current.Id, -30_000, "EUR", new DateTime(2026, 9, 3), "Virement Livret A", categoryId: epargne.Id);
 
-            var overview = app.Budget.GetOverview(budget.Id);
+            var overview = app.Budget.GetOverview(2026, 9);
             Check(overview.IncomeMinor == 220_000, "income sums transactions categorized as Income within the month");
             Check(overview.SavingsMinor == 30_000, "savings sums transactions categorized as Savings within the month (magnitude)");
-            Check(overview.RemainingToLiveMinor == 5_000, "reste à vivre only sums Expense-category remaining, unaffected by income/savings");
+            // ADR-147: reste à vivre = net recurring operations for the month (here, just the
+            // confirmed September rent occurrence, -65 000 — the only recurring-operation-sourced
+            // occurrence whose ExpectedDate falls in September) minus the month's total budgeted
+            // amount across every category regardless of type (here, just housing's 70 000).
+            Check(overview.RemainingToLiveMinor == -135_000,
+                "reste à vivre = net recurring operations (-65 000, the confirmed rent occurrence) minus total budgeted (70 000)");
             Check(Math.Abs(overview.SavingsRatePercent - 13.6363636) < 0.01, "savings rate = savings / income * 100");
+
+            // ADR-147: with no budget created for October, reste à vivre still returns a real
+            // figure (not a placeholder) — just the net recurring operations alone, nothing to
+            // deduct. October's rent occurrence (generated earlier, still 'planned') is the only
+            // recurring-operation-sourced occurrence in that month.
+            var overviewWithoutBudget = app.Budget.GetOverview(2026, 10);
+            Check(overviewWithoutBudget.RemainingToLiveMinor == -65_000,
+                "reste à vivre falls back to net recurring operations alone when no budget exists for the month");
 
             // The "Virement Livret A" transaction just above (line ~116) is exactly the real-world
             // case this feature targets: one leg of a transfer entered manually, with nothing ever

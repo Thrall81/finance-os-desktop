@@ -144,6 +144,19 @@ namespace FinanceOS.Data
                 .Select(Map)
                 .ToList();
 
+        /// <summary>Every recurring-operation-sourced occurrence within a period, regardless of
+        /// status (planned, missed, or already matched) — one-off occurrences (no recurring
+        /// operation behind them) and cancelled/ignored ones are excluded. Unlike
+        /// <see cref="ListForPeriod"/>, deliberately includes matched occurrences: used for "reste
+        /// à vivre" (ADR-147), which needs a stable month-wide total that does not shrink as
+        /// occurrences get confirmed one by one over the course of the month.</summary>
+        public IReadOnlyList<ForecastOccurrence> ListRecurringForPeriod(DateTime from, DateTime to) =>
+            _connection.Query<ForecastOccurrenceRow>(
+                    $"{SelectColumns} WHERE recurring_operation_id IS NOT NULL AND status IN ('planned', 'missed', 'matched') AND expected_date BETWEEN ? AND ? ORDER BY expected_date",
+                    from.ToStorageString(), to.ToStorageString())
+                .Select(Map)
+                .ToList();
+
         /// <summary>Existing occurrences for one recurring operation in a date range — used by the
         /// (future) generator to stay idempotent. See docs/06-Moteur_de_prevision.md §5.</summary>
         public IReadOnlyList<ForecastOccurrence> ListForRecurringOperation(int recurringOperationId, DateTime from, DateTime to) =>

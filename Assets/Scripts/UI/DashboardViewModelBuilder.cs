@@ -90,10 +90,12 @@ namespace FinanceOS.UI
             return alerts;
         }
 
-        /// <summary>Empty when no budget exists for the current month — same reasoning as
-        /// <see cref="BuildRemainingToLiveText"/>, and the same underlying figures as the Budget
+        /// <summary>Empty when no budget exists for the current month — unlike
+        /// <see cref="BuildRemainingToLiveText"/> since ADR-147 (which no longer needs one), this
+        /// figure is genuinely budget-shaped: it reuses the same underlying figures as the Budget
         /// screen's own allocations table (`BudgetService.GetSummary`), just as compact progress
-        /// bars instead of four columns. Not account-scoped, same as reste à vivre.</summary>
+        /// bars instead of four columns, and there is nothing to summarize without allocations.
+        /// Not account-scoped, same as reste à vivre.</summary>
         private static IReadOnlyList<DashboardBudgetRowViewModel> BuildBudgetSummary(AppContainer app, DateTime today)
         {
             var budget = app.Budget.FindByYearMonth(today.Year, today.Month);
@@ -148,22 +150,16 @@ namespace FinanceOS.UI
                 .ToList();
         }
 
-        /// <summary>"—" when no budget exists for the current month — unlike the savings-evolution
-        /// chart (ADR-123), reste à vivre is inherently budget-shaped: it sums the remaining
-        /// (prévu − réel − engagé) of each allocated Expense-type category, so with no allocation
-        /// there is nothing to sum in the first place, not just an empty history. Same definition
-        /// as `BudgetOverview.RemainingToLiveMinor` (ADR-115) — user-wide, not account-scoped,
-        /// unlike every other Dashboard figure, because a budget itself isn't account-scoped
-        /// either.</summary>
+        /// <summary>Same definition as `BudgetOverview.RemainingToLiveMinor` (ADR-147) — user-wide,
+        /// not account-scoped, unlike every other Dashboard figure, because neither recurring
+        /// operations nor a budget are account-scoped either. No longer requires a budget to exist
+        /// for the month (ADR-147 redefines the figure around recurring operations, only deducting
+        /// a budget total when one exists) — always shows a real amount rather than "—" as soon as
+        /// there is at least one recurring operation, which is true for almost every real user from
+        /// their very first session.</summary>
         private static string BuildRemainingToLiveText(AppContainer app, DateTime today)
         {
-            var budget = app.Budget.FindByYearMonth(today.Year, today.Month);
-            if (budget is null)
-            {
-                return "—";
-            }
-
-            var overview = app.Budget.GetOverview(budget.Id);
+            var overview = app.Budget.GetOverview(today.Year, today.Month);
             return MoneyFormat.Format(overview.RemainingToLiveMinor, forceSign: true);
         }
 
