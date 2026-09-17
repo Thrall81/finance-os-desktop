@@ -620,12 +620,16 @@
     align-items: center;
 }
 
-/* Unity's Toggle control never had a project rule at all (unlike every other text element,
-   which already flows through --color-ink-* tokens) — its label defaulted to Unity's built-in
-   runtime theme color, readable by coincidence on the light background but invisible against
-   the dark one. Same root cause as ADR-135's forgotten .primary-button white text: grep for
-   controls with no explicit color rule whenever checking a new theme, not just hardcoded hex. */
-.unity-toggle__text {
+/* Unity's Toggle control never had a project rule that actually matched anything — the first
+   attempt at this fix (commit dc9b287) targeted .unity-toggle__text, a class that does not exist
+   on this control in this Unity version. Confirmed via the UI Toolkit Debugger (Window > UI
+   Toolkit > Debugger > Pick Element): the real class list on a Toggle's label is
+   unity-text-element, unity-label, unity-base-field__label, unity-toggle__label — same "Unity
+   composes BEM class strings at runtime, verify rather than assume" lesson as the
+   MultiColumnListView header classes. The label defaulted to Unity's built-in runtime theme
+   color, readable by coincidence on the light background but invisible (and, once any of it did
+   show through, a dim blue when checked) against the dark one. */
+.unity-toggle__label {
     color: var(--color-ink-900);
 }
 
