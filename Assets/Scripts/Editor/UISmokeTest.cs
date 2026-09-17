@@ -618,6 +618,13 @@ namespace FinanceOS.EditorTools
                 Check(wrongAccountRoot.Q<VisualElement>("form-counterparty-row").style.display == DisplayStyle.Flex, "counterparty row is editable in edit mode");
                 Check(wrongAccountRoot.Q<TextField>("form-counterparty").value == string.Empty, "counterparty field opens empty when the operation has no counterparty");
 
+                // Start date, previously read-only in edit mode, now reuses the same App UI
+                // DatePicker trigger as creation (ADR-145 follow-up) — opens pre-filled with the
+                // operation's actual start date, not today's.
+                Check(wrongAccountRoot.Q<VisualElement>("form-start-date-row").style.display == DisplayStyle.Flex, "start-date row is editable in edit mode");
+                Check(wrongAccountRoot.Q<Button>("form-start-date").text == DateFormat.ForInput(operation.StartDate),
+                    "start-date trigger opens pre-filled with the operation's current start date");
+
                 wrongAccountRoot.Q<DropdownField>("form-source-account").SetValueWithoutNotify("Compte courant");
                 wrongAccountRoot.Q<DropdownField>("form-frequency").SetValueWithoutNotify("Trimestrielle");
                 wrongAccountRoot.Q<DropdownField>("form-category").SetValueWithoutNotify("Logement");
@@ -1064,7 +1071,7 @@ namespace FinanceOS.EditorTools
             var onboardingPath = Path.Combine(Path.GetTempPath(), $"financeos-ui-smoke-onboarding-{Guid.NewGuid():N}.db");
             using (var onboardingApp = new AppContainer(onboardingPath))
             {
-                var freshOnboardingViewModel = OnboardingViewModelBuilder.Build(onboardingApp.Accounts, onboardingApp.RecurringOperations);
+                var freshOnboardingViewModel = OnboardingViewModelBuilder.Build(onboardingApp.Accounts, onboardingApp.RecurringOperations, onboardingApp.Categories);
                 Check(freshOnboardingViewModel.Accounts.Count == 0, "a fresh onboarding scenario starts with no accounts");
                 Check(freshOnboardingViewModel.Operations.Count == 0, "a fresh onboarding scenario starts with no operations");
 
@@ -1077,7 +1084,8 @@ namespace FinanceOS.EditorTools
                 var onboardingRoot = onboardingTree.Instantiate();
                 var onboardingFinishedCalls = 0;
                 var onboardingController = new OnboardingController(
-                    onboardingRoot, onboardingApp.Accounts, onboardingApp.RecurringOperations, () => onboardingFinishedCalls++);
+                    onboardingRoot, onboardingApp.Accounts, onboardingApp.RecurringOperations, onboardingApp.Categories,
+                    () => onboardingFinishedCalls++);
 
                 Check(onboardingRoot.Q<VisualElement>("step-welcome").style.display == DisplayStyle.Flex, "welcome step shown first");
                 Check(onboardingRoot.Q<VisualElement>("step-account").style.display == DisplayStyle.None, "account step hidden initially");
@@ -1122,14 +1130,30 @@ namespace FinanceOS.EditorTools
                     "removing an account archives it rather than deleting it — no hard-delete path exists for accounts anywhere in this app");
                 Check(onboardingRoot.Q<VisualElement>("account-list").childCount == 1, "the removed account no longer renders in the step's own list");
 
+                // Created before advancing to the recurring-operations step so that step's own
+                // Refresh() (triggered by TryAdvanceFromAccountStep below) picks it up when
+                // building the category dropdown's choices — the same live-rebuild-on-navigation
+                // pattern the account dropdown already relies on.
+                var salaryCategory = onboardingApp.Categories.Create("Salaire", CategoryType.Income);
+
                 onboardingController.TryAdvanceFromAccountStep();
                 Check(onboardingRoot.Q<Label>("account-next-error").style.display == DisplayStyle.None, "no error once an account exists");
                 Check(onboardingRoot.Q<VisualElement>("step-recurring").style.display == DisplayStyle.Flex, "advances to the recurring-operations step now that an account exists");
                 Check(onboardingRoot.Q<Button>("recurring-next-button").text == "Passer", "the advance button reads 'Passer' with nothing added yet — this step is optional");
 
+                // The date and category fields were both missing before this pass — every
+                // onboarding operation silently started "today" with no category at all. The date
+                // trigger can't be click-simulated here (same live-panel limitation as every other
+                // AppDatePickerField button in this project), so only its default pre-fill is
+                // checked; category selection works fine since DropdownField.value can be set
+                // directly without a panel.
+                Check(onboardingRoot.Q<Button>("operation-date-field").text != "jj/mm/aaaa",
+                    "operation date field is pre-filled with today's date, not the placeholder");
+
                 onboardingRoot.Q<TextField>("operation-name-field").value = "Salaire";
                 onboardingRoot.Q<DropdownField>("operation-type-field").value = "Revenu";
                 onboardingRoot.Q<TextField>("operation-amount-field").value = "2500";
+                onboardingRoot.Q<DropdownField>("operation-category-field").value = "Salaire";
                 onboardingController.AddOperation();
 
                 Check(onboardingApp.RecurringOperations.ListAll().Count == 1, "the recurring operation was actually persisted");
@@ -1139,7 +1163,13 @@ namespace FinanceOS.EditorTools
                 Check(createdOperation.DestinationAccountId == createdAccount.Id, "income targets the account created in step 2 as its destination");
                 Check(createdOperation.ExpectedAmountMinor == 250_000, "operation amount carried through (2500,00 €)");
                 Check(createdOperation.Frequency == RecurringFrequency.Monthly, "onboarding always creates monthly operations — no frequency field to keep the form minimal");
+                Check(createdOperation.StartDate.Date == DateTime.Now.Date, "operation start date defaults to today, now editable via the same App UI DatePicker as every other date field");
+                Check(createdOperation.CategoryId == salaryCategory.Id, "operation category is now carried through — previously there was no field to set it at all");
                 Check(onboardingRoot.Q<Button>("recurring-next-button").text == "Suivant", "the advance button relabels to 'Suivant' once something has been added");
+                Check(onboardingRoot.Q<Button>("operation-date-field").text == DateFormat.ForInput(DateTime.Now),
+                    "date field resets to today after a successful add, same reset pattern as name/amount");
+                Check(onboardingRoot.Q<DropdownField>("operation-category-field").value == "Aucune",
+                    "category field resets to Aucune after a successful add, same reset pattern as the account field");
 
                 // Same removal coverage for a mistakenly-added recurring operation — a real
                 // delete this time (RecurringOperationService.Delete), safe here since no

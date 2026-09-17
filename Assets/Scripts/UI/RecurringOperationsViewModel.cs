@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 
 namespace FinanceOS.UI
@@ -17,7 +18,7 @@ namespace FinanceOS.UI
         int? CategoryId,
         string CategoryText,
         string CounterpartyText,
-        string StartDateText,
+        DateTime StartDate,
         bool IsActive);
 
     public sealed record RecurringOperationsViewModel(

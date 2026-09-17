@@ -54,10 +54,6 @@
         <ui:Label text="Date de début" class="form-label" />
         <ui:Button name="form-start-date" text="jj/mm/aaaa" class="form-field date-field-trigger" />
       </ui:VisualElement>
-      <ui:VisualElement name="form-start-date-readonly-row" class="form-row" style="display: none;">
-        <ui:Label text="Date de début" class="form-label" />
-        <ui:Label name="form-start-date-readonly" text="—" class="form-readonly-value" />
-      </ui:VisualElement>
 
       <ui:VisualElement name="form-day-of-month-row" class="form-row">
         <ui:Label text="Jour du mois attendu (facultatif)" class="form-label" />

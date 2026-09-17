@@ -9,11 +9,10 @@ namespace FinanceOS.UI
 {
     /// <summary>
     /// Binds RecurringOperations.uxml: list, creation (expense/income/savings transfer/internal
-    /// transfer), and — in edit mode — everything except name and start date (type, accounts,
-    /// expected amount, frequency, day-of-month, category, counterparty — see
-    /// RecurringOperationService.UpdateOperation, ADR-140). Start date stays read-only because
-    /// it's immutable in Domain by design; name has simply never had a reported need to change.
-    /// See docs/07-Interface.md §3/§9/§10.
+    /// transfer), and — in edit mode — everything except name (type, accounts, expected amount,
+    /// frequency, start date, day-of-month, category, counterparty — see
+    /// RecurringOperationService.UpdateOperation, ADR-140). Name has simply never had a reported
+    /// need to change. See docs/07-Interface.md §3/§9/§10.
     /// </summary>
     public sealed class RecurringOperationsController
     {
@@ -61,12 +60,11 @@ namespace FinanceOS.UI
         private readonly DropdownField _frequencyField;
         private readonly VisualElement _startDateRow;
         private readonly Button _startDateField;
-        private readonly VisualElement _startDateReadonlyRow;
-        private readonly Label _startDateReadonlyLabel;
 
-        /// <summary>ADR-145 (essai) : source de vérité pour la date de début désormais choisie via
-        /// le DatePicker App UI (Button.text n'est qu'un affichage, pas une valeur analysable comme
-        /// l'était le TextField qu'il remplace) — toujours valide, plus besoin de TryParseInput.</summary>
+        /// <summary>ADR-145 : source de vérité pour la date de début désormais choisie via le
+        /// DatePicker App UI (Button.text n'est qu'un affichage, pas une valeur analysable comme
+        /// l'était le TextField qu'il remplace) — toujours valide, plus besoin de TryParseInput.
+        /// Éditable en création comme en édition, même champ dans les deux cas.</summary>
         private DateTime _startDateValue;
         private readonly VisualElement _dayOfMonthRow;
         private readonly TextField _dayOfMonthField;
@@ -131,8 +129,6 @@ namespace FinanceOS.UI
                 _startDateField, () => _startDateValue,
                 selected => { _startDateValue = selected; UpdateSkipWarning(); },
                 settings.Get().Theme == AppTheme.Dark, appUiThemeStyleSheet);
-            _startDateReadonlyRow = root.Q<VisualElement>("form-start-date-readonly-row");
-            _startDateReadonlyLabel = root.Q<Label>("form-start-date-readonly");
             _dayOfMonthRow = root.Q<VisualElement>("form-day-of-month-row");
             _dayOfMonthField = root.Q<TextField>("form-day-of-month");
             NumericInputFilter.RestrictToInteger(_dayOfMonthField);
@@ -265,7 +261,6 @@ namespace FinanceOS.UI
             _frequencyField.SetValueWithoutNotify(FrequencyOptions[1].Text);
 
             _startDateRow.style.display = DisplayStyle.Flex;
-            _startDateReadonlyRow.style.display = DisplayStyle.None;
             _startDateValue = DateTime.Now;
             _startDateField.text = DateFormat.ForInput(_startDateValue);
 
@@ -301,11 +296,11 @@ namespace FinanceOS.UI
 
             _nameRow.style.display = DisplayStyle.None;
 
-            // Type, accounts, frequency, day-of-month, category and counterparty are all
-            // editable in edit mode too — only name and start date stay fixed after creation
-            // (start date is immutable in Domain by design; renaming has no reported need yet).
-            // See RecurringOperationService.UpdateOperation, ADR-140 (extends ADR-137's
-            // account-only correction to the operation's other fields).
+            // Type, accounts, frequency, start date, day-of-month, category and counterparty are
+            // all editable in edit mode too — only name stays fixed after creation (renaming has
+            // no reported need yet). See RecurringOperationService.UpdateOperation, ADR-140
+            // (extends ADR-137's account-only correction to the operation's other fields; the
+            // start-date follow-up extends it once more after ADR-145 proved the datepicker).
             _typeRow.style.display = DisplayStyle.Flex;
             _typeField.SetValueWithoutNotify(row.TypeText);
 
@@ -320,9 +315,9 @@ namespace FinanceOS.UI
             _frequencyRow.style.display = DisplayStyle.Flex;
             _frequencyField.SetValueWithoutNotify(row.FrequencyText);
 
-            _startDateRow.style.display = DisplayStyle.None;
-            _startDateReadonlyRow.style.display = DisplayStyle.Flex;
-            _startDateReadonlyLabel.text = row.StartDateText;
+            _startDateRow.style.display = DisplayStyle.Flex;
+            _startDateValue = row.StartDate;
+            _startDateField.text = DateFormat.ForInput(_startDateValue);
 
             _dayOfMonthRow.style.display = DisplayStyle.Flex;
             _dayOfMonthField.SetValueWithoutNotify(row.ExpectedDayOfMonth?.ToString() ?? string.Empty);
@@ -398,8 +393,8 @@ namespace FinanceOS.UI
             try
             {
                 _operations.UpdateOperation(
-                    id, type, sourceAccountId, destinationAccountId, magnitude, frequency, dayOfMonth,
-                    categoryId, counterpartyId);
+                    id, type, sourceAccountId, destinationAccountId, magnitude, frequency, _startDateValue,
+                    dayOfMonth, categoryId, counterpartyId);
             }
             catch (ArgumentException ex)
             {
@@ -450,10 +445,11 @@ namespace FinanceOS.UI
         }
 
         /// <summary>Reads and validates every field shared by creation and editing (everything
-        /// except name/start date, which only creation gathers itself). Extracted once both forms
-        /// needed the exact same type/frequency/day-of-month/accounts/category/counterparty
-        /// parsing — see ADR-140. Returns false (and shows the relevant error) on the first
-        /// invalid field.</summary>
+        /// except name, which only creation gathers, and start date, which both forms read
+        /// directly from <see cref="_startDateValue"/> instead). Extracted once both forms needed
+        /// the exact same type/frequency/day-of-month/accounts/category/counterparty parsing —
+        /// see ADR-140. Returns false (and shows the relevant error) on the first invalid
+        /// field.</summary>
         private bool TryGatherOperationFields(
             out RecurringOperationType type,
             out long expectedAmountMinor,

@@ -18,7 +18,7 @@ namespace FinanceOS.Domain
         public long ExpectedAmountMinor { get; private set; }
         public RecurringFrequency Frequency { get; private set; }
         public int IntervalValue { get; private set; }
-        public DateTime StartDate { get; }
+        public DateTime StartDate { get; private set; }
         public DateTime? EndDate { get; private set; }
         public int? ExpectedDayOfMonth { get; private set; }
         public int DateToleranceDays { get; private set; }
@@ -203,14 +203,29 @@ namespace FinanceOS.Domain
         }
 
         /// <summary>Corrects the frequency and/or day-of-month chosen at creation. Interval value
-        /// stays untouched — no screen exposes editing it, same restraint as start date (below).
-        /// Callers must also clear and regenerate this operation's still-pending occurrences
-        /// (RecurringOperationService.UpdateOperation) — their dates were computed from the old
-        /// schedule.</summary>
+        /// stays untouched — no screen exposes editing it. Callers must also clear and regenerate
+        /// this operation's still-pending occurrences (RecurringOperationService.UpdateOperation)
+        /// — their dates were computed from the old schedule.</summary>
         public void ChangeSchedule(RecurringFrequency frequency, int? expectedDayOfMonth, DateTimeOffset? now = null)
         {
             Frequency = frequency;
             ExpectedDayOfMonth = expectedDayOfMonth;
+            Touch(now);
+        }
+
+        /// <summary>Corrects the start date chosen at creation — previously immutable by design,
+        /// reopened once the App UI DatePicker (ADR-145) made it just as easy to edit as any other
+        /// field. Same "already-generated occurrences carry their old value" caveat as every other
+        /// ChangeX method here: callers must also clear and regenerate this operation's still-
+        /// pending occurrences (RecurringOperationService.UpdateOperation).</summary>
+        public void ChangeStartDate(DateTime startDate, DateTimeOffset? now = null)
+        {
+            if (EndDate is { } end && end < startDate)
+            {
+                throw new ArgumentException("End date cannot precede start date.", nameof(startDate));
+            }
+
+            StartDate = startDate;
             Touch(now);
         }
 

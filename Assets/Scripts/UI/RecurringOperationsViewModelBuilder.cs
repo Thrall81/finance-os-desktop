@@ -42,7 +42,7 @@ namespace FinanceOS.UI
                     o.CategoryId,
                     o.CategoryId is int categoryId && categoryNames.TryGetValue(categoryId, out var categoryName) ? categoryName : "—",
                     o.CounterpartyId is int counterpartyId && counterpartyNames.TryGetValue(counterpartyId, out var counterpartyName) ? counterpartyName : "—",
-                    DateFormat.Short(o.StartDate),
+                    o.StartDate,
                     o.IsActive))
                 .ToList();
 

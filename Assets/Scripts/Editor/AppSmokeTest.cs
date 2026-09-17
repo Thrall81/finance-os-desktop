@@ -190,7 +190,7 @@ namespace FinanceOS.EditorTools
 
             app.RecurringOperations.UpdateOperation(
                 wrongAccountOperation.Id, RecurringOperationType.Expense, current.Id, null,
-                1_000, RecurringFrequency.Monthly, 1, categoryId: null, counterpartyId: null);
+                1_000, RecurringFrequency.Monthly, wrongAccountOperation.StartDate, 1, categoryId: null, counterpartyId: null);
             Check(app.RecurringOperations.FindById(wrongAccountOperation.Id)!.SourceAccountId == current.Id,
                 "the corrected account is persisted on the recurring operation itself");
 
@@ -208,7 +208,7 @@ namespace FinanceOS.EditorTools
             {
                 app.RecurringOperations.UpdateOperation(
                     wrongAccountOperation.Id, RecurringOperationType.Expense, null, null,
-                    1_000, RecurringFrequency.Monthly, 1, categoryId: null, counterpartyId: null);
+                    1_000, RecurringFrequency.Monthly, wrongAccountOperation.StartDate, 1, categoryId: null, counterpartyId: null);
             }
             catch (ArgumentException)
             {
@@ -223,7 +223,7 @@ namespace FinanceOS.EditorTools
             var testCounterparty = app.Counterparties.FindOrCreateByName("Bailleur Test");
             app.RecurringOperations.UpdateOperation(
                 wrongAccountOperation.Id, RecurringOperationType.Expense, current.Id, null,
-                1_000, RecurringFrequency.Quarterly, 1, categoryId: housing.Id, counterpartyId: testCounterparty.Id);
+                1_000, RecurringFrequency.Quarterly, wrongAccountOperation.StartDate, 1, categoryId: housing.Id, counterpartyId: testCounterparty.Id);
 
             var afterScheduleChange = app.RecurringOperations.FindById(wrongAccountOperation.Id)!;
             Check(afterScheduleChange.Frequency == RecurringFrequency.Quarterly, "frequency change is persisted");
@@ -243,15 +243,19 @@ namespace FinanceOS.EditorTools
             // from source to destination — exercises the repository's own `type` column, which
             // never appeared in its UPDATE statement before this pass (a latent bug, harmless
             // only because Type used to be immutable — same shape as ADR-137's original
-            // account-columns gap).
+            // account-columns gap). Bundled with a real start-date change too, since start date
+            // was immutable until this same pass — exercises the repository's `start_date` column,
+            // which never appeared in the UPDATE statement either (identical latent-bug shape).
+            var newStartDate = new DateTime(2026, 10, 15);
             app.RecurringOperations.UpdateOperation(
                 wrongAccountOperation.Id, RecurringOperationType.Income, null, current.Id,
-                1_000, RecurringFrequency.Quarterly, 1, categoryId: housing.Id, counterpartyId: testCounterparty.Id);
+                1_000, RecurringFrequency.Quarterly, newStartDate, 1, categoryId: housing.Id, counterpartyId: testCounterparty.Id);
 
             var afterTypeChange = app.RecurringOperations.FindById(wrongAccountOperation.Id)!;
             Check(afterTypeChange.Type == RecurringOperationType.Income, "type change is actually persisted by the repository, not silently dropped");
             Check(afterTypeChange.ExpectedAmountMinor == 1_000, "an income's expected amount is stored positive — the sign flipped by the type change");
             Check(afterTypeChange.DestinationAccountId == current.Id, "the account moved from source to destination to match the new type");
+            Check(afterTypeChange.StartDate == newStartDate, "start date change is actually persisted by the repository, not silently dropped");
 
             var settings = app.Settings.Get();
             Check(settings.ForecastHorizonDays == 90, "default forecast horizon");

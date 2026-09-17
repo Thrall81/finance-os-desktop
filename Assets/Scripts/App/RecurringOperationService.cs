@@ -49,15 +49,15 @@ namespace FinanceOS.App
         public IReadOnlyList<RecurringOperation> ListAll() => _operations.ListAll();
 
         /// <summary>Applies every field the edit form can change — type, accounts, expected
-        /// amount, frequency, day-of-month, category, counterparty — in one save, then wipes and
-        /// regenerates this operation's still-pending occurrences exactly once. Every one of these
-        /// fields is baked into an already-generated ForecastOccurrence at the moment it's created
-        /// (see ForecastOccurrenceGenerator), so any of them changing makes existing planned/missed
-        /// occurrences stale in the same way ADR-137 first found for accounts alone — consolidated
-        /// into a single wipe+regenerate here rather than one per field. The caller is responsible
-        /// for regenerating afterward, same as after Create — see the UI README. Name, start date
-        /// and interval value stay out of scope: no screen exposes editing them (start date is
-        /// immutable in Domain by design; interval value has no form field anywhere).</summary>
+        /// amount, frequency, start date, day-of-month, category, counterparty — in one save, then
+        /// wipes and regenerates this operation's still-pending occurrences exactly once. Every one
+        /// of these fields is baked into an already-generated ForecastOccurrence at the moment it's
+        /// created (see ForecastOccurrenceGenerator), so any of them changing makes existing
+        /// planned/missed occurrences stale in the same way ADR-137 first found for accounts alone
+        /// — consolidated into a single wipe+regenerate here rather than one per field. The caller
+        /// is responsible for regenerating afterward, same as after Create — see the UI README.
+        /// Name and interval value stay out of scope: no screen exposes editing them (renaming has
+        /// no reported need yet; interval value has no form field anywhere).</summary>
         public void UpdateOperation(
             int operationId,
             RecurringOperationType type,
@@ -65,6 +65,7 @@ namespace FinanceOS.App
             int? destinationAccountId,
             long expectedAmountMinor,
             RecurringFrequency frequency,
+            DateTime startDate,
             int? expectedDayOfMonth,
             int? categoryId,
             int? counterpartyId)
@@ -73,6 +74,7 @@ namespace FinanceOS.App
             operation.ChangeType(type, sourceAccountId, destinationAccountId);
             operation.UpdateExpectedAmount(expectedAmountMinor);
             operation.ChangeSchedule(frequency, expectedDayOfMonth);
+            operation.ChangeStartDate(startDate);
             operation.AssignCategory(categoryId);
             operation.AssignCounterparty(counterpartyId);
             _operations.Update(operation);
@@ -94,12 +96,11 @@ namespace FinanceOS.App
 
         /// <summary>Deletes a recurring operation and every occurrence it generated, refusing if
         /// any of them was ever confirmed as a real transaction — deleting those would silently
-        /// erase the record of something that actually happened. Still the only way to undo the
-        /// start date itself (immutable by design, see RecurringOperation.StartDate) — every other
-        /// field (type, accounts, amount, frequency, day-of-month, category, counterparty) can now
-        /// be corrected directly via UpdateOperation instead (ADR-137, extended by ADR-140).
-        /// Relies on `forecast_occurrence.recurring_operation_id ON DELETE CASCADE` to remove the
-        /// (never reconciled) occurrences themselves. See docs/07-Interface.md §3.</summary>
+        /// erase the record of something that actually happened. Every editable field (type,
+        /// accounts, amount, frequency, start date, day-of-month, category, counterparty) can be
+        /// corrected directly via UpdateOperation instead (ADR-137, extended by ADR-140 and the
+        /// start-date follow-up). Relies on `forecast_occurrence.recurring_operation_id ON DELETE
+        /// CASCADE` to remove the (never reconciled) occurrences themselves. See docs/07-Interface.md §3.</summary>
         public void Delete(int operationId)
         {
             RequireOperation(operationId);
