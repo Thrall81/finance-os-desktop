@@ -3,6 +3,7 @@ using System.IO;
 using System.Linq;
 using FinanceOS.App;
 using FinanceOS.Domain;
+using FinanceOS.UI;
 using UnityEditor;
 using UnityEngine;
 
@@ -278,6 +279,21 @@ namespace FinanceOS.EditorTools
             Check(settings.Theme == AppTheme.Light, "theme defaults to light");
             app.Settings.UpdateTheme(AppTheme.Dark);
             Check(app.Settings.Get().Theme == AppTheme.Dark, "theme persisted through the service");
+
+            Check(settings.LastSeenChangelogVersion is null, "no changelog version seen by default");
+            app.Settings.MarkChangelogSeen("1.0.9");
+            Check(app.Settings.Get().LastSeenChangelogVersion == "1.0.9", "seen changelog version persisted through the service");
+
+            // ADR-150: ChangelogEntries.Since is pure and doesn't need an AppContainer at all, but
+            // exercised here alongside the setting it's paired with in practice. "1.0.6" sits three
+            // entries below the newest in the real, hand-written list (1.0.9, 1.0.8, 1.0.7 above
+            // it) — asserted against that known content directly rather than derived generically.
+            var sinceOlder = ChangelogEntries.Since("1.0.6");
+            Check(sinceOlder.Select(e => e.Version).SequenceEqual(new[] { "1.0.9", "1.0.8", "1.0.7" }),
+                "Since returns exactly the entries strictly newer than the given version, newest first");
+            Check(ChangelogEntries.Since(null).Count == ChangelogEntries.All.Count, "Since falls back to the full history when nothing has been seen yet");
+            Check(ChangelogEntries.Since("not-a-real-version").Count == ChangelogEntries.All.Count,
+                "Since falls back to the full history for an unrecognized version rather than showing nothing");
 
             // October's and November's rent occurrences (generated earlier, never confirmed) are
             // still "planned" at this point in the test — a good, untouched pair to exercise the

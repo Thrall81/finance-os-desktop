@@ -384,15 +384,21 @@ namespace FinanceOS.EditorTools
             transactionsController.OnFilterChanged();
             Check(listView.itemsSource.Count == 1, "clearing filter-text restores the unfiltered list");
 
-            var filterDateFromField = transactionsRoot.Q<TextField>("filter-date-from");
-            filterDateFromField.SetValueWithoutNotify("01/09/2026");
-            transactionsController.OnFilterChanged();
+            // ADR-150: filter-date-from is now a datepicker trigger, not free text — its own
+            // click can't be simulated without a live panel, so ApplyFilterDateFrom (the picker's
+            // callback) is called directly instead, same testability pattern as every other
+            // click/change-only method in this project.
+            var filterDateFromField = transactionsRoot.Q<Button>("filter-date-from");
+            Check(filterDateFromField.text == "jj/mm/aaaa", "filter-date-from starts on the placeholder, no constraint");
+            transactionsController.ApplyFilterDateFrom(new DateTime(2026, 9, 1));
             Check(listView.itemsSource.Count == 0, "filter-date-from excludes the August-dated seed transaction");
-            filterDateFromField.SetValueWithoutNotify("not a date");
-            transactionsController.OnFilterChanged();
-            Check(listView.itemsSource.Count == 1, "an unparseable filter-date-from value is treated as no constraint rather than blocking the list");
-            filterDateFromField.SetValueWithoutNotify(string.Empty);
-            transactionsController.OnFilterChanged();
+            Check(filterDateFromField.text == "01/09/2026", "the trigger's own text reflects the picked date");
+            transactionsController.ApplyFilterDateFrom(null);
+            Check(listView.itemsSource.Count == 1, "clearing filter-date-from (the dedicated clear button's action) restores the unfiltered list");
+            Check(filterDateFromField.text == "jj/mm/aaaa", "the trigger's text reverts to the placeholder once cleared");
+            Check(transactionsRoot.Q<Button>("filter-date-from-clear") is not null, "filter-date-from clear button is bound");
+            Check(transactionsRoot.Q<Button>("filter-date-to") is not null, "filter-date-to trigger is bound");
+            Check(transactionsRoot.Q<Button>("filter-date-to-clear") is not null, "filter-date-to clear button is bound");
 
             var filterAmountMinField = transactionsRoot.Q<TextField>("filter-amount-min");
             filterAmountMinField.SetValueWithoutNotify("50");
@@ -645,6 +651,41 @@ namespace FinanceOS.EditorTools
             }
 
             TryDeleteQuietly(wrongAccountUiPath);
+
+            // ADR-150: the skip-date warning (ADR-120), previously create-only, now also fires
+            // during editing — this operation is deliberately created with the exact mismatch
+            // ADR-120 was about (start date the 29th, day-of-month 28: the 28th has already
+            // passed within September by the 29th, so the real first occurrence is in October).
+            var skipWarningEditPath = Path.Combine(Path.GetTempPath(), $"financeos-ui-smoke-skip-warning-edit-{Guid.NewGuid():N}.db");
+            using (var skipWarningApp = new AppContainer(skipWarningEditPath))
+            {
+                skipWarningApp.Categories.SeedDefaultCategoriesIfEmpty();
+                var skipWarningAccount = skipWarningApp.Accounts.CreateAccount("Compte courant", AccountType.Current, "EUR", 100_000);
+                var skipWarningOperation = skipWarningApp.RecurringOperations.Create(
+                    "Abonnement décalé", RecurringOperationType.Expense, 1_000, RecurringFrequency.Monthly,
+                    new DateTime(2026, 9, 29), sourceAccountId: skipWarningAccount.Id, expectedDayOfMonth: 28);
+
+                var skipWarningRoot = recurringOperationsTree.Instantiate();
+                var skipWarningController = new RecurringOperationsController(
+                    skipWarningRoot, skipWarningApp.Accounts, skipWarningApp.Categories, skipWarningApp.Counterparties,
+                    skipWarningApp.RecurringOperations, skipWarningApp.Settings);
+
+                var skipWarningRowViewModel = RecurringOperationsViewModelBuilder.Build(
+                        skipWarningApp.Accounts, skipWarningApp.Categories, skipWarningApp.Counterparties, skipWarningApp.RecurringOperations)
+                    .Operations.Single(o => o.Id == skipWarningOperation.Id);
+
+                skipWarningController.OpenEditForm(skipWarningRowViewModel);
+                Check(skipWarningRoot.Q<Label>("form-skip-warning").style.display == DisplayStyle.None,
+                    "opening the edit form itself does not show the skip warning — only a field change does, same as creation");
+
+                skipWarningController.UpdateSkipWarning();
+                Check(skipWarningRoot.Q<Label>("form-skip-warning").style.display == DisplayStyle.Flex,
+                    "the skip warning now fires during editing too (ADR-150), not just creation");
+                Check(skipWarningRoot.Q<Label>("form-skip-warning").text.Contains("28 octobre"),
+                    "warning names the real first occurrence date (28 octobre), not the mismatched start date's own month");
+            }
+
+            TryDeleteQuietly(skipWarningEditPath);
 
             var forecastsViewModel = ForecastsViewModelBuilder.Build(app, null, today);
             Check(forecastsViewModel.SelectedAccountId == account.Id, "primary account resolved to the Current-type account");
@@ -1284,6 +1325,23 @@ namespace FinanceOS.EditorTools
             Check(root.Q<Label>("update-ready-message").text.Contains("9.9.9"), "the overlay message names the new version");
             shell.HideUpdateReady();
             Check(root.Q<VisualElement>("update-ready-overlay").style.display == DisplayStyle.None, "HideUpdateReady hides it again");
+
+            // ADR-150: same overlay pattern as update-ready, for the changelog popup.
+            Check(root.Q<VisualElement>("changelog-overlay").style.display == DisplayStyle.None, "changelog overlay hidden by default");
+            var changelogClosedCalls = 0;
+            shell.ShowChangelog(
+                new[] { new ChangelogEntry("9.9.9", new[] { "Première nouveauté.", "Deuxième nouveauté." }) },
+                () => changelogClosedCalls++);
+            Check(root.Q<VisualElement>("changelog-overlay").style.display == DisplayStyle.Flex, "ShowChangelog reveals the overlay");
+            var changelogRows = root.Q<ScrollView>("changelog-list").Children().Cast<Label>().ToList();
+            Check(changelogRows.Count == 3, "one version title plus one row per highlight");
+            Check(changelogRows[0].text.Contains("9.9.9"), "first row names the version");
+            Check(changelogRows[1].text.Contains("Première nouveauté"), "highlight rows follow the version title, in order");
+            Check(changelogClosedCalls == 0, "the closed callback has not fired just from showing the overlay");
+            Check(root.Q<Button>("changelog-close-button") is not null, "close button is bound");
+            shell.HideChangelog();
+            Check(root.Q<VisualElement>("changelog-overlay").style.display == DisplayStyle.None, "HideChangelog hides it again");
+            Check(changelogClosedCalls == 1, "HideChangelog fires the closed callback exactly once, whether triggered by the close button or directly");
 
             // UpdateChecker's actual network/coroutine flow can't run here (no real HTTP in
             // batchmode, and it shouldn't depend on live internet either way) — but its decision
