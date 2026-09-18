@@ -8,11 +8,13 @@ using UnityEngine.UIElements;
 namespace FinanceOS.UI
 {
     /// <summary>
-    /// Binds Forecasts.uxml: account selector, synthesis, the full "file de vérification" (with
-    /// an inline confirm form for "C'est arrivé"), the read-only occurrences list, the textual
-    /// timeline (accessible alternative to the deferred chart, ADR-112) and the "Et si ?"
-    /// simulation. Holds the whole AppContainer, like the builder — see
-    /// ForecastsViewModelBuilder's doc comment for why. See docs/07-Interface.md §3/§6/§8.
+    /// Binds Forecasts.uxml: account selector, synthesis, the full "file de vérification" — each
+    /// row's own "C'est arrivé" confirms directly with the expected date/amount (the common case,
+    /// no form); "Modifier" opens the same shared inline form to adjust the date/amount first,
+    /// ADR-148 — the read-only occurrences list, the textual timeline (accessible alternative to
+    /// the deferred chart, ADR-112) and the "Et si ?" simulation. Holds the whole AppContainer,
+    /// like the builder — see ForecastsViewModelBuilder's doc comment for why.
+    /// See docs/07-Interface.md §3/§6/§8.
     /// </summary>
     public sealed class ForecastsController
     {
@@ -423,11 +425,14 @@ namespace FinanceOS.UI
             amountElement.AddToClassList("verification-row-amount");
 
             var actions = new VisualElement { style = { flexDirection = FlexDirection.Row } };
-            var confirmButton = new Button(() => OpenConfirmForm(row)) { text = "C'est arrivé" };
+            var confirmButton = new Button(() => ConfirmDirectly(row)) { text = "C'est arrivé" };
             confirmButton.AddToClassList("secondary-button");
+            var editButton = new Button(() => OpenConfirmForm(row)) { text = "Modifier" };
+            editButton.AddToClassList("secondary-button");
             var cancelButton = new Button(() => CancelOccurrence(row.OccurrenceId)) { text = "Annuler" };
             cancelButton.AddToClassList("secondary-button");
             actions.Add(confirmButton);
+            actions.Add(editButton);
             actions.Add(cancelButton);
 
             element.Add(textColumn);
@@ -436,12 +441,31 @@ namespace FinanceOS.UI
             return element;
         }
 
+        /// <summary>The common case: confirms with the expected date/amount exactly, no form —
+        /// added alongside "Modifier" specifically so most confirmations (which match the
+        /// forecast) take one click instead of opening-then-resubmitting an identical-looking
+        /// form (ADR-148, a real user/entourage usability complaint). If this row's own form
+        /// happened to be open (via "Modifier"), close it — it would otherwise reference an
+        /// occurrence that just changed status underneath it. Public only so UISmokeTest.cs can
+        /// call it directly — its real trigger (Button.clicked) can't fire without a live panel,
+        /// same reasoning as every other click-only method across this project's controllers.</summary>
+        public void ConfirmDirectly(VerificationRowViewModel row)
+        {
+            _app.ForecastOccurrences.ConfirmAsTransaction(row.OccurrenceId, row.ExpectedDate, row.ExpectedAmountMinor);
+            if (_confirmingOccurrenceId == row.OccurrenceId)
+            {
+                CloseConfirmForm();
+            }
+
+            Refresh();
+        }
+
         private void OpenConfirmForm(VerificationRowViewModel row)
         {
             _confirmingOccurrenceId = row.OccurrenceId;
             _confirmingIsNegative = row.ExpectedAmountMinor < 0;
 
-            _confirmFormTitle.text = row.Label;
+            _confirmFormTitle.text = $"Confirmer « {row.Label} »";
             _confirmDateValue = row.ExpectedDate;
             _confirmDateField.text = DateFormat.ForInput(_confirmDateValue);
             _confirmAmountField.SetValueWithoutNotify(PlainAmountText(Math.Abs(row.ExpectedAmountMinor)));

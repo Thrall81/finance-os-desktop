@@ -64,7 +64,7 @@
         </ui:VisualElement>
         <ui:VisualElement class="form-actions">
           <ui:Button name="confirm-cancel-button" text="Annuler" class="secondary-button" />
-          <ui:Button name="confirm-submit-button" text="C'est arrivé" class="primary-button" />
+          <ui:Button name="confirm-submit-button" text="Confirmer" class="primary-button" />
         </ui:VisualElement>
         <ui:Label name="confirm-error" text="" class="form-error" style="display: none;" />
       </ui:VisualElement>

@@ -692,6 +692,42 @@ namespace FinanceOS.EditorTools
             Check(forecastVerificationList.childCount == forecastsViewModel.VerificationQueue.Count, "verification queue rows rendered");
             Check(forecastsRoot.Q<Label>("verification-count").text == forecastsViewModel.VerificationQueue.Count.ToString(), "verification badge count bound");
 
+            var rentRowButtons = forecastVerificationList.Children().ElementAt(0).Query<Button>().ToList();
+            Check(rentRowButtons.Count == 3, "each verification row has three actions: direct confirm, edit, decline (ADR-148)");
+            Check(rentRowButtons[0].text == "C'est arrivé", "first action confirms directly with the expected date/amount, no form");
+            Check(rentRowButtons[1].text == "Modifier", "second action opens the adjustable form for a different date/amount");
+            Check(rentRowButtons[2].text == "Annuler", "third action declines the occurrence, unchanged from before ADR-148");
+
+            // Isolated fixture: ConfirmDirectly changes the shared "rent" occurrence's status,
+            // which the shared app/account fixture's verification-queue/count assertions above and
+            // below this block still rely on staying "planned" — same isolation reasoning as the
+            // wrong-account fixture earlier in this file.
+            var confirmDirectlyPath = Path.Combine(Path.GetTempPath(), $"financeos-ui-smoke-confirm-directly-{Guid.NewGuid():N}.db");
+            using (var confirmDirectlyApp = new AppContainer(confirmDirectlyPath))
+            {
+                confirmDirectlyApp.Categories.SeedDefaultCategoriesIfEmpty();
+                var confirmDirectlyAccount = confirmDirectlyApp.Accounts.CreateAccount("Compte courant", AccountType.Current, "EUR", 100_000);
+                var internetBill = confirmDirectlyApp.RecurringOperations.Create(
+                    "Facture Internet", RecurringOperationType.Expense, 2_900, RecurringFrequency.Monthly,
+                    new DateTime(2026, 9, 14), sourceAccountId: confirmDirectlyAccount.Id, expectedDayOfMonth: 14);
+                confirmDirectlyApp.RecurringOperations.GenerateOccurrences(internetBill.Id, new DateTime(2026, 9, 1), new DateTime(2026, 9, 30));
+
+                var confirmDirectlyRoot = forecastsTree.Instantiate();
+                var confirmDirectlyController = new ForecastsController(confirmDirectlyRoot, confirmDirectlyApp);
+
+                var confirmDirectlyViewModel = ForecastsViewModelBuilder.Build(confirmDirectlyApp, confirmDirectlyAccount.Id, new DateTime(2026, 9, 14));
+                var confirmDirectlyRow = confirmDirectlyViewModel.VerificationQueue.Single();
+                confirmDirectlyController.ConfirmDirectly(confirmDirectlyRow);
+
+                Check(confirmDirectlyApp.ForecastOccurrences.ListDueForVerification(new DateTime(2026, 9, 14)).Count == 0,
+                    "direct confirmation clears the occurrence from the verification queue, same as the form's own submit");
+                var confirmDirectlyTransactions = confirmDirectlyApp.Transactions.ListForAccount(confirmDirectlyAccount.Id);
+                Check(confirmDirectlyTransactions.Count == 1 && confirmDirectlyTransactions[0].AmountMinor == -2_900,
+                    "direct confirmation creates the real transaction with the expected amount, unedited");
+            }
+
+            TryDeleteQuietly(confirmDirectlyPath);
+
             Check(forecastsRoot.Q<VisualElement>("simulation-body").style.display == DisplayStyle.None, "simulation body collapsed by default");
             Check(forecastsRoot.Q<Button>("simulation-toggle-button").text == "Simuler un scénario", "simulation toggle shows its initial label");
 
