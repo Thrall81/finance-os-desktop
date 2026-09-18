@@ -39,7 +39,7 @@ Une fenêtre unique, sans onglets de navigateur ni URL. Barre de navigation lat�
 Premier lancement (affiché une seule fois, cf. §4)
 Tableau de bord
 Comptes (liste, création, modification, détail)
-Transactions (liste, création, modification, import CSV)
+Transactions (liste, création, modification)
 Opérations récurrentes (liste, création, modification)
 Prévisions (synthèse, timeline, liste des occurrences, file de vérification, simulation)
 Budget mensuel
@@ -98,7 +98,7 @@ Cartes reprises de l'ancien projet : Solde disponible, Solde prévu en fin de mo
 
 **Comptes — état d'implémentation** : `Accounts.uxml` + `AccountsController` couvrent la liste (actifs puis archivés), la création et — en modification — le renommage, la politique de liquidité et l'archivage/restauration ; alimentés par `AccountsViewModelBuilder`, qui ne dépend que d'`AccountService` (pas de tout l'`AppContainer`). Le type et le solde initial d'un compte existant ne sont pas modifiables depuis cet écran — cohérent avec `AccountService`, qui n'expose pas ces mutations une fois le compte créé ; ajuster un solde passe par `RecordOfficialBalance` (pas encore relié à une action d'écran). La vue détail dédiée (au-delà du formulaire d'édition inline) n'existe pas encore.
 
-**Transactions — état d'implémentation** : `Transactions.uxml` + `TransactionsController` couvrent la liste (`MultiColumnListView`, colonnes Date/Compte/Libellé/Catégorie/Montant, filtrable par compte), la création — Dépense, Revenu ou Virement interne (via `InternalTransferService`, jusque-là inutilisé par aucun écran) — et, en modification, la catégorie, le tiers, les notes et l'exclusion du budget ainsi que la suppression, cohérent avec ce qu'expose `TransactionService` (compte, date et montant ne sont pas modifiables après création). La catégorisation assistée (§7) fonctionne dès la saisie du libellé : `TransactionService.CreateManual` normalise et mémorise automatiquement chaque libellé saisi manuellement (`LabelNormalization`, `FinanceOS.App`), donc la suggestion marche sans étape de correction préalable. Alimenté par `TransactionsViewModelBuilder` (`AccountService`/`CategoryService`/`CounterpartyService`/`TransactionService`, pas tout l'`AppContainer`). L'import CSV n'est pas construit (hors périmètre V1, cf. `01-Perimetre.md`).
+**Transactions — état d'implémentation** : `Transactions.uxml` + `TransactionsController` couvrent la liste (`MultiColumnListView`, colonnes Date/Compte/Libellé/Catégorie/Montant, filtrable par compte), la création — Dépense, Revenu ou Virement interne (via `InternalTransferService`, jusque-là inutilisé par aucun écran) — et, en modification, la catégorie, le tiers, les notes et l'exclusion du budget ainsi que la suppression, cohérent avec ce qu'expose `TransactionService` (compte, date et montant ne sont pas modifiables après création). La catégorisation assistée (§7) fonctionne dès la saisie du libellé : `TransactionService.CreateManual` normalise et mémorise automatiquement chaque libellé saisi manuellement (`LabelNormalization`, `FinanceOS.App`), donc la suggestion marche sans étape de correction préalable. Alimenté par `TransactionsViewModelBuilder` (`AccountService`/`CategoryService`/`CounterpartyService`/`TransactionService`, pas tout l'`AppContainer`). L'import CSV, envisagé initialement, a été écarté définitivement du périmètre (2026-09-18, ADR-149, `01-Perimetre.md` §3) — la saisie manuelle reste la seule voie d'entrée.
 
 **Opérations récurrentes — état d'implémentation** : `RecurringOperations.uxml` + `RecurringOperationsController` couvrent la liste (`MultiColumnListView`, colonnes Nom/Type/Compte/Fréquence/Montant/Statut), la création — Dépense, Revenu, Virement épargne ou Virement interne, avec les champs compte(s) qui s'adaptent au type choisi — et, en modification, tous les champs sauf le nom et la date de début (type, comptes, montant attendu, fréquence, jour du mois, catégorie, tiers), plus la suspension/reprise (ADR-140, étend ADR-137 qui n'avait d'abord rouvert que les comptes). `RecurringOperationService.GenerateUpcomingOccurrences` (nouveau) est appelé au démarrage de l'application et après chaque création/reprise, pour que les occurrences futures existent réellement en base sans étape manuelle — jusque-là, seuls les tests appelaient la génération. La création d'une occurrence ponctuelle sans récurrence (§2.7 de `01-Perimetre.md`) n'est pas construite sur cet écran, plutôt prévue pour l'écran Prévisions.
 
@@ -132,11 +132,10 @@ Aucune définition précise de « reste à vivre » et « taux d'épargne du moi
 
 # 7. Catégorisation assistée
 
-À la saisie manuelle ou pendant le mapping d'un import CSV (cf. `01-Perimetre.md` §2.4) :
+À la saisie manuelle (cf. `01-Perimetre.md` §2.4) :
 
 - si le libellé normalisé d'une transaction correspond à un libellé déjà catégorisé, la catégorie est préremplie automatiquement dans le champ, visuellement marquée comme « suggestion » (ex. léger fond distinct) plutôt que comme un choix déjà validé ;
-- un seul clic confirme (ou la validation du formulaire l'accepte implicitement) ; changer la catégorie met à jour la mémorisation pour la prochaine fois ;
-- à l'import CSV en masse, les lignes dont le libellé est reconnu affichent déjà leur catégorie suggérée dans l'aperçu, réduisant le travail de tri après import.
+- un seul clic confirme (ou la validation du formulaire l'accepte implicitement) ; changer la catégorie met à jour la mémorisation pour la prochaine fois.
 
 ---
 

@@ -52,7 +52,6 @@ Ce parcours n'est pas un simple assistant décoratif : sans connecteur pour pré
 ## 2.6 Transactions
 
 - création, modification, suppression manuelles ;
-- import CSV local (fichier bancaire exporté manuellement par l'utilisateur) avec aperçu, mapping de colonnes et dédoublonnage ;
 - recherche, filtres (compte, période, catégorie, montant, texte) ;
 - détection assistée des virements internes (deux transactions de montants opposés, dates proches, comptes différents → proposition, jamais automatique) ;
 - rapprochement facultatif entre une transaction réelle et une occurrence prévisionnelle (cf. §2.7, file de vérification).
@@ -100,9 +99,11 @@ Ce parcours n'est pas un simple assistant décoratif : sans connecteur pour pré
 | Open Banking / synchronisation bancaire | Connecteur externe — idem |
 | Dossier surveillé | Suppose une automatisation en arrière-plan sur le système de fichiers, inutile sans connecteur en amont |
 | Documents (factures, bulletins de salaire, PDF, OCR) | Complexité disproportionnée pour une V1 locale ; réévaluable plus tard comme module purement local |
+| Import CSV | Décision explicite de l'utilisateur (2026-09-18, ADR-149) : écarté définitivement, pas seulement différé — la saisie manuelle et la catégorisation assistée (§2.4) couvrent déjà le besoin, le mapping/dédoublonnage/historique d'import représentait un effort disproportionné pour un gain incertain |
+| Verrou local (code PIN) | Décision explicite de l'utilisateur (2026-09-18, ADR-149) : écarté définitivement, pas seulement différé |
 | Règles de catégorisation complexes (opérateurs, priorités, expressions régulières, application rétroactive en masse) | Remplacées par la mémorisation simple de §2.4, suffisante pour l'objectif ; le moteur complet de l'ancien projet reste hors périmètre |
 | Règles financières personnelles, objectifs d'épargne datés, comparaison de scénarios, cartes de décision | Fonctionnalités avancées de l'ancien projet (epic DECISION) — repoussées après validation du socle |
-| Authentification, compte utilisateur, session | Application mono-utilisateur locale ; un verrou local optionnel (code PIN) peut être ajouté plus tard, jamais un compte en ligne |
+| Authentification, compte utilisateur, session | Application mono-utilisateur locale, jamais de compte en ligne |
 | Multi-devise consolidée | EUR uniquement en V1 |
 | Multi-utilisateur, multi-appareil, synchronisation | Hors périmètre du projet, pas seulement de la V1 |
 | macOS, Linux, mobile | Windows uniquement en V1 (cf. `04-Stack_technique.md`) |
@@ -123,7 +124,7 @@ Création des comptes et saisie des soldes
 Création des catégories (préremplies, modifiables)
     │
     ▼
-Saisie ou import CSV des transactions (catégorisation assistée)
+Saisie des transactions (catégorisation assistée)
     │
     ▼
 Création des opérations récurrentes
@@ -151,8 +152,9 @@ Consultation régulière du tableau de bord
 | Phase 1 — Comptes et transactions | Onboarding, comptes, catégories (+ catégorisation assistée), transactions manuelles, listes et filtres | Remplace un tableau Excel simple |
 | Phase 2 — Prévisionnel | Opérations récurrentes, occurrences, file de vérification, moteur de prévision, graphique de trésorerie | Connaître son solde prévu à une date future, confirmer une échéance en un clic |
 | Phase 3 — Budget et tableau de bord | Budgets, reste à vivre, taux d'épargne, dashboard complet, graphiques restants | Décider si une dépense est compatible avec le mois |
-| Phase 4 — Import CSV | Prévisualisation, mapping, dédoublonnage, historique des imports | Réimporter un relevé sans créer de doublon |
-| Phase 5 — Finitions | Export/sauvegarde, verrou local optionnel, packaging installeur | Version distribuable en téléchargement |
+| Phase 5 — Finitions | Export/sauvegarde, packaging installeur | Version distribuable en téléchargement |
+
+Phase 4 (import CSV) a été supprimée de la feuille de route : écartée définitivement (2026-09-18, ADR-149), voir §3. Le verrou local (code PIN), initialement prévu en Phase 5, a été écarté définitivement à la même occasion.
 
 Les phases suivantes (règles financières, objectifs, scénarios) ne sont pas planifiées avant une utilisation réelle de plusieurs semaines de cette V1, dans le même esprit que `MVP-010` de l'ancien projet.
 

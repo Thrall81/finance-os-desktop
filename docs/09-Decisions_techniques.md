@@ -62,6 +62,7 @@ Journal des décisions structurantes, dans le même format que l'ancien projet (
 | ADR-146 | Correctif du texte de Toggle (mauvaise classe USS) ; date de début éditable après création sur une opération récurrente ; date et catégorie ajoutées à l'étape onboarding des opérations récurrentes | ACCEPTED |
 | ADR-147 | Redéfinition de « reste à vivre » : net des opérations récurrentes du mois moins le total budgété (toutes catégories), disponible sans qu'un budget existe | ACCEPTED |
 | ADR-148 | Confirmation directe en un clic pour la file de vérification (« C'est arrivé » confirme immédiatement) ; « Modifier » ouvre le formulaire ajustable, plus de duplication de boutons | ACCEPTED |
+| ADR-149 | Import CSV et verrou local (code PIN) écartés définitivement du périmètre, sur décision explicite de l'utilisateur | ACCEPTED |
 
 ---
 
@@ -879,3 +880,15 @@ Nouvelle définition (`BudgetOverview.RemainingToLiveMinor`, `BudgetService.GetO
 **Tests** : aucune couverture n'existait pour cette interaction avant ce correctif (`ConfirmDirectly`/`OpenConfirmForm` jamais exercées directement dans `UISmokeTest`) — plutôt que de rétro-équiper tout le flux existant hors du périmètre demandé, une nouvelle fixture isolée couvre spécifiquement le nouveau chemin (comptage des trois boutons et leurs libellés sur la ligne partagée « Loyer », puis confirmation directe sur une fixture dédiée, vérifiant que la file de vérification se vide et qu'une vraie transaction est créée avec le montant attendu inchangé). Fixture isolée plutôt que réutilisation du scénario partagé : confirmer l'occurrence « Loyer » partagée changerait son statut, ce dont dépendent plusieurs assertions de file de vérification plus loin dans le même fichier — même raisonnement d'isolation que la fixture `wrongAccountApp` déjà présente.
 
 **Documents concernés** : `Assets/Scripts/UI/README.md`.
+
+# 51. ADR-149 — Import CSV et verrou local écartés définitivement
+
+**Contexte** : point d'étape demandé par l'utilisateur sur la feuille de route (`01-Perimetre.md` §5). Deux éléments restaient non tranchés depuis le début du projet : l'import CSV (Phase 4, jamais entamée — une recommandation de l'écarter avait déjà été formulée le 2026-09-15 sans décision actée) et le verrou local par code PIN (Phase 5, listé en §3 comme « peut être ajouté plus tard »).
+
+**Décision** : l'utilisateur écarte les deux **définitivement**, pas seulement pour cette V1 : « on écarte définitivement l'import CSV, ainsi que le verrou code PIN. » Les deux rejoignent le tableau des exclusions de `01-Perimetre.md` §3, au même titre que les connecteurs externes (Gmail, Open Banking) déjà marqués comme hors périmètre définitif plutôt que différé.
+
+**Nettoyage documentaire associé** : ces deux fonctionnalités étaient mentionnées comme actives ou envisagées dans plusieurs documents au-delà de `01-Perimetre.md`, tous mis à jour pour éviter qu'une future relecture ne les croie encore d'actualité — `00-Vision.md` (« seule voie d'entrée de données autre que la saisie manuelle » réécrit, la saisie manuelle est maintenant la seule voie, point), `02-Architecture.md` (`IStatementImporter`, jamais implémentée en pratique — confirmé par une recherche dans le code avant suppression, pas supposé), `07-Interface.md` (liste des écrans, catégorisation assistée), `08-Confidentialite_et_donnees.md` (§5 « Protection locale optionnelle » et §6 « Import CSV — seule porte d'entrée externe », tous deux réécrits pour refléter l'absence totale de ces mécanismes plutôt que leur statut « à venir »).
+
+**Conséquence pratique** : les trois points volontairement laissés de côté au fil des sessions précédentes (popup de changelog, filtres de date sur Transactions non convertis au datepicker, avertissement de saut de cycle non étendu à l'édition) deviennent la priorité suivante, par choix explicite de l'utilisateur plutôt que par défaut faute d'alternative.
+
+**Documents concernés** : `00-Vision.md`, `01-Perimetre.md` §2.6/§3/§4/§5, `02-Architecture.md` §6/§7, `07-Interface.md` §3/§7 (Transactions), `08-Confidentialite_et_donnees.md` §5/§6/§7.

@@ -105,14 +105,15 @@ CreateTransactionService (App)
 UI notifiée (événement C#) → rafraîchissement du tableau de bord
 ```
 
-Le recalcul est synchrone dans cette V1 (volume de données faible, pas de traitement asynchrone type Messenger nécessaire). Un recalcul long (import CSV volumineux) peut être exécuté sur un thread de fond .NET avec une barre de progression, sans introduire de file de messages.
+Le recalcul est synchrone dans cette V1 (volume de données faible, pas de traitement asynchrone type Messenger nécessaire).
 
 ---
 
 # 7. Points d'extension prévus
 
-- `IStatementImporter` (import CSV, extensible à d'autres formats plus tard : OFX) — la seule interface introduite d'emblée, car deux implémentations sont déjà envisagées ;
 - couche `Data` remplaçable en théorie (un autre moteur de stockage local), mais aucune abstraction supplémentaire n'est créée tant qu'un second besoin concret n'existe pas.
+
+`IStatementImporter` (import CSV) envisagée initialement n'a jamais été construite — l'import CSV a été écarté définitivement du périmètre (2026-09-18, ADR-149, `01-Perimetre.md` §3).
 
 ---
 

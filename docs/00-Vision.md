@@ -58,7 +58,7 @@ Toutes les données sont stockées dans un unique fichier SQLite local. Aucun ap
 
 ## Aucun connecteur
 
-Pas de Gmail, pas d'Open Banking, pas de dossier surveillé, pas de service cloud. La seule voie d'entrée de données autre que la saisie manuelle est l'import d'un fichier CSV que l'utilisateur choisit explicitement sur son disque.
+Pas de Gmail, pas d'Open Banking, pas de dossier surveillé, pas de service cloud. La saisie manuelle est la seule voie d'entrée de données — l'import CSV envisagé initialement a été écarté définitivement (2026-09-18, ADR-149, `01-Perimetre.md` §3).
 
 ## Le prévisionnel reste le cœur du projet
 

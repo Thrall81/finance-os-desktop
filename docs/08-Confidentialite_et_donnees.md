@@ -59,23 +59,23 @@ Un bouton **Réinitialiser l'application** dans les Paramètres supprime le fich
 
 ---
 
-# 5. Protection locale optionnelle
+# 5. Protection locale
 
-Un verrou applicatif simple (code PIN ou mot de passe demandé à l'ouverture) pourra être ajouté en V2 pour protéger l'accès si la machine est partagée. Il ne doit jamais dépendre d'un service en ligne (pas de « mot de passe oublié » par e-mail : uniquement une réinitialisation locale explicite, avec avertissement de perte de données si le fichier est chiffré).
+Un verrou applicatif (code PIN ou mot de passe demandé à l'ouverture), un temps envisagé pour protéger l'accès si la machine est partagée, a été écarté définitivement (2026-09-18, ADR-149, `01-Perimetre.md` §3) — décision explicite de l'utilisateur, pas seulement différée.
 
-Le chiffrement du fichier SQLite lui-même (ex. SQLCipher) est une option V2 à évaluer si la protection par mot de passe applicatif est jugée insuffisante — non retenue en V1 pour limiter la complexité et les dépendances natives supplémentaires.
+Le chiffrement du fichier SQLite lui-même (ex. SQLCipher) n'a jamais été retenu, pour les mêmes raisons de complexité et de dépendances natives supplémentaires — sans objet une fois le verrou applicatif lui-même écarté.
 
 ---
 
-# 6. Import CSV — seule porte d'entrée externe
+# 6. Aucune porte d'entrée externe
 
-Le fichier CSV importé est un fichier **choisi explicitement par l'utilisateur** sur son propre disque, jamais récupéré automatiquement. Il est traité en mémoire, jamais copié tel quel de façon permanente dans le fichier de données (seules les transactions normalisées sont conservées), et aucune partie de son contenu n'est journalisée dans les logs applicatifs.
+L'import CSV, un temps envisagé comme seule voie d'entrée de données autre que la saisie manuelle, a été écarté définitivement (2026-09-18, ADR-149, `01-Perimetre.md` §3). La saisie manuelle est donc la seule voie d'entrée de données de l'application — aucun fichier externe n'est jamais lu.
 
 ---
 
 # 7. Logs applicatifs
 
-Les journaux Unity (`Logs/`) restent strictement locaux et ne doivent jamais contenir de montant, de libellé de transaction ou d'identifiant de compte — uniquement des informations techniques (erreur SQL, identifiant interne, durée d'un import), comme le prévoyait déjà `06-Securite.md` de l'ancien projet pour les logs applicatifs.
+Les journaux Unity (`Logs/`) restent strictement locaux et ne doivent jamais contenir de montant, de libellé de transaction ou d'identifiant de compte — uniquement des informations techniques (erreur SQL, identifiant interne), comme le prévoyait déjà `06-Securite.md` de l'ancien projet pour les logs applicatifs.
 
 ---
 
