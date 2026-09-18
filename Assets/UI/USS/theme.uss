@@ -108,6 +108,33 @@
     white-space: normal;
 }
 
+/* ADR-150: wider/taller than the compact .modal-card above, and scrollable — several versions'
+   worth of highlights don't fit the fixed-height single-message card the update-ready popup uses. */
+.changelog-card {
+    width: 480px;
+    max-height: 480px;
+}
+
+.changelog-list {
+    max-height: 360px;
+    margin-top: 8px;
+    margin-bottom: 16px;
+}
+
+.changelog-version-title {
+    font-size: 14px;
+    color: var(--color-ink-900);
+    margin-top: 12px;
+    margin-bottom: 4px;
+}
+
+.changelog-highlight {
+    font-size: 13px;
+    color: var(--color-ink-600);
+    margin-bottom: 2px;
+    white-space: normal;
+}
+
 .sidebar-title {
     font-size: 16px;
     -unity-font-definition: url("../../Fonts/Spectral-Bold.ttf");
@@ -604,6 +631,26 @@
 
 .filter-group > .form-field {
     width: 160px;
+}
+
+/* ADR-150: Transactions' "Du"/"Au" filters are the one date field in this project that can be
+   genuinely unset (a filter, not a fact) — App UI's DatePicker itself has no "no date" state, so
+   clearing needs its own small control next to the trigger rather than living inside the popover. */
+.filter-date-row {
+    flex-direction: row;
+    align-items: center;
+}
+
+.filter-date-row > .filter-date-trigger {
+    width: 124px;
+}
+
+.filter-date-clear {
+    width: 28px;
+    height: 32px;
+    margin-left: 4px;
+    padding: 0;
+    -unity-text-align: middle-center;
 }
 
 .filter-group-wide > .form-field {

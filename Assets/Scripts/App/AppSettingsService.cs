@@ -47,5 +47,12 @@ namespace FinanceOS.App
             settings.SetTheme(theme);
             _settings.Save(settings);
         }
+
+        public void MarkChangelogSeen(string version)
+        {
+            var settings = _settings.Load();
+            settings.SetLastSeenChangelogVersion(version);
+            _settings.Save(settings);
+        }
     }
 }

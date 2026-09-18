@@ -73,10 +73,16 @@ namespace FinanceOS.UI
             if (Container.Accounts.ListAll().Count == 0)
             {
                 ShowOnboarding();
+
+                // Nothing to show a brand-new install — but mark the current version as seen so
+                // it has a real baseline to compare against from now on, rather than comparing
+                // against null forever (see MaybeShowChangelog).
+                Container.Settings.MarkChangelogSeen(Application.version);
             }
             else
             {
                 ShowDashboard();
+                MaybeShowChangelog(settings);
             }
 
             // The one deliberate, narrowly-scoped exception to "jamais automatique, jamais
@@ -269,9 +275,39 @@ namespace FinanceOS.UI
             _shell.SetContent(content);
             _settingsController = new SettingsController(
                 content, Container.Settings, Container.Accounts, Container.Backup, Container.DatabasePath,
-                onThemeChanged: _shell.SetTheme);
+                onThemeChanged: _shell.SetTheme, onShowChangelog: ShowChangelogOnDemand);
             ClearOtherControllers(keepSettings: true);
             _shell.SetActive(ShellScreen.Settings);
+        }
+
+        /// <summary>The on-demand path (ADR-150, Paramètres' "Voir les nouveautés") always shows
+        /// the full history, regardless of what has already been seen — the point of an explicit
+        /// request is to look back, not just to catch up. Still marks the current version as seen
+        /// on close, same as the automatic path, so an update that arrives right after doesn't
+        /// show a redundant popup for a version the user already knows about.</summary>
+        private void ShowChangelogOnDemand()
+        {
+            if (Container is null)
+            {
+                return;
+            }
+
+            _shell?.ShowChangelog(ChangelogEntries.All, () => Container.Settings.MarkChangelogSeen(Application.version));
+        }
+
+        /// <summary>Shown once per version, automatically, right after the dashboard renders for a
+        /// returning user (ADR-150 — the on-demand path in Paramètres is separate). Never for a
+        /// brand-new install (see Awake()) since there is nothing to have missed yet.</summary>
+        private void MaybeShowChangelog(AppSettings settings)
+        {
+            var currentVersion = Application.version;
+            if (settings.LastSeenChangelogVersion == currentVersion)
+            {
+                return;
+            }
+
+            var entries = ChangelogEntries.Since(settings.LastSeenChangelogVersion);
+            _shell?.ShowChangelog(entries, () => Container!.Settings.MarkChangelogSeen(currentVersion));
         }
 
         private void ClearOtherControllers(

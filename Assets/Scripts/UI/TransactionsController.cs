@@ -24,10 +24,14 @@ namespace FinanceOS.UI
         private readonly TransferDetectionService _transferDetection;
         private readonly AppSettingsService _settings;
 
+        private const string DatePlaceholder = "jj/mm/aaaa";
+
         private readonly DropdownField _filterAccountField;
         private readonly DropdownField _filterCategoryField;
-        private readonly TextField _filterDateFromField;
-        private readonly TextField _filterDateToField;
+        private readonly Button _filterDateFromField;
+        private readonly Button _filterDateFromClearButton;
+        private readonly Button _filterDateToField;
+        private readonly Button _filterDateToClearButton;
         private readonly TextField _filterAmountMinField;
         private readonly TextField _filterAmountMaxField;
         private readonly TextField _filterTextField;
@@ -117,8 +121,16 @@ namespace FinanceOS.UI
 
             _filterAccountField = root.Q<DropdownField>("filter-account");
             _filterCategoryField = root.Q<DropdownField>("filter-category");
-            _filterDateFromField = root.Q<TextField>("filter-date-from");
-            _filterDateToField = root.Q<TextField>("filter-date-to");
+            _filterDateFromField = root.Q<Button>("filter-date-from");
+            AppDatePickerField.AttachNullable(
+                _filterDateFromField, () => _filterDateFrom, ApplyFilterDateFrom, isDarkTheme, appUiThemeStyleSheet);
+            _filterDateFromClearButton = root.Q<Button>("filter-date-from-clear");
+            _filterDateFromClearButton.clicked += () => ApplyFilterDateFrom(null);
+            _filterDateToField = root.Q<Button>("filter-date-to");
+            AppDatePickerField.AttachNullable(
+                _filterDateToField, () => _filterDateTo, ApplyFilterDateTo, isDarkTheme, appUiThemeStyleSheet);
+            _filterDateToClearButton = root.Q<Button>("filter-date-to-clear");
+            _filterDateToClearButton.clicked += () => ApplyFilterDateTo(null);
             _filterAmountMinField = root.Q<TextField>("filter-amount-min");
             NumericInputFilter.RestrictToDecimal(_filterAmountMinField);
             _filterAmountMaxField = root.Q<TextField>("filter-amount-max");
@@ -181,8 +193,6 @@ namespace FinanceOS.UI
 
             _filterAccountField.RegisterValueChangedCallback(_ => OnFilterChanged());
             _filterCategoryField.RegisterValueChangedCallback(_ => OnFilterChanged());
-            _filterDateFromField.RegisterValueChangedCallback(_ => OnFilterChanged());
-            _filterDateToField.RegisterValueChangedCallback(_ => OnFilterChanged());
             _filterAmountMinField.RegisterValueChangedCallback(_ => OnFilterChanged());
             _filterAmountMaxField.RegisterValueChangedCallback(_ => OnFilterChanged());
             _filterTextField.RegisterValueChangedCallback(_ => OnFilterChanged());
@@ -365,9 +375,11 @@ namespace FinanceOS.UI
         }
 
         // Every filter field re-reads its own value on each change rather than tracking deltas,
-        // and an unparseable date/amount is treated as "no constraint on that field" rather than
+        // and an unparseable amount is treated as "no constraint on that field" rather than
         // blocking the whole filter — this is a live, incremental search box, not a submitted
-        // form, so it must never show a validation error while the user is mid-keystroke.
+        // form, so it must never show a validation error while the user is mid-keystroke. Dates
+        // are handled separately (ApplyFilterDateFrom/ApplyFilterDateTo, ADR-150) since they come
+        // from a picker, not free text, and can never be unparseable.
         // Public only so UISmokeTest.cs can trigger it directly: an instantiated-but-unattached
         // VisualTreeAsset has no panel, so the ChangeEvent a real .value assignment sends never
         // dispatches in batchmode — same "public purely for testability" reasoning as
@@ -380,15 +392,31 @@ namespace FinanceOS.UI
             var categoryIndex = _filterCategoryField.index;
             _filterCategoryId = categoryIndex <= 0 ? null : _categoryOptions[categoryIndex - 1].Id;
 
-            _filterDateFrom = DateFormat.TryParseInput(_filterDateFromField.value, out var dateFrom) ? dateFrom : null;
-            _filterDateTo = DateFormat.TryParseInput(_filterDateToField.value, out var dateTo) ? dateTo : null;
-
             _filterAmountMinMinor = MoneyFormat.TryParseEurosToMinor(_filterAmountMinField.value, out var amountMin) ? amountMin : null;
             _filterAmountMaxMinor = MoneyFormat.TryParseEurosToMinor(_filterAmountMaxField.value, out var amountMax) ? amountMax : null;
 
             _filterText = string.IsNullOrWhiteSpace(_filterTextField.value) ? null : _filterTextField.value.Trim();
 
             Refresh();
+        }
+
+        /// <summary>The "Du" filter's own picker callback (ADR-150) — a null clears it back to
+        /// "no constraint" (the clear button's handler), any other value is a real pick. Public
+        /// only so UISmokeTest.cs can call it directly, same reasoning as <see cref="OnFilterChanged"/>
+        /// — AppDatePickerField's trigger is a Button.clicked, which needs a live panel to fire.</summary>
+        public void ApplyFilterDateFrom(DateTime? date)
+        {
+            _filterDateFrom = date;
+            _filterDateFromField.text = date is { } value ? DateFormat.ForInput(value) : DatePlaceholder;
+            OnFilterChanged();
+        }
+
+        /// <summary>The "Au" filter's own picker callback — see <see cref="ApplyFilterDateFrom"/>.</summary>
+        public void ApplyFilterDateTo(DateTime? date)
+        {
+            _filterDateTo = date;
+            _filterDateToField.text = date is { } value ? DateFormat.ForInput(value) : DatePlaceholder;
+            OnFilterChanged();
         }
 
         private void ResetFilters()
@@ -401,8 +429,8 @@ namespace FinanceOS.UI
             _filterAmountMaxMinor = null;
             _filterText = null;
 
-            _filterDateFromField.SetValueWithoutNotify(string.Empty);
-            _filterDateToField.SetValueWithoutNotify(string.Empty);
+            _filterDateFromField.text = DatePlaceholder;
+            _filterDateToField.text = DatePlaceholder;
             _filterAmountMinField.SetValueWithoutNotify(string.Empty);
             _filterAmountMaxField.SetValueWithoutNotify(string.Empty);
             _filterTextField.SetValueWithoutNotify(string.Empty);

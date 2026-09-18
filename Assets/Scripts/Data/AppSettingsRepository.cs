@@ -23,6 +23,7 @@ namespace FinanceOS.Data
         private const string DefaultCurrentAccountIdKey = "default_current_account_id";
         private const string MissedThresholdDaysKey = "missed_threshold_days";
         private const string ThemeKey = "theme";
+        private const string LastSeenChangelogVersionKey = "last_seen_changelog_version";
 
         private readonly SQLiteConnection _connection;
 
@@ -51,7 +52,8 @@ namespace FinanceOS.Data
                 missedThresholdDays: values.TryGetValue(MissedThresholdDaysKey, out var missedThreshold) && int.TryParse(missedThreshold, out var missedThresholdDays)
                     ? missedThresholdDays
                     : AppSettings.DefaultMissedThresholdDays,
-                theme: values.TryGetValue(ThemeKey, out var theme) ? StorageFormat.ParseAppTheme(theme) : AppTheme.Light);
+                theme: values.TryGetValue(ThemeKey, out var theme) ? StorageFormat.ParseAppTheme(theme) : AppTheme.Light,
+                lastSeenChangelogVersion: values.TryGetValue(LastSeenChangelogVersionKey, out var changelogVersion) ? changelogVersion : null);
 
             return settings;
         }
@@ -73,6 +75,15 @@ namespace FinanceOS.Data
                 else
                 {
                     _connection.Execute("DELETE FROM app_setting WHERE key = ?", DefaultCurrentAccountIdKey);
+                }
+
+                if (settings.LastSeenChangelogVersion is { } changelogVersion)
+                {
+                    Upsert(LastSeenChangelogVersionKey, changelogVersion);
+                }
+                else
+                {
+                    _connection.Execute("DELETE FROM app_setting WHERE key = ?", LastSeenChangelogVersionKey);
                 }
             });
         }

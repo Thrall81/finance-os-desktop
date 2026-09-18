@@ -82,6 +82,9 @@
         <ui:Label text="Version" class="form-label" />
         <ui:Label name="version-value" text="—" class="form-readonly-value" />
       </ui:VisualElement>
+      <ui:VisualElement class="form-actions">
+        <ui:Button name="changelog-button" text="Voir les nouveautés" class="secondary-button" />
+      </ui:VisualElement>
     </ui:VisualElement>
   </ui:ScrollView>
 </ui:UXML>

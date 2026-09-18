@@ -35,11 +35,17 @@
         </ui:VisualElement>
         <ui:VisualElement class="filter-group">
           <ui:Label text="Du" class="form-label" />
-          <ui:TextField name="filter-date-from" class="form-field" />
+          <ui:VisualElement class="filter-date-row">
+            <ui:Button name="filter-date-from" text="jj/mm/aaaa" class="form-field date-field-trigger filter-date-trigger" />
+            <ui:Button name="filter-date-from-clear" text="×" class="secondary-button filter-date-clear" />
+          </ui:VisualElement>
         </ui:VisualElement>
         <ui:VisualElement class="filter-group">
           <ui:Label text="Au" class="form-label" />
-          <ui:TextField name="filter-date-to" class="form-field" />
+          <ui:VisualElement class="filter-date-row">
+            <ui:Button name="filter-date-to" text="jj/mm/aaaa" class="form-field date-field-trigger filter-date-trigger" />
+            <ui:Button name="filter-date-to-clear" text="×" class="secondary-button filter-date-clear" />
+          </ui:VisualElement>
         </ui:VisualElement>
         <ui:VisualElement class="filter-group">
           <ui:Label text="Montant min (€)" class="form-label" />

@@ -43,12 +43,13 @@ namespace FinanceOS.UI
         private readonly Button _backupButton;
         private readonly Label _backupResultLabel;
         private readonly Label _versionLabel;
+        private readonly Button _changelogButton;
 
         private IReadOnlyList<DropdownOption> _accountOptions = Array.Empty<DropdownOption>();
 
         public SettingsController(
             VisualElement root, AppSettingsService settings, AccountService accounts, BackupService backup, string databasePath,
-            Action<AppTheme>? onThemeChanged = null)
+            Action<AppTheme>? onThemeChanged = null, Action? onShowChangelog = null)
         {
             _settings = settings;
             _accounts = accounts;
@@ -77,6 +78,8 @@ namespace FinanceOS.UI
             // Read once — Application.version (PlayerSettings.bundleVersion) never changes
             // during a session, unlike everything else this screen shows via Refresh().
             _versionLabel.text = Application.version;
+            _changelogButton = root.Q<Button>("changelog-button");
+            _changelogButton.clicked += () => onShowChangelog?.Invoke();
 
             _themeField.choices = ThemeOptions.Select(o => o.Text).ToList();
 

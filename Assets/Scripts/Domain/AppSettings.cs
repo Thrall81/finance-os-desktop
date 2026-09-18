@@ -19,6 +19,12 @@ namespace FinanceOS.Domain
         public int? DefaultCurrentAccountId { get; private set; }
         public AppTheme Theme { get; private set; }
 
+        /// <summary>The app version whose changelog the user has already seen (ADR-150) — null
+        /// before the changelog feature's first save. Compared against <c>Application.version</c>
+        /// at launch to decide whether to show the "what's new" popup automatically; never
+        /// compared for a brand-new install (nothing to have missed yet).</summary>
+        public string? LastSeenChangelogVersion { get; private set; }
+
         /// <summary>Days an unresolved occurrence may sit past its expected date before it
         /// transitions to "Manquée" — visible but non-blocking, still confirmable or cancellable.
         /// See docs/07-Interface.md §6.</summary>
@@ -30,7 +36,8 @@ namespace FinanceOS.Domain
             long lowBalanceThresholdMinor = DefaultLowBalanceThresholdMinor,
             int? defaultCurrentAccountId = null,
             int missedThresholdDays = DefaultMissedThresholdDays,
-            AppTheme theme = AppTheme.Light)
+            AppTheme theme = AppTheme.Light,
+            string? lastSeenChangelogVersion = null)
         {
             if (string.IsNullOrWhiteSpace(defaultCurrency))
             {
@@ -53,6 +60,7 @@ namespace FinanceOS.Domain
             DefaultCurrentAccountId = defaultCurrentAccountId;
             MissedThresholdDays = missedThresholdDays;
             Theme = theme;
+            LastSeenChangelogVersion = lastSeenChangelogVersion;
         }
 
         public void UpdateForecastHorizon(int days)
@@ -80,5 +88,7 @@ namespace FinanceOS.Domain
         }
 
         public void SetTheme(AppTheme theme) => Theme = theme;
+
+        public void SetLastSeenChangelogVersion(string version) => LastSeenChangelogVersion = version;
     }
 }

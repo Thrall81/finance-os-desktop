@@ -42,6 +42,23 @@ namespace FinanceOS.UI
         /// hasn't wired the asset yet doesn't hard-fail.</summary>
         public static void Attach(
             Button trigger, Func<DateTime> getCurrentValue, Action<DateTime> onChanged, bool isDarkTheme,
+            StyleSheet? appUiThemeStyleSheet) =>
+            AttachCore(trigger, getCurrentValue, onChanged, isDarkTheme, appUiThemeStyleSheet);
+
+        /// <summary>Same popover mechanism as <see cref="Attach"/>, for a field with no value yet
+        /// (e.g. an optional date-range filter, ADR-150 — Transactions' "Du"/"Au" filters, the one
+        /// case in this project where a date genuinely can be unset). The calendar itself can never
+        /// represent "no date" — a <see cref="DatePicker"/> always shows some month — so opening it
+        /// with nothing picked yet seeds on today's date, same as any other date field's own
+        /// default. There is no in-picker way to clear back to "no date" (App UI's DatePicker has
+        /// no such affordance); callers pair this with their own explicit clear control instead.</summary>
+        public static void AttachNullable(
+            Button trigger, Func<DateTime?> getCurrentValue, Action<DateTime?> onChanged, bool isDarkTheme,
+            StyleSheet? appUiThemeStyleSheet) =>
+            AttachCore(trigger, () => getCurrentValue() ?? DateTime.Now, selected => onChanged(selected), isDarkTheme, appUiThemeStyleSheet);
+
+        private static void AttachCore(
+            Button trigger, Func<DateTime> getCurrentValue, Action<DateTime> onChanged, bool isDarkTheme,
             StyleSheet? appUiThemeStyleSheet)
         {
             // A real bug caught by the user clicking the trigger repeatedly, not anticipated:

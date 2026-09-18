@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using FinanceOS.Domain;
 using UnityEngine.UIElements;
 
@@ -43,6 +44,11 @@ namespace FinanceOS.UI
         private Action? _onUpdateLater;
         private Action? _onUpdateInstallNow;
 
+        private readonly VisualElement _changelogOverlay;
+        private readonly ScrollView _changelogList;
+        private readonly Button _changelogCloseButton;
+        private Action? _onChangelogClosed;
+
         public ShellController(
             VisualElement root,
             Action onNavigateToDashboard,
@@ -78,6 +84,12 @@ namespace FinanceOS.UI
             _updateInstallButton = root.Q<Button>("update-install-button");
             _updateLaterButton.clicked += () => _onUpdateLater?.Invoke();
             _updateInstallButton.clicked += () => _onUpdateInstallNow?.Invoke();
+
+            _changelogOverlay = root.Q<VisualElement>("changelog-overlay");
+            _changelogOverlay.style.display = DisplayStyle.None;
+            _changelogList = root.Q<ScrollView>("changelog-list");
+            _changelogCloseButton = root.Q<Button>("changelog-close-button");
+            _changelogCloseButton.clicked += HideChangelog;
 
             _navDashboard.clicked += onNavigateToDashboard;
             _navAccounts.clicked += onNavigateToAccounts;
@@ -127,6 +139,40 @@ namespace FinanceOS.UI
             _updateReadyOverlay.style.display = DisplayStyle.None;
             _onUpdateInstallNow = null;
             _onUpdateLater = null;
+        }
+
+        /// <summary>Shown either automatically once per version after an update, or on demand from
+        /// Paramètres (ADR-150) — <paramref name="onClosed"/> is only meaningfully used for the
+        /// former, to mark the version as seen once the user actually looks at it; the on-demand
+        /// path passes a no-op. Same "direct child of .shell-root, survives screen navigation"
+        /// overlay pattern as <see cref="ShowUpdateReady"/>.</summary>
+        public void ShowChangelog(IReadOnlyList<ChangelogEntry> entries, Action onClosed)
+        {
+            _onChangelogClosed = onClosed;
+
+            _changelogList.Clear();
+            foreach (var entry in entries)
+            {
+                var versionTitle = new Label($"Version {entry.Version}");
+                versionTitle.AddToClassList("changelog-version-title");
+                _changelogList.Add(versionTitle);
+
+                foreach (var highlight in entry.Highlights)
+                {
+                    var highlightLabel = new Label($"• {highlight}");
+                    highlightLabel.AddToClassList("changelog-highlight");
+                    _changelogList.Add(highlightLabel);
+                }
+            }
+
+            _changelogOverlay.style.display = DisplayStyle.Flex;
+        }
+
+        public void HideChangelog()
+        {
+            _changelogOverlay.style.display = DisplayStyle.None;
+            _onChangelogClosed?.Invoke();
+            _onChangelogClosed = null;
         }
 
         public void SetActive(ShellScreen screen)
