@@ -559,14 +559,14 @@ namespace FinanceOS.UI
         /// before submission if the chosen start date/day-of-month combination would silently skip
         /// the first cycle (the exact trap that produced a real, hard-to-diagnose missing occurrence
         /// — see the "Real user data revealed two bugs" note in project memory). Never blocks
-        /// submission: the combination is still valid, just possibly not what the user meant.</summary>
-        private void UpdateSkipWarning()
+        /// submission: the combination is still valid, just possibly not what the user meant. Also
+        /// runs during editing (ADR-150) — frequency, day-of-month and start date are all editable
+        /// there too (ADR-140, ADR-146), so the same trap is just as real when correcting an
+        /// existing operation as when creating one. Public only so UISmokeTest.cs can call it
+        /// directly — its real triggers (RegisterValueChangedCallback) can't fire without a live
+        /// panel, same reasoning as every other change/click-only method in this project.</summary>
+        public void UpdateSkipWarning()
         {
-            if (_editingOperationId is not null)
-            {
-                return;
-            }
-
             var startDate = _startDateValue;
 
             int? dayOfMonth = null;
