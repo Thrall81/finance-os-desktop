@@ -289,7 +289,7 @@ namespace FinanceOS.EditorTools
             // entries below the newest in the real, hand-written list (1.0.9, 1.0.8, 1.0.7 above
             // it) — asserted against that known content directly rather than derived generically.
             var sinceOlder = ChangelogEntries.Since("1.0.6");
-            Check(sinceOlder.Select(e => e.Version).SequenceEqual(new[] { "1.0.9", "1.0.8", "1.0.7" }),
+            Check(sinceOlder.Select(e => e.Version).SequenceEqual(new[] { "1.0.10", "1.0.9", "1.0.8", "1.0.7" }),
                 "Since returns exactly the entries strictly newer than the given version, newest first");
             Check(ChangelogEntries.Since(null).Count == ChangelogEntries.All.Count, "Since falls back to the full history when nothing has been seen yet");
             Check(ChangelogEntries.Since("not-a-real-version").Count == ChangelogEntries.All.Count,

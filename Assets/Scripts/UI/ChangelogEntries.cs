@@ -18,6 +18,10 @@ namespace FinanceOS.UI
     {
         public static readonly IReadOnlyList<ChangelogEntry> All = new[]
         {
+            new ChangelogEntry("1.0.10", new[]
+            {
+                "Correction : après avoir cliqué « Installer et redémarrer » sur une mise à jour, l'application ne redémarrait jamais toute seule (le fichier était bien mis à jour, mais il fallait la relancer manuellement).",
+            }),
             new ChangelogEntry("1.0.9", new[]
             {
                 "Les filtres de date sur Transactions passent au calendrier, avec un bouton pour les effacer.",

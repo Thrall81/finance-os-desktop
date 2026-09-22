@@ -102,9 +102,13 @@ namespace FinanceOS.UI
         /// nothing from UpdateChecker's silent background download ever reaches this method
         /// without the user clicking "Installer et redémarrer" first. Launches the already-
         /// downloaded installer /VERYSILENT (no further Inno Setup prompts — the user already
-        /// confirmed via this app's own dialog) and quits; the installer's own CloseApplications/
-        /// RestartApplications directives (packaging/FinanceOS.iss, ADR-139) handle waiting for
-        /// this process to fully exit and relaunching it once installation finishes.</summary>
+        /// confirmed via this app's own dialog) and quits. Real bug found via a user report
+        /// (ADR-151): quitting here means Windows Restart Manager never sees this process still
+        /// running by the time the installer starts, so packaging/FinanceOS.iss's
+        /// CloseApplications/RestartApplications directives — which only relaunch what Restart
+        /// Manager itself closed — silently do nothing in this exact path. The app actually comes
+        /// back via that installer's own [Run] section instead (postinstall, deliberately without
+        /// skipifsilent so it still fires on this always-/VERYSILENT self-update run).</summary>
         private void InstallUpdateAndRestart(string installerPath)
         {
             try

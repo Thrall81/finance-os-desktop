@@ -27,10 +27,13 @@ Compression=lzma2/max
 SolidCompression=yes
 WizardStyle=modern
 UninstallDisplayIcon={app}\FinanceOS.exe
-; The self-update flow (ADR-139) launches this installer /VERYSILENT while FinanceOS.exe may
-; still be running (and holding GameAssembly.dll/UnityPlayer.dll locked) — CloseApplications lets
-; Windows Restart Manager detect and close it automatically instead of the copy silently failing,
-; and RestartApplications relaunches it once installation finishes, silent runs included.
+; Covers the installer being run manually (e.g. a fresh download re-run) while FinanceOS.exe still
+; holds GameAssembly.dll/UnityPlayer.dll locked — CloseApplications lets Windows Restart Manager
+; detect and close it instead of the copy silently failing. RestartApplications then relaunches
+; whatever Restart Manager itself closed — it does NOT cover the self-update flow (ADR-139/
+; ADR-151), where AppBootstrap already quits FinanceOS.exe itself before this installer starts, so
+; Restart Manager never sees it running in the first place; the [Run] section below is what
+; actually relaunches the app after a self-update.
 CloseApplications=yes
 RestartApplications=yes
 
@@ -51,4 +54,11 @@ Name: "{group}\Désinstaller Finance OS"; Filename: "{uninstallexe}"
 Name: "{autodesktop}\Finance OS"; Filename: "{app}\FinanceOS.exe"; Tasks: desktopicon
 
 [Run]
-Filename: "{app}\FinanceOS.exe"; Description: "Lancer Finance OS"; Flags: nowait postinstall skipifsilent
+; No skipifsilent: the self-update flow (ADR-139/ADR-151) always installs /VERYSILENT, and
+; AppBootstrap.InstallUpdateAndRestart quits FinanceOS.exe itself right after launching this
+; installer — by the time Windows Restart Manager (CloseApplications/RestartApplications below)
+; would otherwise detect and later relaunch it, the process is already gone, so that mechanism
+; never actually restarts anything in this path. This [Run] entry is the one relaunch path that
+; reliably fires regardless: skipifsilent would suppress it during exactly the silent runs this
+; self-update flow always uses, so it must stay unguarded here for the app to come back at all.
+Filename: "{app}\FinanceOS.exe"; Description: "Lancer Finance OS"; Flags: nowait postinstall
