@@ -106,9 +106,11 @@ namespace FinanceOS.UI
         /// (ADR-151): quitting here means Windows Restart Manager never sees this process still
         /// running by the time the installer starts, so packaging/FinanceOS.iss's
         /// CloseApplications/RestartApplications directives — which only relaunch what Restart
-        /// Manager itself closed — silently do nothing in this exact path. The app actually comes
-        /// back via that installer's own [Run] section instead (postinstall, deliberately without
-        /// skipifsilent so it still fires on this always-/VERYSILENT self-update run).</summary>
+        /// Manager itself closed — silently do nothing in this exact path. The app comes back via
+        /// that installer's own [Code] section instead, which explicitly launches FinanceOS.exe
+        /// when WizardSilent is true — confirmed by an actual install-then-check-the-process test
+        /// after the [Run] section's postinstall/skipifsilent flags turned out not to fire under
+        /// /VERYSILENT at all, contrary to what Inno Setup's own docs suggested.</summary>
         private void InstallUpdateAndRestart(string installerPath)
         {
             try

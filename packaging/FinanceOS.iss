@@ -7,7 +7,7 @@
 ;   2. ISCC.exe packaging\FinanceOS.iss
 ; Output: packaging\Output\FinanceOS-Setup-<version>.exe (gitignored, rebuilt from source each time)
 
-#define AppVersion "1.0.9"
+#define AppVersion "1.0.10"
 
 [Setup]
 AppId={{3330EEC9-D1D8-44DB-B2E5-10E37473E979}}
@@ -54,11 +54,29 @@ Name: "{group}\Désinstaller Finance OS"; Filename: "{uninstallexe}"
 Name: "{autodesktop}\Finance OS"; Filename: "{app}\FinanceOS.exe"; Tasks: desktopicon
 
 [Run]
-; No skipifsilent: the self-update flow (ADR-139/ADR-151) always installs /VERYSILENT, and
-; AppBootstrap.InstallUpdateAndRestart quits FinanceOS.exe itself right after launching this
-; installer — by the time Windows Restart Manager (CloseApplications/RestartApplications below)
-; would otherwise detect and later relaunch it, the process is already gone, so that mechanism
-; never actually restarts anything in this path. This [Run] entry is the one relaunch path that
-; reliably fires regardless: skipifsilent would suppress it during exactly the silent runs this
-; self-update flow always uses, so it must stay unguarded here for the app to come back at all.
-Filename: "{app}\FinanceOS.exe"; Description: "Lancer Finance OS"; Flags: nowait postinstall
+; skipifsilent restored: this entry is the interactive "Lancer Finance OS" checkbox on the
+; Setup Completed wizard page only — it never fires during a silent/very silent install either
+; way (confirmed empirically, ADR-151: removing skipifsilent alone did NOT make it fire under
+; /VERYSILENT, despite what Inno Setup's own docs suggest — the [Code] section below is the
+; actual, verified fix for the silent case, not this flag).
+Filename: "{app}\FinanceOS.exe"; Description: "Lancer Finance OS"; Flags: nowait postinstall skipifsilent
+
+[Code]
+// ADR-151: the self-update flow (ADR-139) always installs /VERYSILENT, and
+// AppBootstrap.InstallUpdateAndRestart quits FinanceOS.exe itself right after launching this
+// installer — by the time Windows Restart Manager (CloseApplications/RestartApplications above)
+// would otherwise detect and later relaunch it, the process is already gone, so that mechanism
+// never restarts anything in this path. The [Run] section's own postinstall checkbox only ever
+// fires on an interactive install, confirmed empirically not to fire under /VERYSILENT even
+// without skipifsilent. This explicit, unconditional launch is the one mechanism proven (via a
+// real install-then-check-the-process test, not just documentation) to actually bring the app
+// back after a silent self-update.
+procedure CurStepChanged(CurStep: TSetupStep);
+var
+  ResultCode: Integer;
+begin
+  if (CurStep = ssDone) and WizardSilent then
+  begin
+    Exec(ExpandConstant('{app}\FinanceOS.exe'), '', '', SW_SHOW, ewNoWait, ResultCode);
+  end;
+end;
